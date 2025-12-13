@@ -1,9 +1,17 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet, Platform } from "react-native";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { login, sendPasswordReset } from "../services/auth";
-import { palette } from "../theme";
-import Card from "../components/Card";
+import { palette, spacing, borderRadius } from "../theme";
 import { useGoogleAuth } from "../services/googleAuth";
+
+// Cor principal da tela de login (azul-esverdeado)
+const LOGIN_COLORS = {
+  primary: '#0d9488',      // teal-600
+  primaryDark: '#0f766e',  // teal-700
+  primaryLight: '#14b8a6', // teal-500
+  gradient: '#f0fdfa',     // teal-50
+};
 
 export default function Login({ navigation }: any) {
   const [email, setEmail] = useState("");
@@ -81,27 +89,47 @@ export default function Login({ navigation }: any) {
 
   return (
     <View style={styles.container}>
-      <Card style={styles.card}>
-        <Text style={styles.title}>Entrar</Text>
+      {/* Header com ícone e título */}
+      <View style={styles.header}>
+        <View style={styles.iconContainer}>
+          <MaterialCommunityIcons name="piggy-bank" size={64} color="#fff" />
+        </View>
+        <Text style={styles.appName}>Cofrin</Text>
+        <Text style={styles.tagline}>
+          Organize suas finanças de forma{'\n'}simples como anotar num papel
+        </Text>
+      </View>
 
-        <TextInput
-          placeholder="Email"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-          style={[styles.input, styles.inputMargin]}
-          editable={!loading}
-        />
+      {/* Card de Login */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Bem-vindo de volta!</Text>
 
-        <TextInput
-          placeholder="Senha"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          style={[styles.input, styles.inputMargin]}
-          editable={!loading}
-        />
+        <View style={styles.inputContainer}>
+          <MaterialCommunityIcons name="email-outline" size={20} color={palette.textMuted} style={styles.inputIcon} />
+          <TextInput
+            placeholder="Email"
+            placeholderTextColor={palette.textMuted}
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            style={styles.input}
+            editable={!loading}
+          />
+        </View>
+
+        <View style={styles.inputContainer}>
+          <MaterialCommunityIcons name="lock-outline" size={20} color={palette.textMuted} style={styles.inputIcon} />
+          <TextInput
+            placeholder="Senha"
+            placeholderTextColor={palette.textMuted}
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            style={styles.input}
+            editable={!loading}
+          />
+        </View>
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
@@ -117,29 +145,28 @@ export default function Login({ navigation }: any) {
           {loading ? (
             <ActivityIndicator color="#fff" />
           ) : (
-            <Text style={styles.primaryButtonText}>Entrar</Text>
+            <View style={styles.buttonContent}>
+              <MaterialCommunityIcons name="login" size={20} color="#fff" style={{ marginRight: 8 }} />
+              <Text style={styles.primaryButtonText}>Entrar</Text>
+            </View>
           )}
         </Pressable>
-
-        <View style={{ height: 12 }} />
 
         <Pressable
           onPress={handleGoogleLogin}
           style={({ pressed }) => [
-            styles.ghostButton,
+            styles.googleButton,
             pressed && styles.buttonPressed,
             !request && styles.buttonDisabled,
           ]}
           disabled={!request || loading}
         >
-          <Text style={styles.ghostButtonText}>Entrar com Google</Text>
+          <View style={styles.buttonContent}>
+            <MaterialCommunityIcons name="google" size={20} color={palette.text} style={{ marginRight: 8 }} />
+            <Text style={styles.googleButtonText}>Continuar com Google</Text>
+          </View>
         </Pressable>
 
-        <View style={{ height: 12 }} />
-
-        <Pressable onPress={() => navigation.navigate("Register")} style={styles.linkContainer}>
-          <Text style={styles.linkText}>Criar Conta</Text>
-        </Pressable>
         <Pressable
           onPress={() => { setShowReset(!showReset); if (!showReset) setResetEmail(email); }}
           style={styles.linkContainer}
@@ -147,27 +174,51 @@ export default function Login({ navigation }: any) {
           <Text style={styles.linkText}>{showReset ? "Fechar" : "Esqueceu sua senha?"}</Text>
         </Pressable>
 
-        {showReset ? (
-          <View style={{ marginTop: 12 }}>
-            <TextInput
-              placeholder="Coloque seu e-mail aqui"
-              value={resetEmail}
-              onChangeText={setResetEmail}
-              autoCapitalize="none"
-              keyboardType="email-address"
-              style={[styles.input, { marginBottom: 8 }]}
-            />
+        {showReset && (
+          <View style={styles.resetContainer}>
+            <View style={styles.inputContainer}>
+              <MaterialCommunityIcons name="email-outline" size={20} color={palette.textMuted} style={styles.inputIcon} />
+              <TextInput
+                placeholder="Digite seu e-mail"
+                placeholderTextColor={palette.textMuted}
+                value={resetEmail}
+                onChangeText={setResetEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                style={styles.input}
+              />
+            </View>
             <Pressable
               onPress={handleSendReset}
-              style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed, resetLoading && styles.buttonDisabled]}
+              style={({ pressed }) => [
+                styles.resetButton, 
+                pressed && styles.buttonPressed, 
+                resetLoading && styles.buttonDisabled
+              ]}
               disabled={resetLoading}
             >
-              {resetLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.primaryButtonText}>Enviar link</Text>}
+              {resetLoading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.resetButtonText}>Enviar link de recuperação</Text>
+              )}
             </Pressable>
-            {resetResult ? <Text style={styles.helperText}>{resetResult}</Text> : null}
+            {resetResult && <Text style={styles.helperText}>{resetResult}</Text>}
           </View>
-        ) : null}
-      </Card>
+        )}
+
+        <View style={styles.divider}>
+          <View style={styles.dividerLine} />
+          <Text style={styles.dividerText}>ou</Text>
+          <View style={styles.dividerLine} />
+        </View>
+
+        <Pressable onPress={() => navigation.navigate("Register")} style={styles.registerButton}>
+          <Text style={styles.registerText}>
+            Não tem conta? <Text style={styles.registerTextBold}>Criar agora</Text>
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -175,76 +226,177 @@ export default function Login({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    padding: 20,
-    backgroundColor: palette.bg,
+    backgroundColor: LOGIN_COLORS.primary,
+    paddingHorizontal: spacing.lg,
+  },
+  header: {
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 32,
+  },
+  iconContainer: {
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.md,
+  },
+  appName: {
+    fontSize: 32,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: spacing.sm,
+  },
+  tagline: {
+    fontSize: 15,
+    color: 'rgba(255,255,255,0.9)',
+    textAlign: 'center',
+    lineHeight: 22,
   },
   card: {
-    padding: 18,
+    backgroundColor: '#fff',
+    borderRadius: borderRadius.xl,
+    padding: spacing.xl,
+    ...Platform.select({
+      web: {
+        boxShadow: '0px 8px 24px rgba(0, 0, 0, 0.15)',
+      },
+      default: {
+        elevation: 8,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.15,
+        shadowRadius: 12,
+      },
+    }),
   },
-  title: {
-    fontSize: 24,
-    marginBottom: 20,
-    textAlign: "center",
-    fontWeight: "600",
+  cardTitle: {
+    fontSize: 20,
+    fontWeight: '600',
     color: palette.text,
+    textAlign: 'center',
+    marginBottom: spacing.lg,
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: palette.grayLight,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
+  },
+  inputIcon: {
+    marginRight: spacing.sm,
   },
   input: {
-    borderWidth: 1,
-    borderColor: palette.border,
-    padding: 12,
-    borderRadius: 8,
+    flex: 1,
+    paddingVertical: 14,
     fontSize: 16,
-  },
-  inputMargin: {
-    marginBottom: 12,
+    color: palette.text,
   },
   primaryButton: {
-    backgroundColor: palette.blue,
-    padding: 14,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 6,
+    backgroundColor: LOGIN_COLORS.primary,
+    paddingVertical: 14,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: spacing.sm,
+  },
+  buttonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   primaryButtonText: {
-    color: "#fff",
-    fontWeight: "600",
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
   },
-  ghostButton: {
-    backgroundColor: "transparent",
+  googleButton: {
+    backgroundColor: '#fff',
     borderWidth: 1,
     borderColor: palette.border,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
+    paddingVertical: 12,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    marginTop: spacing.md,
   },
-  ghostButtonText: {
+  googleButtonText: {
     color: palette.text,
-    fontWeight: "600",
+    fontWeight: '600',
+    fontSize: 15,
   },
   buttonPressed: {
     opacity: 0.85,
+    transform: [{ scale: 0.98 }],
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   linkContainer: {
-    marginTop: 10,
-    alignItems: "center",
+    marginTop: spacing.md,
+    alignItems: 'center',
   },
   linkText: {
-    color: palette.blue,
-    fontWeight: "600",
+    color: LOGIN_COLORS.primary,
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  resetContainer: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: palette.border,
+  },
+  resetButton: {
+    backgroundColor: LOGIN_COLORS.primaryLight,
+    paddingVertical: 12,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+  },
+  resetButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 14,
   },
   error: {
-    color: "#dc2626",
-    marginBottom: 8,
-    textAlign: "center",
+    color: palette.danger,
+    marginBottom: spacing.sm,
+    textAlign: 'center',
+    fontSize: 14,
   },
   helperText: {
-    color: palette.muted,
-    fontSize: 12,
-    marginTop: 8,
+    color: palette.textSecondary,
+    fontSize: 13,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+  },
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginVertical: spacing.lg,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: palette.border,
+  },
+  dividerText: {
+    paddingHorizontal: spacing.md,
+    color: palette.textMuted,
+    fontSize: 13,
+  },
+  registerButton: {
+    alignItems: 'center',
+  },
+  registerText: {
+    color: palette.textSecondary,
+    fontSize: 14,
+  },
+  registerTextBold: {
+    color: LOGIN_COLORS.primary,
+    fontWeight: '700',
   },
 });

@@ -1,185 +1,546 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme, Modal, Portal, TextInput as PaperInput, Chip, Surface, Text as PaperText, IconButton, Divider, List, FAB } from 'react-native-paper';
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+    View,
+    StyleSheet,
+    ScrollView,
+    Platform,
+    Pressable,
+    Modal, Dimensions
+} from 'react-native';
+import {
+    useTheme, TextInput,
+    Text,
+    IconButton,
+    Button,
+    Menu,
+    Divider, PaperProvider
+} from 'react-native-paper';
+import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
-interface Props { visible: boolean; onClose: () => void; onSave?: (payload: { type: string; amount: number; description: string; category: string; account?: string; toAccount?: string; date: Date; recurrence: any; }) => void; initialType?: 'despesa'|'receita'|'transfer' }
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-export default function AddTransactionModal({ visible, onClose, onSave, initialType = 'despesa' }: Props) {
+// Types
+type TransactionType = 'despesa' | 'receita' | 'transfer';
+type RecurrenceType = 'none' | 'semanal' | 'quinzenal' | 'mensal' | 'anual';
+
+interface Props {
+  visible: boolean;
+  onClose: () => void;
+  onSave?: (payload: {
+    type: string;
+    amount: number;
+    description: string;
+    category: string;
+    account?: string;
+    toAccount?: string;
+    date: Date;
+    recurrence: RecurrenceType;
+  }) => void;
+  initialType?: TransactionType;
+}
+
+// Constants
+const CATEGORIES = [
+  'Alimentação',
+  'Transporte',
+  'Moradia',
+  'Saúde',
+  'Educação',
+  'Lazer',
+  'Vestuário',
+  'Serviços',
+  'Salário',
+  'Investimentos',
+  'Outros',
+];
+
+const ACCOUNTS = [
+  'Nubank',
+  'Itaú',
+  'Bradesco',
+  'Santander',
+  'Caixa',
+  'Banco do Brasil',
+  'Inter',
+  'C6 Bank',
+  'Carteira',
+];
+
+const RECURRENCE_OPTIONS: { label: string; value: RecurrenceType }[] = [
+  { label: 'Não repetir', value: 'none' },
+  { label: 'Semanal', value: 'semanal' },
+  { label: 'Quinzenal', value: 'quinzenal' },
+  { label: 'Mensal', value: 'mensal' },
+  { label: 'Anual', value: 'anual' },
+];
+
+// Helpers
+function formatCurrency(value: string): string {
+  const digits = value.replace(/\D/g, '') || '0';
+  const num = parseInt(digits, 10);
+  const cents = (num % 100).toString().padStart(2, '0');
+  const integer = Math.floor(num / 100);
+  const integerStr = integer.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return `R$ ${integerStr},${cents}`;
+}
+
+function parseCurrency(input: string): number {
+  if (!input) return 0;
+  const cleaned = input.replace(/[^\d,.-]/g, '');
+  const normalized = cleaned.includes(',') && cleaned.includes('.')
+    ? cleaned.replace(/\./g, '').replace(',', '.')
+    : cleaned.replace(',', '.');
+  return parseFloat(normalized) || 0;
+}
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+export default function AddTransactionModal({
+  visible,
+  onClose,
+  onSave,
+  initialType = 'despesa',
+}: Props) {
   const theme = useTheme();
 
-  const [type, setType] = useState<'despesa' | 'receita' | 'transfer'>(initialType);
-  const [amount, setAmount] = useState('0,00');
+  // State
+  const [type, setType] = useState<TransactionType>(initialType);
+  const [amount, setAmount] = useState('R$ 0,00');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Outros');
-  const [account, setAccount] = useState('Nuconta');
-  const [toAccount, setToAccount] = useState('Nuconta');
+  const [account, setAccount] = useState('Nubank');
+  const [toAccount, setToAccount] = useState('Itaú');
   const [date, setDate] = useState(new Date());
-  const [recurrence, setRecurrence] = useState<'fixo'|'parcelado'|'none'>('none');
-  const [editingDescription, setEditingDescription] = useState(false);
-  const descriptionRef = React.useRef<any>(null);
+  const [recurrence, setRecurrence] = useState<RecurrenceType>('none');
 
+  // Menu visibility states
+  const [showCategoryMenu, setShowCategoryMenu] = useState(false);
+  const [showAccountMenu, setShowAccountMenu] = useState(false);
+  const [showToAccountMenu, setShowToAccountMenu] = useState(false);
+  const [showRecurrenceMenu, setShowRecurrenceMenu] = useState(false);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+
+  // Reset form when modal opens
   useEffect(() => {
-    setType(initialType);
-  }, [initialType]);
-
-  function parseCurrencyToNumber(input: string) {
-    // Accepts "1.234,56" or "1234.56" and returns number 1234.56
-    if (!input) return 0;
-    let v = input.trim();
-    // Remove currency symbols and spaces
-    v = v.replace(/[^0-9,.-]/g, '');
-    // If contains comma and dot, assume dot is thousands, comma is decimal: '1.234,56'
-    if (v.indexOf(',') > -1 && v.indexOf('.') > -1) {
-      v = v.replace(/\./g, '').replace(',', '.');
-    } else {
-      // Replace comma with dot
-      v = v.replace(',', '.');
+    if (visible) {
+      setType(initialType);
+      setAmount('R$ 0,00');
+      setDescription('');
+      setCategory('Outros');
+      setAccount('Nubank');
+      setToAccount('Itaú');
+      setDate(new Date());
+      setRecurrence('none');
     }
-    const n = parseFloat(v);
-    return isNaN(n) ? 0 : n;
-  }
+  }, [visible, initialType]);
 
-  function handleSave() {
-    const parsed = parseCurrencyToNumber(amount);
+  // Colors based on type
+  const headerColor = {
+    despesa: theme.colors.error,
+    receita: theme.colors.primary,
+    transfer: '#64748b',
+  }[type];
+
+  const handleAmountChange = useCallback((text: string) => {
+    setAmount(formatCurrency(text));
+  }, []);
+
+  const handleDateChange = useCallback(
+    (event: DateTimePickerEvent, selectedDate?: Date) => {
+      // No Android, sempre fechar o picker após seleção ou cancelamento
+      if (Platform.OS === 'android') {
+        setShowDatePicker(false);
+      }
+      // Só atualiza a data se o usuário confirmou (não cancelou)
+      if (event.type === 'set' && selectedDate) {
+        setDate(selectedDate);
+      }
+    },
+    []
+  );
+
+  const handleSave = useCallback(() => {
+    const parsed = parseCurrency(amount);
     const value = type === 'despesa' ? -Math.abs(parsed) : parsed;
-    if (onSave) onSave({ type, amount: value, description, category, account, toAccount: type === 'transfer' ? toAccount : undefined, date, recurrence });
-    // onClose will be called by parent or we call it here to ensure modal closes
-    if (onClose) onClose();
-  }
-  const amountColor = type === 'despesa' ? (theme.colors?.error || '#B00020') : (theme.colors?.primary || '#2563eb');
-  function formatAmountInput(text: string) {
-    // keep digits only
-    const digits = text.replace(/\D/g, '') || '0';
-    const num = parseInt(digits, 10);
-    const cents = (num % 100).toString().padStart(2, '0');
-    const integer = Math.floor(num / 100).toString();
-    const withThousands = integer.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-    return `${withThousands},${cents}`;
-  }
+    onSave?.({
+      type,
+      amount: value,
+      description,
+      category,
+      account,
+      toAccount: type === 'transfer' ? toAccount : undefined,
+      date,
+      recurrence,
+    });
+    onClose();
+  }, [type, amount, description, category, account, toAccount, date, recurrence, onSave, onClose]);
 
-  function handleAmountChange(text: string) {
-    // allow pasting formatted or raw numbers
-    const formatted = formatAmountInput(text);
-    setAmount(formatted);
-  }
-
-  useEffect(() => {
-    if (editingDescription && descriptionRef.current && descriptionRef.current.focus) {
-      descriptionRef.current.focus();
-    }
-  }, [editingDescription]);
+  // Select field component
+  const SelectField = ({
+    label,
+    value,
+    icon,
+    visible: menuVisible,
+    onOpen,
+    onClose: closeMenu,
+    options,
+    onSelect,
+  }: {
+    label: string;
+    value: string;
+    icon: string;
+    visible: boolean;
+    onOpen: () => void;
+    onClose: () => void;
+    options: string[];
+    onSelect: (value: string) => void;
+  }) => (
+    <Menu
+      visible={menuVisible}
+      onDismiss={closeMenu}
+      anchor={
+        <Pressable onPress={onOpen} style={styles.selectField}>
+          <IconButton icon={icon} size={20} style={styles.fieldIcon} />
+          <View style={styles.fieldContent}>
+            <Text variant="labelSmall" style={styles.fieldLabel}>{label}</Text>
+            <Text variant="bodyMedium">{value}</Text>
+          </View>
+          <IconButton icon="chevron-down" size={20} />
+        </Pressable>
+      }
+      contentStyle={styles.menuContent}
+    >
+      <ScrollView style={styles.menuScroll}>
+        {options.map((option) => (
+          <Menu.Item
+            key={option}
+            title={option}
+            onPress={() => {
+              onSelect(option);
+              closeMenu();
+            }}
+          />
+        ))}
+      </ScrollView>
+    </Menu>
+  );
 
   return (
-    <Portal>
-      <Modal
-        visible={visible}
-        onDismiss={onClose}
-        dismissable={true}
-          contentContainerStyle={{ height: '100%', justifyContent: 'flex-end', margin: 0, backgroundColor: 'transparent' }}
-      >
-        <SafeAreaView edges={['bottom']}>
-          <View style={{ alignItems: 'stretch' }}>
-            <Surface style={[styles.sheet, { backgroundColor: theme.colors.background }]}> 
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
+      <PaperProvider>
+        <View style={styles.centeredView}>
+          <Pressable style={styles.overlay} onPress={onClose} />
+          <View style={styles.modalContainer}>
+            <View style={[styles.sheet, { backgroundColor: theme.colors.background }]}>
+              {/* Handle */}
               <View style={styles.handle} />
 
-              <View style={[styles.headerTop, { backgroundColor: amountColor }] }>
-                <View style={{ flex: 1 }}>
-                  <PaperText style={[styles.headerTitle, { color: '#fff' }]}>{type === 'despesa' ? 'Despesa' : type === 'receita' ? 'Receita' : 'Transferência'}</PaperText>
-                  <View style={styles.chipsContainer}>
-                    <Chip selected={type === 'despesa'} onPress={() => setType('despesa')} style={styles.chip} compact mode="outlined">Despesa</Chip>
-                    <Chip selected={type === 'receita'} onPress={() => setType('receita')} style={styles.chip} compact mode="outlined">Receita</Chip>
-                    <Chip selected={type === 'transfer'} onPress={() => setType('transfer')} style={styles.chip} compact mode="outlined">Transferência</Chip>
-                  </View>
-                </View>
-                <IconButton icon="close" onPress={onClose} accessibilityLabel="Fechar" color="#fff" />
-              </View>
+          {/* Header with type selector and amount */}
+          <View style={[styles.header, { backgroundColor: headerColor }]}>
+            {/* Type chips */}
+            <View style={styles.typeSelector}>
+              {(['despesa', 'receita', 'transfer'] as TransactionType[]).map((t) => (
+                <Pressable
+                  key={t}
+                  onPress={() => setType(t)}
+                  style={[
+                    styles.typeChip,
+                    type === t && styles.typeChipActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.typeChipText,
+                      type === t && styles.typeChipTextActive,
+                    ]}
+                  >
+                    {t === 'despesa' ? 'Despesa' : t === 'receita' ? 'Receita' : 'Transferência'}
+                  </Text>
+                </Pressable>
+              ))}
+            </View>
 
-              <ScrollView contentContainerStyle={{ paddingBottom: 140 }} keyboardShouldPersistTaps="handled">
-                <View style={styles.amountRow}>
-                  <PaperInput
-                    label="Valor"
-                    value={amount}
-                    onChangeText={handleAmountChange}
-                    keyboardType="numeric"
-                    mode="flat"
-                    style={styles.amountBox}
-                    contentStyle={styles.amountInputText}
-                    right={<PaperText style={{ marginRight: 8, color: amountColor }}>{type === 'despesa' ? 'R$' : ''}</PaperText>}
-                  />
-                </View>
-
-                <Divider />
-
-                {editingDescription ? (
-                  <View style={{ paddingHorizontal: 8 }}>
-                    <PaperInput
-                      ref={descriptionRef}
-                      label="Descrição"
-                      value={description}
-                      onChangeText={setDescription}
-                      onBlur={() => setEditingDescription(false)}
-                      mode="outlined"
-                    />
-                  </View>
-                ) : (
-                  <List.Item title="Descrição" description={description || 'Adicione a descrição'} left={() => <List.Icon icon="pencil" />} onPress={() => setEditingDescription(true)} />
-                )}
-                <Divider />
-
-                <List.Item title="Categoria" description={category} left={() => <List.Icon icon="format-list-bulleted" />} onPress={() => { /* open category picker */ }} />
-                <Divider />
-
-                {type !== 'transfer' ? (
-                  <List.Item title={type === 'despesa' ? 'Pago com' : 'Recebido em'} description={account} left={() => <List.Icon icon="bank" />} onPress={() => {}} />
-                ) : (
-                  <>
-                    <List.Item title="De" description={account} left={() => <List.Icon icon="arrow-up" />} onPress={() => {}} />
-                    <Divider />
-                    <List.Item title="Para" description={toAccount} left={() => <List.Icon icon="arrow-down" />} onPress={() => {}} />
-                  </>
-                )}
-
-                <Divider />
-
-                <List.Item title="Data" description={'Hoje'} left={() => <List.Icon icon="calendar" />} onPress={() => { /* open date picker */ }} />
-                <Divider />
-
-                <List.Item title="Repetir lançamento" description={recurrence === 'none' ? 'Não' : recurrence} left={() => <List.Icon icon="repeat" />} onPress={() => {}} />
-                <Divider />
-
-              </ScrollView>
-
-              <FAB icon="check" style={styles.fabCenter} onPress={handleSave} large visible color="#fff" />
-            </Surface>
+            {/* Amount input */}
+            <TextInput
+              value={amount}
+              onChangeText={handleAmountChange}
+              keyboardType="numeric"
+              mode="flat"
+              style={styles.amountInput}
+              contentStyle={styles.amountInputContent}
+              underlineColor="transparent"
+              activeUnderlineColor="transparent"
+              textColor="#fff"
+              placeholderTextColor="rgba(255,255,255,0.6)"
+            />
           </View>
-        </SafeAreaView>
-      </Modal>
-    </Portal>
+
+          {/* Form fields */}
+          <ScrollView style={styles.form} showsVerticalScrollIndicator={false}>
+            {/* Description */}
+            <View style={styles.inputWrapper}>
+              <TextInput
+                label="Descrição"
+                value={description}
+                onChangeText={setDescription}
+                mode="outlined"
+                left={<TextInput.Icon icon="text" />}
+                style={styles.textInput}
+              />
+            </View>
+
+            <Divider style={styles.divider} />
+
+            {/* Category */}
+            <SelectField
+              label="Categoria"
+              value={category}
+              icon="tag-outline"
+              visible={showCategoryMenu}
+              onOpen={() => setShowCategoryMenu(true)}
+              onClose={() => setShowCategoryMenu(false)}
+              options={CATEGORIES}
+              onSelect={setCategory}
+            />
+
+            <Divider style={styles.divider} />
+
+            {/* Account fields */}
+            {type === 'transfer' ? (
+              <>
+                <SelectField
+                  label="De (conta origem)"
+                  value={account}
+                  icon="bank-transfer-out"
+                  visible={showAccountMenu}
+                  onOpen={() => setShowAccountMenu(true)}
+                  onClose={() => setShowAccountMenu(false)}
+                  options={ACCOUNTS}
+                  onSelect={setAccount}
+                />
+                <Divider style={styles.divider} />
+                <SelectField
+                  label="Para (conta destino)"
+                  value={toAccount}
+                  icon="bank-transfer-in"
+                  visible={showToAccountMenu}
+                  onOpen={() => setShowToAccountMenu(true)}
+                  onClose={() => setShowToAccountMenu(false)}
+                  options={ACCOUNTS.filter((a) => a !== account)}
+                  onSelect={setToAccount}
+                />
+              </>
+            ) : (
+              <SelectField
+                label={type === 'despesa' ? 'Pago com' : 'Recebido em'}
+                value={account}
+                icon="bank-outline"
+                visible={showAccountMenu}
+                onOpen={() => setShowAccountMenu(true)}
+                onClose={() => setShowAccountMenu(false)}
+                options={ACCOUNTS}
+                onSelect={setAccount}
+              />
+            )}
+
+            <Divider style={styles.divider} />
+
+            {/* Date */}
+            <Pressable onPress={() => setShowDatePicker(true)} style={styles.selectField}>
+              <IconButton icon="calendar" size={20} style={styles.fieldIcon} />
+              <View style={styles.fieldContent}>
+                <Text variant="labelSmall" style={styles.fieldLabel}>Data</Text>
+                <Text variant="bodyMedium">{formatDate(date)}</Text>
+              </View>
+              <IconButton icon="chevron-right" size={20} />
+            </Pressable>
+
+            {showDatePicker && (
+              <DateTimePicker
+                value={date}
+                mode="date"
+                display="default"
+                onChange={handleDateChange}
+              />
+            )}
+
+            <Divider style={styles.divider} />
+
+            {/* Recurrence */}
+            <SelectField
+              label="Repetir lançamento"
+              value={RECURRENCE_OPTIONS.find((r) => r.value === recurrence)?.label || 'Não repetir'}
+              icon="repeat"
+              visible={showRecurrenceMenu}
+              onOpen={() => setShowRecurrenceMenu(true)}
+              onClose={() => setShowRecurrenceMenu(false)}
+              options={RECURRENCE_OPTIONS.map((r) => r.label)}
+              onSelect={(label) => {
+                const option = RECURRENCE_OPTIONS.find((r) => r.label === label);
+                if (option) setRecurrence(option.value);
+              }}
+            />
+
+            {/* Save button inside scroll */}
+            <View style={styles.buttonContainer}>
+              <Button
+                mode="contained"
+                onPress={handleSave}
+                style={[styles.saveButton, { backgroundColor: headerColor }]}
+                contentStyle={styles.saveButtonContent}
+                labelStyle={styles.saveButtonLabel}
+                icon="check"
+              >
+                Confirmar
+              </Button>
+            </View>
+          </ScrollView>
+            </View>
+          </View>
+        </View>
+      </PaperProvider>
+    </Modal>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.32)' },
-  sheet: { borderTopLeftRadius: 16, borderTopRightRadius: 16, padding: 16, maxHeight: '85%' },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 },
-  headerTitle: { fontSize: 18, fontWeight: '700' },
-  tabRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  tab: { paddingHorizontal: 6, paddingVertical: 8, borderRadius: 8 },
-  amountRow: { alignItems: 'center', paddingVertical: 8 },
-  amountBox: { width: '100%', height: 100, justifyContent: 'center' },
-  amountInputText: { fontSize: 40, fontWeight: '700', textAlign: 'center' },
-  formRow: { marginVertical: 6 },
-  rowTitle: { color: '#6b6b6b', fontWeight: '600', marginBottom: 4 },
-  input: { backgroundColor: 'transparent' },
-  pill: { padding: 10, borderRadius: 8 },
-  rowInline: { flexDirection: 'row', alignItems: 'flex-start' },
-  smallPill: { padding: 8, borderRadius: 8, marginRight: 8 },
-  fab: { position: 'absolute', right: 16, bottom: 16, backgroundColor: '#16a34a' },
-  handle: { width: 48, height: 6, borderRadius: 4, backgroundColor: 'rgba(0,0,0,0.08)', alignSelf: 'center', marginBottom: 10 },
-  headerTop: { borderTopLeftRadius: 16, borderTopRightRadius: 16, paddingHorizontal: 16, paddingVertical: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  chipsContainer: { flexDirection: 'row', marginTop: 8 },
-  chip: { marginRight: 8, borderRadius: 12, borderWidth: 1 },
-  amountBig: { fontSize: 44, fontWeight: '700', color: '#fff' },
-  fabCenter: { position: 'absolute', alignSelf: 'center', bottom: -36, backgroundColor: '#16a34a', width: 84, height: 84, borderRadius: 42, justifyContent: 'center', elevation: 8, zIndex: 1000, shadowColor: '#000', shadowOpacity: 0.18, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } },
+  centeredView: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContainer: {
+    width: '92%',
+    maxHeight: SCREEN_HEIGHT * 0.85,
+    borderRadius: 24,
+    overflow: 'hidden',
+  },
+  sheet: {
+    borderRadius: 24,
+    overflow: 'hidden',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    maxHeight: SCREEN_HEIGHT * 0.85,
+  },
+  handle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    alignSelf: 'center',
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  header: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 20,
+  },
+  typeSelector: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  typeChip: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  typeChipActive: {
+    backgroundColor: '#fff',
+  },
+  typeChipText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.8)',
+  },
+  typeChipTextActive: {
+    color: '#1f2937',
+  },
+  amountInput: {
+    backgroundColor: 'transparent',
+    fontSize: 32,
+  },
+  amountInputContent: {
+    fontSize: 36,
+    fontWeight: '700',
+    textAlign: 'center',
+    paddingVertical: 4,
+  },
+  form: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    paddingBottom: 80,
+  },
+  inputWrapper: {
+    marginBottom: 4,
+  },
+  textInput: {
+    backgroundColor: 'transparent',
+  },
+  divider: {
+    marginVertical: 8,
+  },
+  selectField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  fieldIcon: {
+    margin: 0,
+    marginRight: 4,
+  },
+  fieldContent: {
+    flex: 1,
+  },
+  fieldLabel: {
+    color: '#6b7280',
+    marginBottom: 2,
+  },
+  menuContent: {
+    maxHeight: 300,
+  },
+  menuScroll: {
+    maxHeight: 280,
+  },
+  buttonContainer: {
+    padding: 16,
+    paddingBottom: Platform.OS === 'ios' ? 24 : 16,
+    backgroundColor: 'transparent',
+  },
+  saveButton: {
+    borderRadius: 12,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+  },
+  saveButtonContent: {
+    paddingVertical: 8,
+  },
+  saveButtonLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
 });

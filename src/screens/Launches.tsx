@@ -96,11 +96,11 @@ export default function Launches() {
   
   // Carregar faturas de cartão de crédito
   const loadCreditCardBills = async () => {
-    if (!user || filterAccountId || activeCards.length === 0) {
+    if (!user || activeCards.length === 0) {
       setCreditCardBills([]);
       return;
     }
-    
+
     setBillsLoading(true);
     try {
       const bills = await generateBillsForMonth(
@@ -109,7 +109,20 @@ export default function Launches() {
         selectedYear,
         activeCards
       );
-      setCreditCardBills(bills);
+
+      // If an account filter is active, include only bills related to that account.
+      // A bill is related if it was paid from that account (paidFromAccountId) or
+      // if any transaction in the bill references the accountId.
+      if (filterAccountId) {
+        const filtered = bills.filter((bill) => {
+          if ((bill as any).paidFromAccountId && (bill as any).paidFromAccountId === filterAccountId) return true;
+          if (bill.transactions && bill.transactions.some((tx) => tx.accountId === filterAccountId)) return true;
+          return false;
+        });
+        setCreditCardBills(filtered);
+      } else {
+        setCreditCardBills(bills);
+      }
     } catch (error) {
       console.error('Erro ao carregar faturas:', error);
     } finally {
@@ -447,7 +460,7 @@ export default function Launches() {
               ) : (
                 <View style={[styles.listCard, { backgroundColor: colors.card }, getShadow(colors)]}>
                   {/* Faturas de Cartão de Crédito - integradas na lista */}
-                  {!filterAccountId && creditCardBills.length > 0 && (
+                  {creditCardBills.length > 0 && (
                     creditCardBills.map((bill) => (
                       <CreditCardBillItem
                         key={`bill-${bill.creditCardId}`}

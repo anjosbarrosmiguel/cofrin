@@ -62,7 +62,7 @@ export default function BalanceCard({ balance = 0, accounts = [], onAccountPress
       {/* Header with total balance */}
       <View style={styles.header}>
         <View style={styles.balanceSection}>
-          <Text variant="labelMedium" style={[styles.balanceLabel, { color: colors.textMuted }]}>Saldo geral</Text>
+          <Text variant="labelMedium" style={[styles.balanceLabel, { color: colors.textMuted }]}>Saldo em contas</Text>
           <Text variant="headlineMedium" style={[styles.balanceValue, { color: colors.text }]}>
             {formatCurrencyBRL(balance)}
           </Text>

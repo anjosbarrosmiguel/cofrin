@@ -2,14 +2,16 @@ import { View, StyleSheet, ScrollView, useWindowDimensions } from "react-native"
 import { useAuth } from "../contexts/authContext";
 import { useAppTheme } from "../contexts/themeContext";
 import { useTransactions } from "../hooks/useFirebaseTransactions";
+import { useAccounts } from "../hooks/useAccounts";
 import { useTransactionRefresh } from "../contexts/transactionRefreshContext";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import AppHeader from "../components/AppHeader";
 import MainLayout from "../components/MainLayout";
 import HomeOverview from "../components/home/HomeOverview";
 import BalanceCard from "../components/home/BalanceCard";
 import TopExpensesCard from "../components/home/TopExpensesCard";
 import CreditCardsCard from "../components/home/CreditCardsCard";
+import { ACCOUNT_TYPE_LABELS } from "../types/firebase";
 
 export default function Home() {
   const { user } = useAuth();
@@ -35,10 +37,29 @@ export default function Home() {
     year: currentYear 
   });
 
+  // Hook de contas do Firebase
+  const { accounts, refresh: refreshAccounts } = useAccounts();
+
+  // Calcular saldo total das contas e formatar para o componente
+  const { totalAccountsBalance, formattedAccounts } = useMemo(() => {
+    const total = accounts
+      .filter(acc => acc.includeInTotal)
+      .reduce((sum, acc) => sum + acc.balance, 0);
+    
+    const formatted = accounts.map(acc => ({
+      name: acc.name,
+      type: ACCOUNT_TYPE_LABELS[acc.type] || acc.type,
+      balance: acc.balance,
+    }));
+
+    return { totalAccountsBalance: total, formattedAccounts: formatted };
+  }, [accounts]);
+
   // Refresh quando refreshKey mudar
   useEffect(() => {
     if (refreshKey > 0) {
       refresh();
+      refreshAccounts();
     }
   }, [refreshKey]);
 
@@ -65,7 +86,7 @@ export default function Home() {
         <View style={{ height: 12 }} />
         <View style={{ flexDirection: isNarrow ? 'column' : 'row' }}>
           <View style={{ flex: 1 }}>
-            <BalanceCard balance={2637} accounts={[{ name: 'CARTEIRA FÍSICA', type: 'Conta manual', balance: 30 }, { name: 'Nuconta', type: 'Conta manual', balance: 2607.47 }]} />
+            <BalanceCard balance={totalAccountsBalance} accounts={formattedAccounts} />
           </View>
           <View style={{ width: isNarrow ? '100%' : 12, height: isNarrow ? 12 : 'auto' }} />
           <View style={{ flex: 1 }}>

@@ -31,6 +31,10 @@ interface ThemeColors {
   warning: string;
   warningBg: string;
   
+  // Transaction colors
+  income: string;
+  expense: string;
+  
   // Neutral
   border: string;
   gray: string;
@@ -61,6 +65,9 @@ const lightTheme: ThemeColors = {
   warning: '#f59e0b',
   warningBg: '#fffbeb',
   
+  income: '#10b981',
+  expense: '#ef4444',
+  
   border: '#e2e8f0',
   gray: '#64748b',
   grayLight: '#f1f5f9',
@@ -90,6 +97,9 @@ const darkTheme: ThemeColors = {
   warning: '#fbbf24',
   warningBg: '#78350f',
   
+  income: '#34d399',
+  expense: '#f87171',
+  
   border: '#334155',
   gray: '#94a3b8',
   grayLight: '#1e293b',
@@ -118,6 +128,9 @@ const tealTheme: ThemeColors = {
   dangerBg: '#fef2f2',
   warning: '#f59e0b',
   warningBg: '#fffbeb',
+  
+  income: '#10b981',
+  expense: '#ef4444',
   
   border: '#99f6e4',
   gray: '#5eead4',

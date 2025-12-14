@@ -1,4 +1,6 @@
 // Centralized color palette & spacing. Use white + modern blue theme.
+import { Platform } from 'react-native';
+
 export const palette = {
   // Backgrounds
   white: '#ffffff',
@@ -23,6 +25,10 @@ export const palette = {
   warning: '#f59e0b',
   warningBg: '#fffbeb',
   
+  // Transaction colors
+  income: '#10b981',
+  expense: '#ef4444',
+  
   // Neutral
   gray: '#64748b',
   grayLight: '#f1f5f9',
@@ -42,6 +48,7 @@ export const borderRadius = {
   md: 12,
   lg: 16,
   xl: 24,
+  full: 9999,
 };
 
 export const shadows = {
@@ -74,4 +81,15 @@ export const shadows = {
   },
 };
 
-export default { palette, spacing, borderRadius, shadows };
+// Helper function to get cross-platform shadow
+export function getShadow(colors: { card: string }, size: 'sm' | 'md' | 'lg' = 'md') {
+  const shadow = shadows[size];
+  return Platform.select({
+    web: {
+      boxShadow: `0px ${shadow.shadowOffset.height * 2}px ${shadow.shadowRadius * 2}px rgba(0,0,0,${shadow.shadowOpacity})`,
+    },
+    default: shadow,
+  });
+}
+
+export default { palette, spacing, borderRadius, shadows, getShadow };

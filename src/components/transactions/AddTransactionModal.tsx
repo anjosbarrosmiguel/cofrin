@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Platform,
-  Pressable,
-  Modal,
-  Dimensions,
-  Text,
-  TextInput,
-  Alert,
+    View,
+    StyleSheet,
+    ScrollView,
+    Platform,
+    Pressable,
+    Modal,
+    Dimensions,
+    Text,
+    TextInput,
+    Alert,
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -913,263 +913,280 @@ export default function AddTransactionModal({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
-      <View style={styles.centeredView}>
-        <Pressable style={styles.overlay} onPress={onClose} />
-        
-        {/* Main Modal or Picker */}
-        {activePicker !== 'none' ? (
-          // Picker overlay
-          <View style={styles.pickerOverlay}>
-            <Pressable 
-              style={StyleSheet.absoluteFill} 
-              onPress={() => setActivePicker('none')} 
-            />
-            {renderPickerContent()}
-          </View>
-        ) : (
-          // Main form
-          <View style={[styles.modalContainer, getShadow(colors, 'lg')]}>
-            <View style={[styles.sheet, { backgroundColor: colors.bg }]}>
-              {/* Header colorido */}
-              <View style={[styles.header, { backgroundColor: headerColor }]}>
-                {/* Botão fechar */}
-                <Pressable onPress={onClose} style={styles.closeButton} hitSlop={12}>
-                  <MaterialCommunityIcons name="close" size={24} color="#fff" />
-                </Pressable>
-
-                {/* Título */}
-                <Text style={styles.headerTitle}>
-                  {isEditMode 
-                    ? (type === 'despesa' ? 'Editar Despesa' : type === 'receita' ? 'Editar Receita' : 'Editar Transferência')
-                    : (type === 'despesa' ? 'Nova Despesa' : type === 'receita' ? 'Nova Receita' : 'Nova Transferência')
-                  }
-                </Text>
-
-                {/* Type selector */}
-                <View style={styles.typeSelector}>
-                  {(['despesa', 'receita', 'transfer'] as LocalTransactionType[]).map((t) => (
+    <>
+      <Modal
+        visible={visible}
+        transparent
+        animationType="fade"
+        onRequestClose={onClose}
+        statusBarTranslucent
+      >
+        <View style={styles.centeredView}>
+          <Pressable style={styles.overlay} onPress={onClose} />
+          {/* Main Modal or Picker */}
+          {activePicker !== 'none' ? (
+            // Picker overlay
+            <View style={styles.pickerOverlay}>
+              <Pressable
+                style={StyleSheet.absoluteFill}
+                onPress={() => setActivePicker('none')}
+              />
+              {renderPickerContent()}
+            </View>
+          ) : (
+            // Main form
+            <View style={[styles.modalContainer, getShadow(colors, 'lg')]}> 
+              <View style={[styles.sheet, { backgroundColor: colors.bg }]}> 
+                {/* Header colorido */}
+                <View style={[styles.header, { backgroundColor: headerColor }]}> 
+                  {/* Botão fechar */}
+                  <Pressable onPress={onClose} style={styles.closeButton} hitSlop={12}> 
+                    <MaterialCommunityIcons name="close" size={24} color="#fff" /> 
+                  </Pressable>
+                  {/* Título */}
+                  <Text style={styles.headerTitle}> 
+                    {isEditMode 
+                      ? (type === 'despesa' ? 'Editar Despesa' : type === 'receita' ? 'Editar Receita' : 'Editar Transferência')
+                      : (type === 'despesa' ? 'Nova Despesa' : type === 'receita' ? 'Nova Receita' : 'Nova Transferência')
+                    }
+                  </Text>
+                  {/* Type selector */}
+                  <View style={styles.typeSelector}> 
+                    {(['despesa', 'receita', 'transfer'] as LocalTransactionType[]).map((t) => (
+                      <Pressable
+                        key={t}
+                        onPress={() => setType(t)}
+                        style={[ 
+                          styles.typeChip,
+                          type === t && styles.typeChipActive,
+                        ]}
+                        disabled={activeAccounts.length === 0}
+                      >
+                        <MaterialCommunityIcons
+                          name={t === 'despesa' ? 'arrow-down' : t === 'receita' ? 'arrow-up' : 'swap-horizontal'}
+                          size={16}
+                          color={type === t ? headerColor : 'rgba(255,255,255,0.7)'}
+                        />
+                        <Text
+                          style={[ 
+                            styles.typeChipText,
+                            type === t && styles.typeChipTextActive,
+                          ]}
+                        >
+                          {t === 'despesa' ? 'Despesa' : t === 'receita' ? 'Receita' : 'Transf.'}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                  {/* Amount input */}
+                  <TextInput
+                    value={amount}
+                    onChangeText={handleAmountChange}
+                    keyboardType="numeric"
+                    style={styles.amountInput}
+                    placeholderTextColor="rgba(255,255,255,0.6)"
+                    selectionColor="#fff"
+                    editable={activeAccounts.length > 0}
+                  />
+                </View>
+                {/* Onboarding message if no accounts */}
+                {activeAccounts.length === 0 ? (
+                  <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 32 }}>
+                    <MaterialCommunityIcons name="account-plus" size={48} color={colors.primary} style={{ marginBottom: 16 }} />
+                    <Text style={{ fontSize: 18, fontWeight: '600', color: colors.text, textAlign: 'center', marginBottom: 12 }}>
+                      Bem-vindo ao Cofrin!
+                    </Text>
+                    <Text style={{ fontSize: 15, color: colors.textMuted, textAlign: 'center', marginBottom: 24 }}>
+                      Verificamos que você não tem conta cadastrada e para iniciar os lançamentos isso é importante. Por favor, cadastre sua primeira conta para começar a usar o Cofrin.
+                    </Text>
                     <Pressable
-                      key={t}
-                      onPress={() => setType(t)}
-                      style={[
-                        styles.typeChip,
-                        type === t && styles.typeChipActive,
+                      onPress={onClose}
+                      style={({ pressed }) => [
+                        styles.saveButton,
+                        { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 },
                       ]}
                     >
-                      <MaterialCommunityIcons
-                        name={t === 'despesa' ? 'arrow-down' : t === 'receita' ? 'arrow-up' : 'swap-horizontal'}
-                        size={16}
-                        color={type === t ? headerColor : 'rgba(255,255,255,0.7)'}
-                      />
-                      <Text
-                        style={[
-                          styles.typeChipText,
-                          type === t && styles.typeChipTextActive,
-                        ]}
-                      >
-                        {t === 'despesa' ? 'Despesa' : t === 'receita' ? 'Receita' : 'Transf.'}
-                      </Text>
+                      <MaterialCommunityIcons name="arrow-left" size={20} color="#fff" />
+                      <Text style={styles.saveButtonText}>Cadastrar Conta</Text>
                     </Pressable>
-                  ))}
-                </View>
-
-                {/* Amount input */}
-                <TextInput
-                  value={amount}
-                  onChangeText={handleAmountChange}
-                  keyboardType="numeric"
-                  style={styles.amountInput}
-                  placeholderTextColor="rgba(255,255,255,0.6)"
-                  selectionColor="#fff"
-                />
-              </View>
-
-              {/* Form fields */}
-              <ScrollView
-                style={styles.form}
-                contentContainerStyle={styles.formContent}
-                showsVerticalScrollIndicator={false}
-              >
-                {/* Descrição */}
-                <View style={[styles.inputContainer, { backgroundColor: colors.card }, getShadow(colors)]}>
-                  <View style={[styles.fieldIcon, { backgroundColor: colors.primaryBg }]}>
-                    <MaterialCommunityIcons name="text" size={20} color={colors.primary} />
                   </View>
-                  <View style={styles.inputWrapper}>
-                    <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Descrição</Text>
-                    <TextInput
-                      value={description}
-                      onChangeText={setDescription}
-                      placeholder="Ex: Almoço, Salário..."
-                      placeholderTextColor={colors.textMuted}
-                      style={[styles.textInput, { color: colors.text }]}
-                    />
-                  </View>
-                </View>
-
-                {/* Card de campos */}
-                <View style={[styles.fieldsCard, { backgroundColor: colors.card }, getShadow(colors)]}>
-                  {/* Categoria - não mostrar para transferências */}
-                  {type !== 'transfer' && (
-                    <>
-                      <SelectField
-                        label="Categoria"
-                        value={categoryName}
-                        icon="tag-outline"
-                        onPress={() => setActivePicker('category')}
+                ) : (
+                  <View style={{flex: 1}}>
+                    {/* Form fields */}
+                    <ScrollView
+                      style={styles.form}
+                      contentContainerStyle={styles.formContent}
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {/* Descrição */}
+                  <View style={[styles.inputContainer, { backgroundColor: colors.card }, getShadow(colors)]}>
+                    <View style={[styles.fieldIcon, { backgroundColor: colors.primaryBg }]}>
+                      <MaterialCommunityIcons name="text" size={20} color={colors.primary} />
+                    </View>
+                    <View style={styles.inputWrapper}>
+                      <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Descrição</Text>
+                      <TextInput
+                        value={description}
+                        onChangeText={setDescription}
+                        placeholder="Ex: Almoço, Salário..."
+                        placeholderTextColor={colors.textMuted}
+                        style={[styles.textInput, { color: colors.text }]}
                       />
-                      <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                    </>
-                  )}
-
-                  {/* Conta */}
-                  {type === 'transfer' ? (
-                    <>
+                    </View>
+                  </View>
+                  {/* Card de campos */}
+                  <View style={[styles.fieldsCard, { backgroundColor: colors.card }, getShadow(colors)]}>
+                    {/* Categoria - não mostrar para transferências */}
+                    {type !== 'transfer' && (
+                      <>
+                        <SelectField
+                          label="Categoria"
+                          value={categoryName}
+                          icon="tag-outline"
+                          onPress={() => setActivePicker('category')}
+                        />
+                        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                      </>
+                    )}
+                    {/* Conta */}
+                    {type === 'transfer' ? (
+                      <>
+                        <SelectField
+                          label="De (conta origem)"
+                          value={accountName || 'Selecione'}
+                          icon="bank-transfer-out"
+                          onPress={() => setActivePicker('account')}
+                        />
+                        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                        <SelectField
+                          label="Para (conta destino)"
+                          value={toAccountName || 'Selecione'}
+                          icon="bank-transfer-in"
+                          onPress={() => setActivePicker('toAccount')}
+                        />
+                      </>
+                    ) : (
                       <SelectField
-                        label="De (conta origem)"
-                        value={accountName || 'Selecione'}
-                        icon="bank-transfer-out"
+                        label={type === 'despesa' ? 'Pago com' : 'Recebido em'}
+                        value={useCreditCard ? creditCardName : (accountName || 'Selecione')}
+                        icon={useCreditCard ? 'credit-card' : 'bank-outline'}
                         onPress={() => setActivePicker('account')}
                       />
-                      <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                      <SelectField
-                        label="Para (conta destino)"
-                        value={toAccountName || 'Selecione'}
-                        icon="bank-transfer-in"
-                        onPress={() => setActivePicker('toAccount')}
-                      />
-                    </>
-                  ) : (
+                    )}
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    {/* Data */}
                     <SelectField
-                      label={type === 'despesa' ? 'Pago com' : 'Recebido em'}
-                      value={useCreditCard ? creditCardName : (accountName || 'Selecione')}
-                      icon={useCreditCard ? 'credit-card' : 'bank-outline'}
-                      onPress={() => setActivePicker('account')}
+                      label="Data"
+                      value={formatDate(date)}
+                      icon="calendar"
+                      onPress={() => setActivePicker('date')}
                     />
+                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    {/* Recorrência */}
+                    <SelectField
+                      label="Repetir"
+                      value={RECURRENCE_OPTIONS.find((r) => r.value === recurrence)?.label || 'Não repetir'}
+                      icon="repeat"
+                      onPress={() => setActivePicker('recurrence')}
+                    />
+                    {/* Número de repetições - só aparece se recorrência != none */}
+                    {recurrence !== 'none' && (
+                      <>
+                        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                        <SelectField
+                          label="Quantas vezes?"
+                          value={`${repetitions}x`}
+                          icon="counter"
+                          onPress={() => setActivePicker('repetitions')}
+                        />
+                      </>
+                    )}
+                  </View>
+                </ScrollView>
+                {/* Botões - fixo no fundo */}
+                <View style={[styles.buttonContainer, { backgroundColor: colors.bg }]}>
+                  {/* Botão Excluir - só aparece em modo edição */}
+                  {isEditMode && onDelete && editTransaction && (
+                    <Pressable
+                      onPress={() => {
+                        // Verificar se faz parte de uma série
+                        if (editTransaction.seriesId && onDeleteSeries) {
+                          Alert.alert(
+                            'Excluir lançamento',
+                            'Este lançamento faz parte de uma série. O que deseja fazer?',
+                            [
+                              { text: 'Cancelar', style: 'cancel' },
+                              { 
+                                text: 'Excluir apenas este', 
+                                onPress: () => {
+                                  onDelete(editTransaction.id);
+                                  onClose();
+                                }
+                              },
+                              { 
+                                text: 'Excluir toda a série', 
+                                style: 'destructive',
+                                onPress: () => {
+                                  onDeleteSeries(editTransaction.seriesId!);
+                                  onClose();
+                                }
+                              },
+                            ]
+                          );
+                        } else {
+                          // Transação única - confirmar normalmente
+                          Alert.alert(
+                            'Excluir lançamento',
+                            'Tem certeza que deseja excluir este lançamento?',
+                            [
+                              { text: 'Cancelar', style: 'cancel' },
+                              { 
+                                text: 'Excluir', 
+                                style: 'destructive',
+                                onPress: () => {
+                                  onDelete(editTransaction.id);
+                                  onClose();
+                                }
+                              },
+                            ]
+                          );
+                        }
+                      }}
+                      style={({ pressed }) => [
+                        styles.deleteButton,
+                        { borderColor: '#dc2626' },
+                        pressed && { opacity: 0.8, backgroundColor: '#dc262610' },
+                      ]}
+                    >
+                      <MaterialCommunityIcons name="trash-can-outline" size={20} color="#dc2626" />
+                      <Text style={styles.deleteButtonText}>Excluir</Text>
+                    </Pressable>
                   )}
-                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-                  {/* Data */}
-                  <SelectField
-                    label="Data"
-                    value={formatDate(date)}
-                    icon="calendar"
-                    onPress={() => setActivePicker('date')}
-                  />
-                  <View style={[styles.divider, { backgroundColor: colors.border }]} />
-
-                  {/* Recorrência */}
-                  <SelectField
-                    label="Repetir"
-                    value={RECURRENCE_OPTIONS.find((r) => r.value === recurrence)?.label || 'Não repetir'}
-                    icon="repeat"
-                    onPress={() => setActivePicker('recurrence')}
-                  />
-
-                  {/* Número de repetições - só aparece se recorrência != none */}
-                  {recurrence !== 'none' && (
-                    <>
-                      <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                      <SelectField
-                        label="Quantas vezes?"
-                        value={`${repetitions}x`}
-                        icon="counter"
-                        onPress={() => setActivePicker('repetitions')}
-                      />
-                    </>
-                  )}
-                </View>
-              </ScrollView>
-
-              {/* Botões - fixo no fundo */}
-              <View style={[styles.buttonContainer, { backgroundColor: colors.bg }]}>
-                {/* Botão Excluir - só aparece em modo edição */}
-                {isEditMode && onDelete && editTransaction && (
+                  {/* Botão Salvar/Atualizar - sempre verde */}
                   <Pressable
-                    onPress={() => {
-                      // Verificar se faz parte de uma série
-                      if (editTransaction.seriesId && onDeleteSeries) {
-                        Alert.alert(
-                          'Excluir lançamento',
-                          'Este lançamento faz parte de uma série. O que deseja fazer?',
-                          [
-                            { text: 'Cancelar', style: 'cancel' },
-                            { 
-                              text: 'Excluir apenas este', 
-                              onPress: () => {
-                                onDelete(editTransaction.id);
-                                onClose();
-                              }
-                            },
-                            { 
-                              text: 'Excluir toda a série', 
-                              style: 'destructive',
-                              onPress: () => {
-                                onDeleteSeries(editTransaction.seriesId!);
-                                onClose();
-                              }
-                            },
-                          ]
-                        );
-                      } else {
-                        // Transação única - confirmar normalmente
-                        Alert.alert(
-                          'Excluir lançamento',
-                          'Tem certeza que deseja excluir este lançamento?',
-                          [
-                            { text: 'Cancelar', style: 'cancel' },
-                            { 
-                              text: 'Excluir', 
-                              style: 'destructive',
-                              onPress: () => {
-                                onDelete(editTransaction.id);
-                                onClose();
-                              }
-                            },
-                          ]
-                        );
-                      }
-                    }}
+                    onPress={handleSave}
+                    disabled={saving}
                     style={({ pressed }) => [
-                      styles.deleteButton,
-                      { borderColor: '#dc2626' },
-                      pressed && { opacity: 0.8, backgroundColor: '#dc262610' },
+                      styles.saveButton,
+                      { backgroundColor: '#10b981' },
+                      pressed && { opacity: 0.9 },
+                      saving && { opacity: 0.6 },
                     ]}
                   >
-                    <MaterialCommunityIcons name="trash-can-outline" size={20} color="#dc2626" />
-                    <Text style={styles.deleteButtonText}>Excluir</Text>
+                    <MaterialCommunityIcons name={saving ? 'loading' : 'check'} size={20} color="#fff" />
+                    <Text style={styles.saveButtonText}>
+                      {saving ? (isEditMode ? 'Atualizando...' : 'Salvando...') : (isEditMode ? 'Atualizar' : 'Confirmar')}
+                    </Text>
                   </Pressable>
+                </View>
+                  </View>
                 )}
-                
-                {/* Botão Salvar/Atualizar - sempre verde */}
-                <Pressable
-                  onPress={handleSave}
-                  disabled={saving}
-                  style={({ pressed }) => [
-                    styles.saveButton,
-                    { backgroundColor: '#10b981' },
-                    pressed && { opacity: 0.9 },
-                    saving && { opacity: 0.6 },
-                  ]}
-                >
-                  <MaterialCommunityIcons name={saving ? 'loading' : 'check'} size={20} color="#fff" />
-                  <Text style={styles.saveButtonText}>
-                    {saving ? (isEditMode ? 'Atualizando...' : 'Salvando...') : (isEditMode ? 'Atualizar' : 'Confirmar')}
-                  </Text>
-                </Pressable>
               </View>
             </View>
-          </View>
-        )}
-      </View>
-    </Modal>
+          )}
+        </View>
+      </Modal>
+    </>
   );
 }
 

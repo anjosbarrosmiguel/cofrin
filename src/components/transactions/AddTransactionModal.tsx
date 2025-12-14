@@ -15,6 +15,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Timestamp } from 'firebase/firestore';
 import { useAppTheme } from '../../contexts/themeContext';
+import { useNavigation } from '@react-navigation/native';
 import { spacing, borderRadius, getShadow } from '../../theme';
 import { useCategories } from '../../hooks/useCategories';
 import { useAccounts } from '../../hooks/useAccounts';
@@ -120,6 +121,7 @@ export default function AddTransactionModal({
   const { activeAccounts } = useAccounts();
   const { activeCards } = useCreditCards();
   const { createTransaction, updateTransaction } = useTransactions();
+  const navigation = useNavigation<any>();
 
   // Mode
   const isEditMode = !!editTransaction;
@@ -1000,14 +1002,17 @@ export default function AddTransactionModal({
                       Verificamos que você não tem conta cadastrada e para iniciar os lançamentos isso é importante. Por favor, cadastre sua primeira conta para começar a usar o Cofrin.
                     </Text>
                     <Pressable
-                      onPress={onClose}
+                      onPress={() => {
+                        onClose();
+                        navigation.navigate('ConfigureAccounts');
+                      }}
                       style={({ pressed }) => [
-                        styles.saveButton,
-                        { backgroundColor: colors.primary, opacity: pressed ? 0.8 : 1 },
+                        styles.onboardingButton,
+                        { backgroundColor: colors.primary, opacity: pressed ? 0.9 : 1 },
                       ]}
                     >
-                      <MaterialCommunityIcons name="arrow-left" size={20} color="#fff" />
-                      <Text style={styles.saveButtonText}>Cadastrar Conta</Text>
+                      <MaterialCommunityIcons name="arrow-left" size={18} color="#fff" style={{ marginRight: 8 }} />
+                      <Text style={styles.onboardingButtonText}>Cadastrar Conta</Text>
                     </Pressable>
                   </View>
                 ) : (
@@ -1363,6 +1368,21 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#dc2626',
     marginLeft: spacing.xs,
+  },
+  onboardingButton: {
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    gap: spacing.xs,
+  },
+  onboardingButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
   },
   // Picker styles
   pickerOverlay: {

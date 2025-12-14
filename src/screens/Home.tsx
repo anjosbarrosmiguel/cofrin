@@ -42,14 +42,14 @@ export default function Home() {
           </View>
           <View style={{ width: isNarrow ? '100%' : 12, height: isNarrow ? 12 : 'auto' }} />
           <View style={{ flex: 1 }}>
-            <TopExpensesCard />
+            <CreditCardsCard cards={creditCards} />
           </View>
         </View>
 
         <View style={{ height: 12 }} />
         <View style={{ flexDirection: isNarrow ? 'column' : 'row' }}>
           <View style={{ flex: 1 }}>
-            <CreditCardsCard cards={creditCards} />
+            <TopExpensesCard />
           </View>
           {!isNarrow && <View style={{ flex: 1 }} />}
         </View>

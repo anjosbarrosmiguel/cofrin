@@ -1,11 +1,11 @@
 import { View, StyleSheet, ScrollView, useWindowDimensions } from "react-native";
-import { useNavigation } from "@react-navigation/native";
+import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../contexts/authContext";
 import { useAppTheme } from "../contexts/themeContext";
 import { useTransactions } from "../hooks/useFirebaseTransactions";
 import { useAccounts } from "../hooks/useAccounts";
 import { useTransactionRefresh } from "../contexts/transactionRefreshContext";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useCallback } from "react";
 import AppHeader from "../components/AppHeader";
 import MainLayout from "../components/MainLayout";
 import HomeOverview from "../components/home/HomeOverview";
@@ -75,6 +75,14 @@ export default function Home() {
       refreshAccounts();
     }
   }, [refreshKey]);
+
+  // Refresh quando a tela ganhar foco (ex: voltar de Lançamentos)
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+      refreshAccounts();
+    }, [])
+  );
 
   // Dados de exemplo dos cartões de crédito
   const creditCards = [

@@ -117,8 +117,8 @@ export async function createTransaction(
 
   const docRef = await addDoc(transactionsRef, transactionData);
 
-  // Atualizar saldos das contas (se não for no cartão de crédito)
-  if (!data.creditCardId) {
+  // Atualizar saldos das contas apenas se status for 'completed' e não for cartão de crédito
+  if (!data.creditCardId && data.status === 'completed') {
     await updateBalancesForTransaction(data);
   }
 
@@ -351,8 +351,12 @@ export async function updateTransaction(
   data: UpdateTransactionInput,
   oldTransaction: Transaction
 ): Promise<void> {
-  // Reverter saldos antigos
-  if (!oldTransaction.creditCardId) {
+  const oldWasCompleted = oldTransaction.status === 'completed';
+  const newStatus = data.status ?? oldTransaction.status;
+  const newWillBeCompleted = newStatus === 'completed';
+
+  // Reverter saldos antigos APENAS se a transação antiga era completed
+  if (!oldTransaction.creditCardId && oldWasCompleted) {
     await updateBalancesForTransaction(
       { ...oldTransaction, type: oldTransaction.type },
       true
@@ -376,9 +380,9 @@ export async function updateTransaction(
 
   await updateDoc(docRef, updateData);
 
-  // Aplicar novos saldos
+  // Aplicar novos saldos APENAS se a transação nova é completed
   const newData = { ...oldTransaction, ...data };
-  if (!newData.creditCardId) {
+  if (!newData.creditCardId && newWillBeCompleted) {
     await updateBalancesForTransaction(newData as any);
   }
 }
@@ -388,8 +392,8 @@ export async function updateTransaction(
 // ==========================================
 
 export async function deleteTransaction(transaction: Transaction): Promise<void> {
-  // Reverter saldos
-  if (!transaction.creditCardId) {
+  // Reverter saldos apenas se status era 'completed' e não era cartão de crédito
+  if (!transaction.creditCardId && transaction.status === 'completed') {
     await updateBalancesForTransaction(
       { ...transaction, type: transaction.type },
       true

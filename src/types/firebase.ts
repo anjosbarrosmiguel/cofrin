@@ -36,7 +36,7 @@ export type UpdateCategoryInput = Partial<CreateCategoryInput>;
 // CONTAS
 // ==========================================
 
-export type AccountType = 'checking' | 'savings' | 'wallet' | 'investment' | 'other';
+export type AccountType = 'checking' | 'wallet' | 'investment' | 'other';
 
 export interface Account extends BaseDocument {
   name: string;
@@ -52,12 +52,13 @@ export interface Account extends BaseDocument {
 export type CreateAccountInput = Omit<Account, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'balance'> & {
   balance?: number;
 };
-export type UpdateAccountInput = Partial<CreateAccountInput>;
+export type UpdateAccountInput = Partial<CreateAccountInput> & {
+  balance?: number;
+};
 
 // Labels para tipos de conta
 export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
   checking: 'Conta Corrente',
-  savings: 'Poupança',
   wallet: 'Carteira',
   investment: 'Investimento',
   other: 'Outro',

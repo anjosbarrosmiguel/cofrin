@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, Platform, ScrollView, Alert } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, Platform, ScrollView, Alert, Modal } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/themeContext";
 import { spacing, borderRadius, getShadow } from "../theme";
 import { useAccounts } from "../hooks/useAccounts";
-import { AccountType, ACCOUNT_TYPE_LABELS } from "../types/firebase";
+import { AccountType, ACCOUNT_TYPE_LABELS, Account } from "../types/firebase";
 import { formatCurrencyBRL } from "../utils/format";
 
 interface AccountTypeOption {
@@ -15,7 +15,6 @@ interface AccountTypeOption {
 
 const ACCOUNT_TYPES: AccountTypeOption[] = [
   { id: 'checking', icon: 'bank', label: 'Corrente' },
-  { id: 'savings', icon: 'piggy-bank', label: 'Poupança' },
   { id: 'wallet', icon: 'wallet', label: 'Carteira' },
   { id: 'investment', icon: 'chart-line', label: 'Investimento' },
   { id: 'other', icon: 'dots-horizontal', label: 'Outro' },
@@ -36,13 +35,24 @@ export default function ConfigureAccounts({ navigation }: any) {
   const [includeInTotal, setIncludeInTotal] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Estado para modal de edição
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editBalance, setEditBalance] = useState('');
+  const [editType, setEditType] = useState<AccountType>('checking');
+  const [editIcon, setEditIcon] = useState('bank');
+  const [editIncludeInTotal, setEditIncludeInTotal] = useState(true);
+
   // Hook de contas do Firebase
   const { 
     activeAccounts,
     totalBalance,
     loading, 
     createAccount,
+    updateAccount,
     archiveAccount,
+    deleteAccount,
   } = useAccounts();
 
   // Converter string de valor para número
@@ -84,19 +94,138 @@ export default function ConfigureAccounts({ navigation }: any) {
     }
   }
 
-  async function handleArchive(accountId: string, accountName: string) {
+  // Abrir modal de edição
+  function openEditModal(account: Account) {
+    setEditingAccount(account);
+    setEditName(account.name);
+    setEditBalance(account.balance.toString().replace('.', ','));
+    setEditType(account.type);
+    setEditIcon(account.icon || getAccountIcon(account.type));
+    setEditIncludeInTotal(account.includeInTotal);
+    setEditModalVisible(true);
+  }
+
+  // Salvar edição
+  async function handleSaveEdit() {
+    if (!editingAccount || !editName.trim()) return;
+
+    setSaving(true);
+    try {
+      const newBalance = parseBalance(editBalance);
+      
+      const result = await updateAccount(editingAccount.id, {
+        name: editName.trim(),
+        type: editType,
+        icon: editIcon,
+        balance: newBalance,
+        includeInTotal: editIncludeInTotal,
+      });
+
+      if (result) {
+        setEditModalVisible(false);
+        setEditingAccount(null);
+        Alert.alert('Sucesso', 'Conta atualizada com sucesso!');
+      } else {
+        Alert.alert('Erro', 'Não foi possível atualizar a conta');
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Ocorreu um erro ao atualizar a conta');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  // Arquivar conta do modal
+  async function handleArchiveFromModal() {
+    if (!editingAccount) return;
+    
     Alert.alert(
-      'Arquivar conta',
-      `Deseja arquivar a conta "${accountName}"? Ela não aparecerá mais na lista, mas você pode restaurá-la depois.`,
+      'Arquivar conta?',
+      `A conta "${editingAccount.name}" será arquivada e não aparecerá mais na lista.`,
       [
         { text: 'Cancelar', style: 'cancel' },
         { 
           text: 'Arquivar', 
+          onPress: async () => {
+            const result = await archiveAccount(editingAccount.id);
+            if (result) {
+              setEditModalVisible(false);
+              setEditingAccount(null);
+            } else {
+              Alert.alert('Erro', 'Não foi possível arquivar a conta');
+            }
+          }
+        },
+      ]
+    );
+  }
+
+  // Excluir conta do modal
+  async function handleDeleteFromModal() {
+    if (!editingAccount) return;
+    
+    Alert.alert(
+      'Excluir permanentemente?',
+      `A conta "${editingAccount.name}" será excluída e não poderá ser recuperada. Lançamentos associados NÃO serão excluídos.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Excluir', 
           style: 'destructive',
+          onPress: async () => {
+            const result = await deleteAccount(editingAccount.id);
+            if (result) {
+              setEditModalVisible(false);
+              setEditingAccount(null);
+              Alert.alert('Sucesso', 'Conta excluída com sucesso!');
+            } else {
+              Alert.alert('Erro', 'Não foi possível excluir a conta');
+            }
+          }
+        },
+      ]
+    );
+  }
+
+  async function handleArchive(accountId: string, accountName: string) {
+    Alert.alert(
+      'O que deseja fazer?',
+      `Conta: "${accountName}"`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Arquivar', 
           onPress: async () => {
             const result = await archiveAccount(accountId);
             if (!result) {
               Alert.alert('Erro', 'Não foi possível arquivar a conta');
+            }
+          }
+        },
+        { 
+          text: 'Excluir', 
+          style: 'destructive',
+          onPress: () => confirmDelete(accountId, accountName),
+        },
+      ]
+    );
+  }
+
+  async function confirmDelete(accountId: string, accountName: string) {
+    Alert.alert(
+      'Excluir permanentemente?',
+      `A conta "${accountName}" será excluída e não poderá ser recuperada. Lançamentos associados NÃO serão excluídos.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Excluir', 
+          style: 'destructive',
+          onPress: async () => {
+            const result = await deleteAccount(accountId);
+            if (result) {
+              Alert.alert('Sucesso', 'Conta excluída com sucesso!');
+            } else {
+              Alert.alert('Erro', 'Não foi possível excluir a conta');
             }
           }
         },
@@ -146,17 +275,19 @@ export default function ConfigureAccounts({ navigation }: any) {
               SUAS CONTAS
             </Text>
             <Text style={[styles.sectionHint, { color: colors.textMuted }]}>
-              Segure para arquivar
+              Toque para editar
             </Text>
             <View style={[styles.card, { backgroundColor: colors.card }, getShadow(colors)]}>
               {activeAccounts.map((account, index) => (
                 <Pressable
                   key={account.id}
+                  onPress={() => openEditModal(account)}
                   onLongPress={() => handleArchive(account.id, account.name)}
                   delayLongPress={500}
-                  style={[
+                  style={({ pressed }) => [
                     styles.accountItem,
                     index < activeAccounts.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
+                    pressed && { opacity: 0.7 },
                   ]}
                 >
                   <View style={[styles.iconCircle, { backgroundColor: colors.primaryBg }]}>
@@ -172,12 +303,15 @@ export default function ConfigureAccounts({ navigation }: any) {
                       {ACCOUNT_TYPE_LABELS[account.type]}
                     </Text>
                   </View>
-                  <Text style={[
-                    styles.accountBalance, 
-                    { color: account.balance >= 0 ? colors.income : colors.expense }
-                  ]}>
-                    {formatCurrencyBRL(account.balance)}
-                  </Text>
+                  <View style={styles.accountRight}>
+                    <Text style={[
+                      styles.accountBalance, 
+                      { color: account.balance >= 0 ? colors.income : colors.expense }
+                    ]}>
+                      {formatCurrencyBRL(account.balance)}
+                    </Text>
+                    <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />
+                  </View>
                 </Pressable>
               ))}
             </View>
@@ -326,6 +460,174 @@ export default function ConfigureAccounts({ navigation }: any) {
           </View>
         </View>
       </ScrollView>
+
+      {/* Modal de Edição */}
+      <Modal
+        visible={editModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
+            {/* Header do Modal */}
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <Pressable onPress={() => setEditModalVisible(false)} hitSlop={12}>
+                <MaterialCommunityIcons name="close" size={24} color={colors.text} />
+              </Pressable>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>Editar Conta</Text>
+              <Pressable onPress={handleSaveEdit} disabled={saving} hitSlop={12}>
+                <MaterialCommunityIcons 
+                  name="check" 
+                  size={24} 
+                  color={saving ? colors.textMuted : colors.primary} 
+                />
+              </Pressable>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              {/* Nome */}
+              <View style={styles.formGroup}>
+                <Text style={[styles.label, { color: colors.text }]}>Nome da conta</Text>
+                <View style={[styles.inputContainer, { borderColor: colors.border }]}>
+                  <TextInput
+                    value={editName}
+                    onChangeText={setEditName}
+                    placeholder="Nome da conta"
+                    placeholderTextColor={colors.textMuted}
+                    style={[styles.input, { color: colors.text }]}
+                  />
+                </View>
+              </View>
+
+              {/* Saldo atual */}
+              <View style={styles.formGroup}>
+                <Text style={[styles.label, { color: colors.text }]}>Saldo atual</Text>
+                <View style={[styles.inputContainer, { borderColor: colors.border }]}>
+                  <Text style={[styles.currency, { color: colors.textMuted }]}>R$</Text>
+                  <TextInput
+                    value={editBalance}
+                    onChangeText={setEditBalance}
+                    placeholder="0,00"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="numeric"
+                    style={[styles.input, { color: colors.text }]}
+                  />
+                </View>
+                <Text style={[styles.helpText, { color: colors.textMuted }]}>
+                  Ajuste o saldo diretamente se precisar corrigir
+                </Text>
+              </View>
+
+              {/* Tipo */}
+              <View style={styles.formGroup}>
+                <Text style={[styles.label, { color: colors.text }]}>Tipo da conta</Text>
+                <View style={styles.typeGrid}>
+                  {ACCOUNT_TYPES.map((type) => (
+                    <Pressable
+                      key={type.id}
+                      onPress={() => {
+                        setEditType(type.id);
+                        setEditIcon(type.icon);
+                      }}
+                      style={[
+                        styles.typeOptionSmall,
+                        { borderColor: editType === type.id ? colors.primary : colors.border },
+                        editType === type.id && { backgroundColor: colors.primaryBg },
+                      ]}
+                    >
+                      <MaterialCommunityIcons 
+                        name={type.icon as any} 
+                        size={18} 
+                        color={editType === type.id ? colors.primary : colors.textMuted} 
+                      />
+                      <Text 
+                        style={[
+                          styles.typeLabelSmall, 
+                          { color: editType === type.id ? colors.primary : colors.textMuted },
+                        ]}
+                      >
+                        {type.label}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              {/* Ícone */}
+              <View style={styles.formGroup}>
+                <Text style={[styles.label, { color: colors.text }]}>Ícone</Text>
+                <View style={styles.iconGridModal}>
+                  {ACCOUNT_ICONS.map((icon) => (
+                    <Pressable
+                      key={icon}
+                      onPress={() => setEditIcon(icon)}
+                      style={[
+                        styles.iconOptionSmall,
+                        { borderColor: editIcon === icon ? colors.primary : colors.border },
+                        editIcon === icon && { backgroundColor: colors.primaryBg },
+                      ]}
+                    >
+                      <MaterialCommunityIcons 
+                        name={icon as any} 
+                        size={18} 
+                        color={editIcon === icon ? colors.primary : colors.textMuted} 
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+              </View>
+
+              {/* Incluir no total */}
+              <Pressable
+                onPress={() => setEditIncludeInTotal(!editIncludeInTotal)}
+                style={styles.checkboxRow}
+              >
+                <View style={[
+                  styles.checkbox,
+                  { borderColor: colors.primary },
+                  editIncludeInTotal && { backgroundColor: colors.primary },
+                ]}>
+                  {editIncludeInTotal && (
+                    <MaterialCommunityIcons name="check" size={14} color="#fff" />
+                  )}
+                </View>
+                <Text style={[styles.checkboxLabel, { color: colors.text }]}>
+                  Incluir no saldo total
+                </Text>
+              </Pressable>
+
+              {/* Ações */}
+              <View style={styles.modalActions}>
+                <Pressable
+                  onPress={handleArchiveFromModal}
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    { backgroundColor: colors.bg, borderColor: colors.border },
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <MaterialCommunityIcons name="archive-outline" size={20} color={colors.textMuted} />
+                  <Text style={[styles.actionButtonText, { color: colors.text }]}>Arquivar</Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={handleDeleteFromModal}
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    styles.deleteButton,
+                    { borderColor: colors.expense },
+                    pressed && { opacity: 0.7 },
+                  ]}
+                >
+                  <MaterialCommunityIcons name="delete-outline" size={20} color={colors.expense} />
+                  <Text style={[styles.actionButtonText, { color: colors.expense }]}>Excluir</Text>
+                </Pressable>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -435,6 +737,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  accountRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+  },
   formGroup: {
     padding: spacing.md,
     paddingBottom: 0,
@@ -462,34 +769,60 @@ const styles = StyleSheet.create({
   },
   typeGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm,
+    flexWrap: 'nowrap',
+    gap: spacing.xs,
   },
   typeOption: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
     borderRadius: borderRadius.md,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    minWidth: 80,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
   },
   typeLabel: {
-    fontSize: 11,
-    marginTop: 4,
+    fontSize: 10,
+    marginTop: 2,
+  },
+  typeOptionSmall: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderRadius: borderRadius.md,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+  },
+  typeLabelSmall: {
+    fontSize: 9,
+    marginTop: 2,
   },
   iconGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
+    gap: spacing.xs,
   },
   iconOption: {
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
     borderRadius: borderRadius.md,
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
+  },
+  iconGridModal: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  iconOptionSmall: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderRadius: borderRadius.md,
+    width: 36,
+    height: 36,
   },
   checkboxRow: {
     flexDirection: 'row',
@@ -521,5 +854,57 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  helpText: {
+    fontSize: 11,
+    marginTop: spacing.xs,
+  },
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    maxHeight: '90%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: spacing.md,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
+  modalBody: {
+    padding: spacing.md,
+    paddingTop: 0,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    paddingVertical: spacing.lg,
+  },
+  actionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    gap: spacing.xs,
+  },
+  deleteButton: {
+    backgroundColor: 'transparent',
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
 });

@@ -1,15 +1,16 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, Platform, ScrollView, Modal } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, Platform, ScrollView, Modal, Alert } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/themeContext";
 import { spacing, borderRadius, getShadow } from "../theme";
-
-type CardBrand = 'credit-card' | 'credit-card-outline';
+import { useCreditCards } from "../hooks/useCreditCards";
+import { useAccounts } from "../hooks/useAccounts";
+import { formatCurrencyBRL } from "../utils/format";
 
 interface CardBrandOption {
   id: string;
   name: string;
-  icon: CardBrand;
+  icon: string;
   color: string;
 }
 
@@ -21,6 +22,8 @@ const CARD_BRANDS: CardBrandOption[] = [
   { id: 'caixa', name: 'Caixa', icon: 'credit-card', color: '#3B82F6' },
   { id: 'santander', name: 'Santander', icon: 'credit-card', color: '#EF4444' },
   { id: 'inter', name: 'Inter', icon: 'credit-card', color: '#F97316' },
+  { id: 'c6', name: 'C6 Bank', icon: 'credit-card', color: '#1A1A1A' },
+  { id: 'picpay', name: 'PicPay', icon: 'credit-card', color: '#21C25E' },
   { id: 'outro', name: 'Outro', icon: 'credit-card-outline', color: '#6B7280' },
 ];
 
@@ -32,33 +35,92 @@ export default function CreditCards({ navigation }: any) {
   const [limit, setLimit] = useState('');
   const [closingDay, setClosingDay] = useState('');
   const [dueDay, setDueDay] = useState('');
-  const [paymentAccount, setPaymentAccount] = useState('');
+  const [selectedAccountId, setSelectedAccountId] = useState('');
+  const [selectedAccountName, setSelectedAccountName] = useState('');
   const [showAccountPicker, setShowAccountPicker] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  // Mock de cartões existentes
-  const [cards] = useState([
-    { id: '1', name: 'Nubank', brand: 'nubank', limit: 5000, closingDay: 10, dueDay: 17 },
-  ]);
+  // Hooks do Firebase
+  const { 
+    activeCards, 
+    totalLimit,
+    loading, 
+    createCreditCard, 
+    archiveCreditCard 
+  } = useCreditCards();
+  
+  const { activeAccounts } = useAccounts();
 
-  // Mock de contas para pagamento
-  const accounts = [
-    { id: '1', name: 'Nubank' },
-    { id: '2', name: 'Carteira' },
-  ];
+  // Calcular total usado
+  const totalUsed = activeCards.reduce((sum, card) => sum + (card.currentUsed || 0), 0);
+
+  // Converter string de valor para número
+  function parseValue(value: string): number {
+    const cleaned = value.replace(/[^\d,.-]/g, '').replace(',', '.');
+    return parseFloat(cleaned) || 0;
+  }
 
   async function handleCreate() {
     if (!name.trim()) return;
     
-    setLoading(true);
-    // TODO: Implementar criação no Firebase
-    setTimeout(() => {
-      setLoading(false);
-      setName('');
-      setLimit('');
-      setClosingDay('');
-      setDueDay('');
-    }, 500);
+    const closingDayNum = parseInt(closingDay) || 1;
+    const dueDayNum = parseInt(dueDay) || 10;
+    
+    if (closingDayNum < 1 || closingDayNum > 31 || dueDayNum < 1 || dueDayNum > 31) {
+      Alert.alert('Erro', 'Os dias devem estar entre 1 e 31');
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      const result = await createCreditCard({
+        name: name.trim(),
+        brand: selectedBrand,
+        color: CARD_BRANDS.find(b => b.id === selectedBrand)?.color || '#6B7280',
+        limit: parseValue(limit),
+        closingDay: closingDayNum,
+        dueDay: dueDayNum,
+        paymentAccountId: selectedAccountId || undefined,
+        isArchived: false,
+      });
+
+      if (result) {
+        setName('');
+        setLimit('');
+        setClosingDay('');
+        setDueDay('');
+        setSelectedAccountId('');
+        setSelectedAccountName('');
+        setSelectedBrand('nubank');
+        Alert.alert('Sucesso', 'Cartão cadastrado com sucesso!');
+      } else {
+        Alert.alert('Erro', 'Não foi possível cadastrar o cartão');
+      }
+    } catch (error) {
+      Alert.alert('Erro', 'Ocorreu um erro ao cadastrar o cartão');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleArchive(cardId: string, cardName: string) {
+    Alert.alert(
+      'Arquivar cartão',
+      `Deseja arquivar o cartão "${cardName}"? Ele não aparecerá mais na lista, mas você pode restaurá-lo depois.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Arquivar', 
+          style: 'destructive',
+          onPress: async () => {
+            const result = await archiveCreditCard(cardId);
+            if (!result) {
+              Alert.alert('Erro', 'Não foi possível arquivar o cartão');
+            }
+          }
+        },
+      ]
+    );
   }
 
   const selectedBrandData = CARD_BRANDS.find(b => b.id === selectedBrand);
@@ -79,40 +141,95 @@ export default function CreditCards({ navigation }: any) {
       </View>
 
       <ScrollView style={styles.content}>
+        {/* Resumo de limites */}
+        {activeCards.length > 0 && (
+          <View style={[styles.summaryCard, { backgroundColor: colors.primary }]}>
+            <View style={styles.summaryRow}>
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Limite total</Text>
+                <Text style={styles.summaryValue}>{formatCurrencyBRL(totalLimit)}</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Usado</Text>
+                <Text style={styles.summaryValue}>{formatCurrencyBRL(totalUsed)}</Text>
+              </View>
+              <View style={styles.summaryDivider} />
+              <View style={styles.summaryItem}>
+                <Text style={styles.summaryLabel}>Disponível</Text>
+                <Text style={styles.summaryValue}>{formatCurrencyBRL(totalLimit - totalUsed)}</Text>
+              </View>
+            </View>
+          </View>
+        )}
+
         {/* Cartões existentes */}
-        {cards.length > 0 && (
+        {loading ? (
+          <View style={styles.loadingContainer}>
+            <Text style={[styles.loadingText, { color: colors.textMuted }]}>Carregando cartões...</Text>
+          </View>
+        ) : activeCards.length > 0 ? (
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
               SEUS CARTÕES
             </Text>
+            <Text style={[styles.sectionHint, { color: colors.textMuted }]}>
+              Segure para arquivar
+            </Text>
             <View style={[styles.card, { backgroundColor: colors.card }, getShadow(colors)]}>
-              {cards.map((card, index) => {
+              {activeCards.map((card, index) => {
                 const brand = CARD_BRANDS.find(b => b.id === card.brand);
+                const cardColor = card.color || brand?.color || colors.primary;
+                const available = card.limit - (card.currentUsed || 0);
                 return (
                   <Pressable
                     key={card.id}
+                    onLongPress={() => handleArchive(card.id, card.name)}
+                    delayLongPress={500}
                     style={[
                       styles.cardItem,
-                      index < cards.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
+                      index < activeCards.length - 1 && { borderBottomWidth: 1, borderBottomColor: colors.border },
                     ]}
                   >
-                    <View style={[styles.iconCircle, { backgroundColor: (brand?.color || colors.primary) + '20' }]}>
+                    <View style={[styles.iconCircle, { backgroundColor: cardColor + '20' }]}>
                       <MaterialCommunityIcons 
-                        name={brand?.icon || 'credit-card'} 
+                        name={(brand?.icon || 'credit-card') as any}
                         size={20} 
-                        color={brand?.color || colors.primary} 
+                        color={cardColor} 
                       />
                     </View>
                     <View style={styles.cardInfo}>
                       <Text style={[styles.cardName, { color: colors.text }]}>{card.name}</Text>
                       <Text style={[styles.cardDetails, { color: colors.textSecondary }]}>
-                        Limite: R$ {card.limit.toFixed(2)} • Fecha dia {card.closingDay}
+                        Limite: {formatCurrencyBRL(card.limit)} • Fecha dia {card.closingDay}
+                      </Text>
+                      <View style={styles.usageBar}>
+                        <View 
+                          style={[
+                            styles.usageBarFill, 
+                            { 
+                              backgroundColor: cardColor,
+                              width: `${Math.min(((card.currentUsed || 0) / card.limit) * 100, 100)}%` 
+                            }
+                          ]} 
+                        />
+                      </View>
+                      <Text style={[styles.availableText, { color: colors.textMuted }]}>
+                        Disponível: {formatCurrencyBRL(available)}
                       </Text>
                     </View>
-                    <MaterialCommunityIcons name="chevron-right" size={24} color={colors.textMuted} />
                   </Pressable>
                 );
               })}
+            </View>
+          </View>
+        ) : (
+          <View style={styles.section}>
+            <View style={[styles.emptyCard, { backgroundColor: colors.card }, getShadow(colors)]}>
+              <MaterialCommunityIcons name="credit-card-off-outline" size={48} color={colors.textMuted} />
+              <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+                Nenhum cartão cadastrado
+              </Text>
             </View>
           </View>
         )}
@@ -229,9 +346,9 @@ export default function CreditCards({ navigation }: any) {
               >
                 <Text style={[
                   styles.selectText, 
-                  { color: paymentAccount ? colors.text : colors.textMuted }
+                  { color: selectedAccountName ? colors.text : colors.textMuted }
                 ]}>
-                  {paymentAccount || 'Selecione a conta'}
+                  {selectedAccountName || 'Selecione a conta'}
                 </Text>
                 <MaterialCommunityIcons name="chevron-down" size={20} color={colors.textMuted} />
               </Pressable>
@@ -240,17 +357,17 @@ export default function CreditCards({ navigation }: any) {
             {/* Botão */}
             <Pressable
               onPress={handleCreate}
-              disabled={loading || !name.trim()}
+              disabled={saving || !name.trim()}
               style={({ pressed }) => [
                 styles.createButton,
                 { backgroundColor: selectedBrandData?.color || colors.primary },
                 pressed && { opacity: 0.9 },
-                (loading || !name.trim()) && { opacity: 0.6 },
+                (saving || !name.trim()) && { opacity: 0.6 },
               ]}
             >
               <MaterialCommunityIcons name="plus" size={20} color="#fff" />
               <Text style={styles.createButtonText}>
-                {loading ? 'Criando...' : 'Cadastrar cartão'}
+                {saving ? 'Criando...' : 'Cadastrar cartão'}
               </Text>
             </Pressable>
           </View>
@@ -270,19 +387,29 @@ export default function CreditCards({ navigation }: any) {
         >
           <View style={[styles.modalContent, { backgroundColor: colors.card }]}>
             <Text style={[styles.modalTitle, { color: colors.text }]}>Selecionar conta</Text>
-            {accounts.map((account) => (
-              <Pressable
-                key={account.id}
-                onPress={() => {
-                  setPaymentAccount(account.name);
-                  setShowAccountPicker(false);
-                }}
-                style={[styles.modalOption, { borderBottomColor: colors.border }]}
-              >
-                <MaterialCommunityIcons name="bank" size={20} color={colors.primary} />
-                <Text style={[styles.modalOptionText, { color: colors.text }]}>{account.name}</Text>
-              </Pressable>
-            ))}
+            {activeAccounts.length === 0 ? (
+              <Text style={[styles.emptyText, { color: colors.textMuted, padding: spacing.md }]}>
+                Nenhuma conta cadastrada
+              </Text>
+            ) : (
+              activeAccounts.map((account) => (
+                <Pressable
+                  key={account.id}
+                  onPress={() => {
+                    setSelectedAccountId(account.id);
+                    setSelectedAccountName(account.name);
+                    setShowAccountPicker(false);
+                  }}
+                  style={[styles.modalOption, { borderBottomColor: colors.border }]}
+                >
+                  <MaterialCommunityIcons name="bank" size={20} color={colors.primary} />
+                  <Text style={[styles.modalOptionText, { color: colors.text }]}>{account.name}</Text>
+                  {selectedAccountId === account.id && (
+                    <MaterialCommunityIcons name="check" size={20} color={colors.primary} />
+                  )}
+                </Pressable>
+              ))
+            )}
           </View>
         </Pressable>
       </Modal>
@@ -314,6 +441,52 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: spacing.md,
   },
+  summaryCard: {
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.md,
+  },
+  summaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  summaryItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  summaryLabel: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 2,
+  },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  summaryDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  loadingContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 14,
+  },
+  emptyCard: {
+    borderRadius: borderRadius.lg,
+    padding: spacing.xl,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 14,
+    marginTop: spacing.sm,
+    textAlign: 'center',
+  },
   section: {
     marginBottom: spacing.lg,
   },
@@ -321,6 +494,11 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     letterSpacing: 0.5,
+    marginBottom: spacing.xs,
+    marginLeft: spacing.xs,
+  },
+  sectionHint: {
+    fontSize: 11,
     marginBottom: spacing.sm,
     marginLeft: spacing.xs,
   },
@@ -351,6 +529,21 @@ const styles = StyleSheet.create({
   cardDetails: {
     fontSize: 13,
     marginTop: 2,
+  },
+  usageBar: {
+    height: 4,
+    backgroundColor: 'rgba(0,0,0,0.1)',
+    borderRadius: 2,
+    marginTop: spacing.sm,
+    overflow: 'hidden',
+  },
+  usageBarFill: {
+    height: '100%',
+    borderRadius: 2,
+  },
+  availableText: {
+    fontSize: 12,
+    marginTop: 4,
   },
   formGroup: {
     padding: spacing.md,

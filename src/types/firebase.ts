@@ -69,10 +69,13 @@ export const ACCOUNT_TYPE_LABELS: Record<AccountType, string> = {
 
 export interface CreditCard extends BaseDocument {
   name: string;
+  brand?: string; // Bandeira/Banco (nubank, itau, etc.)
   lastDigits?: string; // Últimos 4 dígitos
   limit: number;
+  currentUsed?: number; // Valor atualmente utilizado do limite
   closingDay: number; // Dia de fechamento (1-31)
   dueDay: number; // Dia de vencimento (1-31)
+  paymentAccountId?: string; // Conta de pagamento da fatura
   icon?: string;
   color?: string;
   isArchived: boolean;

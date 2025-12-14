@@ -154,6 +154,9 @@ export default function AddTransactionModal({
   // Single picker state - evita modais aninhados
   const [activePicker, setActivePicker] = useState<PickerType>('none');
   
+  // Date picker state for custom calendar
+  const [tempDate, setTempDate] = useState(new Date());
+  
   // Calcular valor por parcela
   const installmentValue = React.useMemo(() => {
     if (recurrence !== 'none' && repetitions > 1) {
@@ -163,8 +166,37 @@ export default function AddTransactionModal({
     return 0;
   }, [amount, repetitions, recurrence]);
   
-  // Date picker state for custom calendar
-  const [tempDate, setTempDate] = useState(new Date());
+  // Obter conta de origem e verificar saldo
+  const sourceAccount = React.useMemo(() => {
+    if (type === 'transfer' || (type === 'despesa' && !useCreditCard)) {
+      return activeAccounts.find(acc => acc.id === accountId);
+    }
+    return null;
+  }, [type, accountId, useCreditCard, activeAccounts]);
+  
+  // Verificar se pode confirmar (saldo suficiente para transferência)
+  const canConfirm = React.useMemo(() => {
+    if (type === 'transfer') {
+      // Não permitir transferência para a mesma conta
+      if (accountId && toAccountId && accountId === toAccountId) {
+        return false;
+      }
+      // Verificar saldo suficiente
+      if (sourceAccount) {
+        const parsed = parseCurrency(amount);
+        return sourceAccount.balance >= 0 && sourceAccount.balance >= parsed;
+      }
+    }
+    return true;
+  }, [type, sourceAccount, amount, accountId, toAccountId]);
+
+  // Limpar categoria quando mudar para transferência
+  useEffect(() => {
+    if (type === 'transfer') {
+      setCategoryId('');
+      setCategoryName('');
+    }
+  }, [type]);
 
   // Set default account when accounts load
   useEffect(() => {
@@ -459,11 +491,15 @@ export default function AddTransactionModal({
     value,
     icon,
     onPress,
+    subtitle,
+    subtitleColor,
   }: {
     label: string;
     value: string;
     icon: string;
     onPress: () => void;
+    subtitle?: string;
+    subtitleColor?: string;
   }) => (
     <Pressable
       onPress={onPress}
@@ -472,14 +508,22 @@ export default function AddTransactionModal({
         { backgroundColor: pressed ? colors.grayLight : 'transparent' },
       ]}
     >
-      <View style={[styles.fieldIcon, { backgroundColor: colors.primaryBg }]}>
-        <MaterialCommunityIcons name={icon as any} size={20} color={colors.primary} />
+      <View style={[styles.fieldIcon, { backgroundColor: colors.grayLight }]}>
+        <MaterialCommunityIcons name={icon as any} size={20} color={colors.gray} />
       </View>
       <View style={styles.fieldContent}>
-        <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>{label}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
+          <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>{label}</Text>
+          {subtitle && (
+            <>
+              <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>|</Text>
+              <Text style={[styles.fieldSubtitle, { color: subtitleColor || colors.textMuted }]}>{subtitle}</Text>
+            </>
+          )}
+        </View>
         <Text style={[styles.fieldValue, { color: colors.text }]}>{value}</Text>
       </View>
-      <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />
+      <MaterialCommunityIcons name="chevron-right" size={20} color={colors.gray} />
     </Pressable>
   );
 
@@ -540,13 +584,13 @@ export default function AddTransactionModal({
         {/* Month/Year Navigation */}
         <View style={styles.calendarHeader}>
           <Pressable onPress={goToPrevMonth} style={styles.calendarNavButton}>
-            <MaterialCommunityIcons name="chevron-left" size={24} color={colors.primary} />
+            <MaterialCommunityIcons name="chevron-left" size={24} color={colors.gray} />
           </Pressable>
           <Text style={[styles.calendarTitle, { color: colors.text }]}>
             {MONTHS[month]} {year}
           </Text>
           <Pressable onPress={goToNextMonth} style={styles.calendarNavButton}>
-            <MaterialCommunityIcons name="chevron-right" size={24} color={colors.primary} />
+            <MaterialCommunityIcons name="chevron-right" size={24} color={colors.gray} />
           </Pressable>
         </View>
 
@@ -1071,6 +1115,8 @@ export default function AddTransactionModal({
                           value={accountName || 'Selecione'}
                           icon="bank-transfer-out"
                           onPress={() => setActivePicker('account')}
+                          subtitle={sourceAccount ? `Saldo atual: ${formatCurrency(Math.round(sourceAccount.balance * 100).toString())}` : undefined}
+                          subtitleColor={sourceAccount && sourceAccount.balance < 0 ? colors.danger : colors.textMuted}
                         />
                         <View style={[styles.divider, { backgroundColor: colors.border }]} />
                         <SelectField
@@ -1127,6 +1173,15 @@ export default function AddTransactionModal({
                     )}
                   </View>
                 </ScrollView>
+                {/* Aviso: mesma conta - antes dos botões */}
+                {type === 'transfer' && accountId && toAccountId && accountId === toAccountId && (
+                  <View style={[styles.warningInfo, { backgroundColor: colors.warningBg, marginHorizontal: spacing.md }]}>
+                    <MaterialCommunityIcons name="alert-circle" size={16} color={colors.warning} />
+                    <Text style={[styles.warningText, { color: colors.warning }]}>
+                      Não é possível transferir para a mesma conta
+                    </Text>
+                  </View>
+                )}
                 {/* Botões - fixo no fundo */}
                 <View style={[styles.buttonContainer, { backgroundColor: colors.bg }]}>
                   {/* Botão Excluir - só aparece em modo edição */}
@@ -1189,12 +1244,12 @@ export default function AddTransactionModal({
                   {/* Botão Salvar/Atualizar - sempre verde */}
                   <Pressable
                     onPress={handleSave}
-                    disabled={saving}
+                    disabled={saving || !canConfirm}
                     style={({ pressed }) => [
                       styles.saveButton,
                       { backgroundColor: '#10b981' },
                       pressed && { opacity: 0.9 },
-                      saving && { opacity: 0.6 },
+                      (saving || !canConfirm) && { opacity: 0.6 },
                     ]}
                   >
                     <MaterialCommunityIcons name={saving ? 'loading' : 'check'} size={20} color="#fff" />
@@ -1332,6 +1387,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     marginBottom: 2,
   },
+  fieldSubtitle: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
   fieldValue: {
     fontSize: 15,
     fontWeight: '500',
@@ -1339,6 +1398,7 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     marginLeft: 68,
+    backgroundColor: '#e2e8f0',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -1541,5 +1601,35 @@ const styles = StyleSheet.create({
   installmentText: {
     fontSize: 14,
     fontWeight: '600',
+  },
+  accountBalanceInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  accountBalanceText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  warningInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginHorizontal: spacing.md,
+    marginTop: spacing.md,
+    marginBottom: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  warningText: {
+    fontSize: 13,
+    fontWeight: '500',
+    flex: 1,
   },
 });

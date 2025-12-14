@@ -132,7 +132,7 @@ const tealTheme: ThemeColors = {
   income: '#10b981',
   expense: '#ef4444',
   
-  border: '#99f6e4',
+  border: '#cbd5e1',
   gray: '#64748b',
   grayLight: '#f1f5f9',
 };

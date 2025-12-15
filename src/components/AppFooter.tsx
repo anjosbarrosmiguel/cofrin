@@ -81,7 +81,7 @@ export default function AppFooter({ onHome, onAdd, onLaunches, onGoals, onReport
           </View>
 
           <View style={styles.slot}>
-            <IconButton icon="target" onPress={onGoals} />
+            <IconButton icon="lightbulb-on" onPress={onGoals} />
           </View>
         </View>
       </View>

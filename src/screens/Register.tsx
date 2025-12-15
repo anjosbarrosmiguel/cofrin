@@ -26,10 +26,13 @@ const REGISTER_COLORS = {
 export default function Register({ navigation }: any) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { alertState, showAlert, hideAlert } = useCustomAlert();
   const [showPasswordHelper, setShowPasswordHelper] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [showResetForm, setShowResetForm] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const [resetLoading, setResetLoading] = useState(false);
@@ -59,6 +62,11 @@ export default function Register({ navigation }: any) {
       setError(
         "A senha precisa ter pelo menos 6 caracteres, com letra maiúscula e minúscula."
       );
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("As senhas não coincidem.");
       return;
     }
 
@@ -160,10 +168,21 @@ export default function Register({ navigation }: any) {
             placeholderTextColor={palette.textMuted}
             value={password}
             onChangeText={setPassword}
-            secureTextEntry
+            secureTextEntry={!showPassword}
             style={styles.input}
             editable={!loading}
           />
+          <Pressable
+            onPress={() => setShowPassword((s) => !s)}
+            style={styles.infoButton}
+            accessibilityLabel={showPassword ? "Ocultar senha" : "Mostrar senha"}
+          >
+            <MaterialCommunityIcons 
+              name={showPassword ? "eye-off" : "eye"} 
+              size={20} 
+              color={palette.textMuted} 
+            />
+          </Pressable>
           <Pressable
             onPress={() => setShowPasswordHelper((s) => !s)}
             style={styles.infoButton}
@@ -173,6 +192,30 @@ export default function Register({ navigation }: any) {
               name={showPasswordHelper ? "information" : "information-outline"} 
               size={20} 
               color={REGISTER_COLORS.primary} 
+            />
+          </Pressable>
+        </View>
+
+        <View style={styles.inputContainer}>
+          <MaterialCommunityIcons name="lock-check-outline" size={20} color={palette.textMuted} style={styles.inputIcon} />
+          <TextInput
+            placeholder="Confirme sua senha"
+            placeholderTextColor={palette.textMuted}
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry={!showConfirmPassword}
+            style={styles.input}
+            editable={!loading}
+          />
+          <Pressable
+            onPress={() => setShowConfirmPassword((s) => !s)}
+            style={styles.infoButton}
+            accessibilityLabel={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
+          >
+            <MaterialCommunityIcons 
+              name={showConfirmPassword ? "eye-off" : "eye"} 
+              size={20} 
+              color={palette.textMuted} 
             />
           </Pressable>
         </View>

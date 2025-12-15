@@ -61,6 +61,18 @@ export default function CreditCards({ navigation }: any) {
     return parseFloat(cleaned) || 0;
   }
 
+  // Formatar valor monetário para exibição
+  const formatCurrency = (value: string) => {
+    const numbers = value.replace(/\D/g, '');
+    if (!numbers) return '';
+    
+    const numValue = parseInt(numbers, 10) / 100;
+    return numValue.toLocaleString('pt-BR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  };
+
   async function handleCreate() {
     // Verificar se há contas cadastradas
     if (activeAccounts.length === 0) {
@@ -159,7 +171,8 @@ export default function CreditCards({ navigation }: any) {
     const account = activeAccounts.find(a => a.id === card.paymentAccountId);
     setEditingCard(card);
     setEditName(card.name);
-    setEditLimit(card.limit.toString().replace('.', ','));
+    // Formatar limite para exibição (1234.56 → "1.234,56")
+    setEditLimit(card.limit.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
     setEditClosingDay(card.closingDay.toString());
     setEditDueDay(card.dueDay.toString());
     setEditAccountId(card.paymentAccountId || '');
@@ -457,7 +470,7 @@ export default function CreditCards({ navigation }: any) {
                 <Text style={[styles.currency, { color: colors.textMuted }]}>R$</Text>
                 <TextInput
                   value={limit}
-                  onChangeText={setLimit}
+                  onChangeText={(v) => setLimit(formatCurrency(v))}
                   placeholder="0,00"
                   placeholderTextColor={colors.textMuted}
                   keyboardType="numeric"
@@ -621,7 +634,7 @@ export default function CreditCards({ navigation }: any) {
                   <Text style={[styles.currency, { color: colors.textMuted }]}>R$</Text>
                   <TextInput
                     value={editLimit}
-                    onChangeText={setEditLimit}
+                    onChangeText={(v) => setEditLimit(formatCurrency(v))}
                     placeholder="0,00"
                     placeholderTextColor={colors.textMuted}
                     keyboardType="numeric"

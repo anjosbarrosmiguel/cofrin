@@ -213,7 +213,7 @@ export default function Login({ navigation }: any) {
           <View style={styles.dividerLine} />
         </View>
 
-        <Pressable onPress={() => navigation.navigate("Register")} style={styles.registerButton}>
+        <Pressable onPress={() => navigation.navigate("Crie uma conta")} style={styles.registerButton}>
           <Text style={styles.registerText}>
             Não tem conta? <Text style={styles.registerTextBold}>Criar agora</Text>
           </Text>

@@ -422,7 +422,7 @@ export default function Reports() {
                           : colors.expense 
                       }
                     ]}>
-                      {report.debtPercentage <= 30 ? '🟢' : report.debtPercentage <= 40 ? '🟡' : '🔴'} {report.debtPercentage.toFixed(1)}%
+                      {report.debtPercentage <= 30 ? '🟢' : report.debtPercentage <= 40 ? '🟡' : '🔴'} {report.debtPercentage % 1 === 0 ? report.debtPercentage.toFixed(0) : report.debtPercentage.toFixed(1)}%
                     </Text>
                   </View>
                 ) : null}

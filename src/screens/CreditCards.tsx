@@ -314,9 +314,11 @@ export default function CreditCards({ navigation }: any) {
       </View>
 
       <ScrollView 
-        style={styles.content}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
       >
+        <View style={styles.centeredContainer}>
+          <View style={styles.content}>
         {/* Resumo de limites */}
         {activeCards.length > 0 && (
           <View style={[styles.summaryCard, { backgroundColor: colors.primary }]}>
@@ -511,6 +513,8 @@ export default function CreditCards({ navigation }: any) {
                 {saving ? 'Criando...' : 'Cadastrar cartão'}
               </Text>
             </Pressable>
+          </View>
+        </View>
           </View>
         </View>
       </ScrollView>
@@ -778,7 +782,17 @@ export default function CreditCards({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingBottom: 70,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  centeredContainer: {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -797,8 +811,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   content: {
-    flex: 1,
-    padding: spacing.md,
+    padding: spacing.lg,
   },
   summaryCard: {
     borderRadius: borderRadius.lg,

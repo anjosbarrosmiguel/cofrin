@@ -13,8 +13,8 @@ export default function OverviewStat({ label, value, color, align = 'left' }: Pr
   const theme = useTheme();
   return (
     <View style={[styles.container, align === 'right' && styles.right]}>
-      <Text style={[styles.label, { color: theme.colors.disabled }]}>{label}</Text>
-      <Text style={[styles.value, { color: color || theme.colors.text }]}>{value}</Text>
+      <Text style={[styles.label, { color: theme.colors.onSurfaceVariant }]}>{label}</Text>
+      <Text style={[styles.value, { color: color || theme.colors.onSurface }]}>{value}</Text>
     </View>
   );
 }

@@ -84,12 +84,13 @@ export const shadows = {
 // Helper function to get cross-platform shadow
 export function getShadow(colors: { card: string }, size: 'sm' | 'md' | 'lg' = 'md') {
   const shadow = shadows[size];
-  return Platform.select({
-    web: {
+  if (Platform.OS === 'web') {
+    return {
       boxShadow: `0px ${shadow.shadowOffset.height * 2}px ${shadow.shadowRadius * 2}px rgba(0,0,0,${shadow.shadowOpacity})`,
-    },
-    default: shadow,
-  });
+    } as const;
+  }
+
+  return shadow;
 }
 
 export default { palette, spacing, borderRadius, shadows, getShadow };

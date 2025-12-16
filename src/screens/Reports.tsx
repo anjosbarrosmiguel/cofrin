@@ -317,8 +317,8 @@ export default function Reports() {
     <MainLayout>
       <ScrollView style={[styles.root, { backgroundColor: colors.bg }]} contentContainerStyle={styles.scrollContent}>
         <AppHeader />
-        <View style={styles.content}>
-          <View style={styles.maxWidth}>
+        <View style={styles.centeredContainer}>
+          <View style={styles.content}>
             <Text style={[styles.title, { color: colors.text }]}>Relatórios</Text>
             <Text style={[styles.subtitle, { color: colors.textMuted }]}>
               {monthNames[currentMonth - 1]} de {currentYear}
@@ -584,14 +584,13 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100,
   },
-  content: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  maxWidth: {
+  centeredContainer: {
+    maxWidth: 1200,
     width: '100%',
-    maxWidth: 980,
-    paddingHorizontal: spacing.md,
+    alignSelf: 'center',
+  },
+  content: {
+    padding: spacing.lg,
   },
   title: {
     fontSize: 22,

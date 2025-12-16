@@ -25,7 +25,7 @@ export default function GoalCard({ goal, progressPercentage, onCreatePress, onGo
             <MaterialCommunityIcons name="flag-checkered" size={24} color={colors.primary} />
           </View>
           <View style={styles.titleContainer}>
-            <Text style={[styles.title, { color: colors.text }]}>Sua meta</Text>
+            <Text style={[styles.title, { color: colors.text }]}>Meta financeira</Text>
           </View>
         </View>
 

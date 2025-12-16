@@ -22,7 +22,7 @@ export default function HomeOverview({
 }: Props) {
   const { colors } = useAppTheme();
   const { width } = useWindowDimensions();
-  const isSmallScreen = width < 380;
+  const isNarrow = width < 700;
 
   const [modalVisible, setModalVisible] = useState(false);
   const [modalType, setModalType] = useState<'despesa' | 'receita' | 'transfer'>('despesa');
@@ -39,7 +39,7 @@ export default function HomeOverview({
     setSnackbarVisible(true);
   };
 
-  // Action button component
+  // Action button component - mais compacto
   const ActionButton = ({ 
     icon, 
     color, 
@@ -55,79 +55,95 @@ export default function HomeOverview({
       onPress={onPress} 
       style={({ pressed }) => [
         styles.actionButton,
-        { opacity: pressed ? 0.8 : 1 }
+        { backgroundColor: color, opacity: pressed ? 0.9 : 1 }
       ]}
     >
-      <View style={[styles.actionIcon, { backgroundColor: color }, getShadow(colors)]}>
-        <MaterialCommunityIcons name={icon as any} size={24} color="#fff" />
-      </View>
-      <Text variant="labelSmall" style={[styles.actionLabel, { color: colors.textSecondary }]}>{label}</Text>
+      <MaterialCommunityIcons name={icon as any} size={20} color="#fff" />
+      <Text style={styles.actionLabel}>{label}</Text>
     </Pressable>
   );
 
-  // Stat component
+  // Stat component - horizontal compacto
   const StatItem = ({ 
     label, 
     value, 
-    color, 
-    align = 'left' 
+    color 
   }: { 
     label: string; 
     value: string; 
     color: string; 
-    align?: 'left' | 'right';
   }) => (
-    <View style={[styles.statItem, align === 'right' && styles.statItemRight]}>
-      <Text variant="bodySmall" style={[styles.statLabel, { color: colors.textSecondary }]}>{label}</Text>
-      <Text variant="titleMedium" style={[styles.statValue, { color }]}>{value}</Text>
+    <View style={styles.statItem}>
+      <Text variant="labelSmall" style={[styles.statLabel, { color: colors.textMuted }]}>{label}</Text>
+      <Text variant="headlineSmall" style={[styles.statValue, { color }]}>{value}</Text>
     </View>
   );
 
-  return (
-    <>
-      <View style={[styles.card, { backgroundColor: colors.card }, getShadow(colors)]}>
-        {/* Greeting */}
-        <Text variant="headlineSmall" style={[styles.greeting, { color: colors.text }]}>
-          Olá, {username}
-        </Text>
+  // Layout responsivo: mobile (vertical) vs desktop (horizontal)
+  if (isNarrow) {
+    // Mobile: Layout vertical tradicional
+    return (
+      <>
+        <View style={[styles.card, { backgroundColor: colors.card }, getShadow(colors)]}>
+          <Text variant="headlineSmall" style={[styles.greeting, { color: colors.text }]}>
+            Bom dia, {username}
+          </Text>
 
-        {/* Quick Actions */}
-        <View style={[styles.actionsRow, isSmallScreen && styles.actionsRowSmall]}>
-          <ActionButton
-            icon="minus"
-            color={colors.expense}
-            label="DESPESA"
-            onPress={() => openModal('despesa')}
-          />
-          <ActionButton
-            icon="plus"
-            color={colors.income}
-            label="RECEITA"
-            onPress={() => openModal('receita')}
-          />
-          <ActionButton
-            icon="swap-horizontal"
-            color={colors.gray}
-            label="TRANSF."
-            onPress={() => openModal('transfer')}
-          />
+          <View style={styles.statsVertical}>
+            <StatItem label="Receitas do mês" value={formatCurrencyBRL(revenue)} color={colors.income} />
+            <StatItem label="Despesas do mês" value={formatCurrencyBRL(expenses)} color={colors.expense} />
+          </View>
+
+          <Text variant="labelMedium" style={[styles.sectionTitle, { color: colors.textMuted }]}>Ações rápidas</Text>
+          <View style={styles.actionsHorizontal}>
+            <ActionButton icon="minus" color={colors.expense} label="Despesa" onPress={() => openModal('despesa')} />
+            <ActionButton icon="plus" color={colors.income} label="Receita" onPress={() => openModal('receita')} />
+            <ActionButton icon="swap-horizontal" color={colors.gray} label="Transferir" onPress={() => openModal('transfer')} />
+          </View>
         </View>
 
-        {/* Stats Section */}
-        <Text variant="labelMedium" style={[styles.sectionTitle, { color: colors.textMuted }]}>Visão geral</Text>
-        
-        <View style={styles.statsRow}>
-          <StatItem 
-            label="Receitas no mês" 
-            value={formatCurrencyBRL(revenue)} 
-            color={colors.income} 
-          />
-          <StatItem 
-            label="Despesas no mês" 
-            value={formatCurrencyBRL(expenses)} 
-            color={colors.expense}
-            align="right"
-          />
+        <AddTransactionModal
+          visible={modalVisible}
+          onClose={() => setModalVisible(false)}
+          initialType={modalType}
+          onSave={handleSave}
+        />
+
+        <Snackbar 
+          visible={snackbarVisible} 
+          onDismiss={() => setSnackbarVisible(false)} 
+          duration={2000}
+          style={{ backgroundColor: colors.card }}
+        >
+          Lançamento salvo com sucesso!
+        </Snackbar>
+      </>
+    );
+  }
+
+  // Desktop: Layout horizontal compacto
+  return (
+    <>
+      <View style={styles.horizontalContainer}>
+        {/* Card 1: Saudação + Resumo */}
+        <View style={[styles.cardCompact, { backgroundColor: colors.card, flex: 1 }, getShadow(colors)]}>
+          <Text variant="titleLarge" style={[styles.greetingCompact, { color: colors.text }]}>
+            Bom dia, {username}
+          </Text>
+          <View style={styles.statsGrid}>
+            <StatItem label="Receitas do mês" value={formatCurrencyBRL(revenue)} color={colors.income} />
+            <StatItem label="Despesas do mês" value={formatCurrencyBRL(expenses)} color={colors.expense} />
+          </View>
+        </View>
+
+        {/* Card 2: Ações rápidas */}
+        <View style={[styles.cardCompact, { backgroundColor: colors.card }, getShadow(colors)]}>
+          <Text variant="labelMedium" style={[styles.sectionTitleCompact, { color: colors.textMuted }]}>Ações rápidas</Text>
+          <View style={styles.actionsVertical}>
+            <ActionButton icon="minus" color={colors.expense} label="Despesa" onPress={() => openModal('despesa')} />
+            <ActionButton icon="plus" color={colors.income} label="Receita" onPress={() => openModal('receita')} />
+            <ActionButton icon="swap-horizontal" color={colors.gray} label="Transferir" onPress={() => openModal('transfer')} />
+          </View>
         </View>
       </View>
 
@@ -151,8 +167,9 @@ export default function HomeOverview({
 }
 
 const styles = StyleSheet.create({
+  // Mobile: Card vertical
   card: {
-    padding: spacing.lg,
+    padding: spacing.xl,
     borderRadius: borderRadius.lg,
     marginBottom: spacing.md,
   },
@@ -160,50 +177,79 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: spacing.lg,
   },
-  actionsRow: {
-    flexDirection: 'row',
-    justifyContent: 'flex-start',
-    gap: spacing.xl,
+  statsVertical: {
+    gap: spacing.lg,
     marginBottom: spacing.xl,
   },
-  actionsRowSmall: {
+  sectionTitle: {
+    marginBottom: spacing.md,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontSize: 11,
+  },
+  actionsHorizontal: {
+    flexDirection: 'row',
     gap: spacing.md,
   },
-  actionButton: {
-    alignItems: 'center',
+
+  // Desktop: Layout horizontal compacto
+  horizontalContainer: {
+    flexDirection: 'row',
+    gap: spacing.lg,
+    marginBottom: spacing.md,
   },
-  actionIcon: {
-    width: 52,
-    height: 52,
+  cardCompact: {
+    padding: spacing.lg,
     borderRadius: borderRadius.lg,
+  },
+  greetingCompact: {
+    fontWeight: '600',
+    marginBottom: spacing.lg,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    gap: spacing.xl,
+  },
+  sectionTitleCompact: {
+    marginBottom: spacing.md,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontSize: 11,
+  },
+  actionsVertical: {
+    gap: spacing.sm,
+  },
+
+  // Shared: Botões de ação compactos
+  actionButton: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    flex: 1,
   },
   actionLabel: {
-    marginTop: spacing.sm,
+    color: '#fff',
     fontWeight: '600',
-    fontSize: 11,
-    letterSpacing: 0.5,
+    fontSize: 14,
   },
-  sectionTitle: {
-    marginBottom: spacing.sm,
-    fontWeight: '500',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
+
+  // Shared: Stats
   statItem: {
     flex: 1,
   },
-  statItemRight: {
-    alignItems: 'flex-end',
-  },
   statLabel: {
     marginBottom: spacing.xs,
+    fontSize: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   statValue: {
     fontWeight: '700',
-    fontSize: 18,
+    fontSize: 24,
   },
 });

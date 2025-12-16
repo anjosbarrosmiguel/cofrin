@@ -12,7 +12,7 @@ function AccountItemComponent({ name, type, balance }: any) {
       description={type}
       left={() => <Avatar.Text size={36} label={String(name)?.charAt(0)?.toUpperCase()} style={styles.avatar} />}
       right={() => (
-        <PaperText style={[styles.balance, { color: theme.colors.text }]}>{typeof balance === 'number' ? formatCurrencyBRL(balance) : balance}</PaperText>
+        <PaperText style={[styles.balance, { color: theme.colors.onSurface }]}>{typeof balance === 'number' ? formatCurrencyBRL(balance) : balance}</PaperText>
       )}
       style={styles.row}
     />

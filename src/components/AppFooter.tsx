@@ -51,37 +51,39 @@ export default function AppFooter({ onHome, onAdd, onLaunches, onGoals, onReport
           getShadow(colors, 'lg'),
         ]}
       >
-        <View style={styles.row}>
-          <View style={styles.slot}>
-            <IconButton icon="home-outline" onPress={onHome} />
-          </View>
+        <View style={styles.centeredContent}>
+          <View style={styles.row}>
+            <View style={styles.slot}>
+              <IconButton icon="home-outline" onPress={onHome} />
+            </View>
 
-          <View style={styles.slot}>
-            <IconButton icon="swap-horizontal" onPress={onLaunches} />
-          </View>
+            <View style={styles.slot}>
+              <IconButton icon="swap-horizontal" onPress={onLaunches} />
+            </View>
 
-          <View style={styles.centerSlot}>
-            <Pressable
-              onPress={onAdd}
-              accessibilityRole="button"
-              accessibilityLabel="Adicionar"
-              style={({ pressed }) => [
-                styles.plusButton, 
-                { backgroundColor: colors.primary },
-                pressed && { opacity: 0.9 }
-              ]}
-              hitSlop={12}
-            >
-              <MaterialCommunityIcons name="plus" size={28} color="#fff" />
-            </Pressable>
-          </View>
+            <View style={styles.centerSlot}>
+              <Pressable
+                onPress={onAdd}
+                accessibilityRole="button"
+                accessibilityLabel="Adicionar"
+                style={({ pressed }) => [
+                  styles.plusButton, 
+                  { backgroundColor: colors.primary },
+                  pressed && { opacity: 0.9 }
+                ]}
+                hitSlop={12}
+              >
+                <MaterialCommunityIcons name="plus" size={28} color="#fff" />
+              </Pressable>
+            </View>
 
-          <View style={styles.slot}>
-            <IconButton icon="chart-bar" onPress={onReports} />
-          </View>
+            <View style={styles.slot}>
+              <IconButton icon="chart-bar" onPress={onReports} />
+            </View>
 
-          <View style={styles.slot}>
-            <IconButton icon="lightbulb-on" onPress={onGoals} />
+            <View style={styles.slot}>
+              <IconButton icon="lightbulb-on" onPress={onGoals} />
+            </View>
           </View>
         </View>
       </View>
@@ -99,6 +101,11 @@ const styles = StyleSheet.create({
   container: {
     paddingTop: spacing.sm,
     paddingHorizontal: spacing.md,
+  },
+  centeredContent: {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
   },
   row: {
     height: FOOTER_HEIGHT,

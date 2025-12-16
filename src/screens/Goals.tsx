@@ -101,8 +101,8 @@ export default function Goals() {
     <MainLayout>
       <ScrollView style={[styles.root, { backgroundColor: colors.bg }]} contentContainerStyle={styles.scrollContent}>
         <AppHeader />
-        <View style={styles.content}>
-          <View style={styles.maxWidth}>
+        <View style={styles.centeredContainer}>
+          <View style={styles.content}>
             {/* Header Section */}
             <View style={[styles.headerCard, { backgroundColor: colors.primary }]}>
               <MaterialCommunityIcons name="lightbulb-on" size={32} color="#fff" />
@@ -144,14 +144,13 @@ const styles = StyleSheet.create({
   scrollContent: {
     paddingBottom: 100,
   },
-  content: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  maxWidth: {
+  centeredContainer: {
+    maxWidth: 1200,
     width: '100%',
-    maxWidth: 980,
-    paddingHorizontal: spacing.md,
+    alignSelf: 'center',
+  },
+  content: {
+    padding: spacing.lg,
   },
   headerCard: {
     borderRadius: borderRadius.lg,

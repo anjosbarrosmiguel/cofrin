@@ -72,7 +72,7 @@ export default function Settings({ navigation }: any) {
   return (
     <ScrollView 
       style={[styles.container, { backgroundColor: colors.bg }]} 
-      contentContainerStyle={styles.content}
+      contentContainerStyle={styles.scrollContent}
     >
       {/* Header com perfil */}
       <View style={[styles.header, { backgroundColor: colors.primary }]}>
@@ -104,7 +104,8 @@ export default function Settings({ navigation }: any) {
       </View>
 
       {/* Cards de menu */}
-      <View style={styles.menuContainer}>
+      <View style={styles.centeredContainer}>
+        <View style={styles.menuContainer}>
         {/* Menu principal */}
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
@@ -129,6 +130,7 @@ export default function Settings({ navigation }: any) {
         <Text style={[styles.version, { color: colors.textMuted }]}>
           Cofrin v1.0.0
         </Text>
+        </View>
       </View>
       <CustomAlert {...alertState} onClose={hideAlert} />
       <SettingsFooter navigation={navigation} />
@@ -140,8 +142,13 @@ const styles = StyleSheet.create({
   container: { 
     flex: 1,
   },
-  content: {
+  scrollContent: {
     paddingBottom: 150,
+  },
+  centeredContainer: {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
   },
   header: {
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
@@ -186,7 +193,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   menuContainer: {
-    paddingHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     marginTop: spacing.md,
   },
   section: {

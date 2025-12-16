@@ -439,9 +439,11 @@ export default function ConfigureAccounts({ navigation }: any) {
       </View>
 
       <ScrollView 
-        style={styles.content}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
       >
+        <View style={styles.centeredContainer}>
+          <View style={styles.content}>
         {/* Saldo total */}
         {activeAccounts.length > 0 && (
           <View style={[styles.totalCard, { backgroundColor: colors.primary }]}>
@@ -662,6 +664,8 @@ export default function ConfigureAccounts({ navigation }: any) {
                 {saving ? 'Criando...' : 'Criar conta'}
               </Text>
             </Pressable>
+          </View>
+        </View>
           </View>
         </View>
       </ScrollView>
@@ -925,7 +929,17 @@ export default function ConfigureAccounts({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingBottom: 70,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  centeredContainer: {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -944,8 +958,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   content: {
-    flex: 1,
-    padding: spacing.md,
+    padding: spacing.lg,
   },
   totalCard: {
     borderRadius: borderRadius.lg,

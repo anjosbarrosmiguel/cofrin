@@ -53,6 +53,7 @@ export default function EditProfile({ navigation }: any) {
         <View style={{ width: 24 }} />
       </View>
 
+      <View style={styles.centeredContainer}>
       {/* Avatar */}
       <View style={styles.avatarSection}>
         <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
@@ -90,6 +91,7 @@ export default function EditProfile({ navigation }: any) {
           </Text>
         </Pressable>
       </View>
+      </View>
 
       <CustomAlert {...alertState} onClose={hideAlert} />
     </View>
@@ -99,6 +101,11 @@ export default function EditProfile({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  centeredContainer: {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
   },
   header: {
     flexDirection: 'row',

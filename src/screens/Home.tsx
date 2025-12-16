@@ -21,6 +21,7 @@ import { ACCOUNT_TYPE_LABELS } from "../types/firebase";
 import { Timestamp } from "firebase/firestore";
 import * as goalService from "../services/goalService";
 import * as transactionService from "../services/transactionService";
+import { spacing } from "../theme";
 
 export default function Home() {
   const { user } = useAuth();
@@ -189,10 +190,10 @@ export default function Home() {
 
   return (
     <MainLayout>
-      <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 18 }}>
+      <ScrollView style={{ backgroundColor: colors.bg }} contentContainerStyle={{ paddingBottom: 120 }}>
         <AppHeader />
-        <View style={{ alignItems: 'center', paddingVertical: 12 }}>
-          <View style={{ width: "100%", maxWidth: 980, paddingHorizontal: 12 }}>
+        <View style={styles.centeredContainer}>
+          <View style={styles.content}>
         <HomeOverview
           username={userName}
           revenue={totalIncome}
@@ -200,7 +201,7 @@ export default function Home() {
           onSaveTransaction={triggerRefresh}
         />
 
-        <View style={{ height: 12 }} />
+        <View style={{ height: spacing.lg }} />
         <View style={{ flexDirection: isNarrow ? 'column' : 'row' }}>
           <View style={{ flex: 1 }}>
             <BalanceCard 
@@ -210,7 +211,7 @@ export default function Home() {
               onAddPress={() => navigation.navigate('ConfigureAccounts')}
             />
           </View>
-          <View style={{ width: isNarrow ? '100%' : 12, height: isNarrow ? 12 : 'auto' }} />
+          <View style={{ width: isNarrow ? '100%' : spacing.lg, height: isNarrow ? spacing.lg : 'auto' }} />
           <View style={{ flex: 1 }}>
             <CreditCardsCard 
               cards={activeCards} 
@@ -220,7 +221,7 @@ export default function Home() {
           </View>
         </View>
 
-        <View style={{ height: 12 }} />
+        <View style={{ height: spacing.lg }} />
         
         {/* Meta Financeira */}
         <GoalCard 
@@ -252,7 +253,7 @@ export default function Home() {
           />
         )}
 
-        <View style={{ height: 12 }} />
+        <View style={{ height: spacing.lg }} />
         <View style={{ flexDirection: isNarrow ? 'column' : 'row' }}>
           <View style={{ flex: 1 }}>
             <ExpensesByCategoryCard 
@@ -272,6 +273,14 @@ export default function Home() {
 }
 
 const styles = StyleSheet.create({
+  centeredContainer: {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
+  },
+  content: {
+    padding: spacing.lg,
+  },
   container: { flex: 1, justifyContent: "center", alignItems: "center" },
   title: { fontSize: 24, marginBottom: 12 },
   avatarContainer: { alignItems: "center", marginBottom: 12 },

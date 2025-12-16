@@ -55,13 +55,18 @@ export default function AddTransactionFab({ style, initialType = 'despesa' }: Pr
         <Text style={styles.plus}>+</Text>
       </Pressable>
 
-      <AddTransactionModal visible={visible} onClose={() => setVisible(false)} onSave={(p) => { handleSave(p); setVisible(false); }} initialType={initialType} />
+      <AddTransactionModal
+        visible={visible}
+        onClose={() => setVisible(false)}
+        onSave={() => setVisible(false)}
+        initialType={initialType}
+      />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { position: 'relative' },
-  fab: { backgroundColor: palette.blue, width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
+  fab: { backgroundColor: palette.primary, width: 56, height: 56, borderRadius: 28, alignItems: 'center', justifyContent: 'center' },
   plus: { color: '#fff', fontWeight: '700', fontSize: 26 },
 });

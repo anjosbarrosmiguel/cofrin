@@ -377,8 +377,8 @@ export default function Launches() {
           }
         >
           <AppHeader />
-          <View style={styles.content}>
-            <View style={styles.maxWidth}>
+          <View style={styles.centeredContainer}>
+            <View style={styles.content}>
               {/* Seletor de Mês/Ano (sempre visível, mesmo com filtro de conta) */}
               <View style={[styles.monthSelector, { backgroundColor: colors.card }, getShadow(colors)]}>
                 <Pressable 
@@ -680,16 +680,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: spacing.md,
+    paddingBottom: 120,
+  },
+  centeredContainer: {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
   },
   content: {
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-  },
-  maxWidth: {
-    width: '100%',
-    maxWidth: 980,
-    paddingHorizontal: spacing.md,
+    padding: spacing.lg,
   },
   monthSelector: {
     flexDirection: 'row',

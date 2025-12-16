@@ -142,11 +142,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   balanceLabel: {
-    marginBottom: spacing.xs,
-    fontWeight: '500',
+    marginBottom: spacing.sm,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    fontSize: 11,
   },
   balanceValue: {
     fontWeight: '700',
+    fontSize: 32,
   },
   balanceIcon: {
     width: 48,

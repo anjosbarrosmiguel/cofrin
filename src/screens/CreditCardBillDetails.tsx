@@ -187,11 +187,13 @@ export default function CreditCardBillDetails() {
       
       <ScrollView
         style={[styles.container, { backgroundColor: colors.bg }]}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
       >
+        <View style={styles.centeredContainer}>
+        <View style={styles.content}>
         {/* Card do resumo da fatura */}
         <View style={[styles.billCard, { backgroundColor: colors.card, ...getShadow(colors) }]}>
           <View style={styles.billHeader}>
@@ -333,6 +335,8 @@ export default function CreditCardBillDetails() {
             </Text>
           </View>
         )}
+        </View>
+        </View>
       </ScrollView>
       
       {/* Modal de seleção de conta */}
@@ -424,9 +428,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scrollContent: {
+    paddingBottom: 100,
+  },
+  centeredContainer: {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
+  },
   content: {
-    padding: spacing.md,
-    paddingBottom: spacing.xl,
+    padding: spacing.lg,
   },
   billCard: {
     borderRadius: borderRadius.lg,

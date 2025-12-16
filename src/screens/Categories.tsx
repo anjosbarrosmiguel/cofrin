@@ -108,9 +108,11 @@ export default function Categories({ navigation }: any) {
       </View>
 
       <ScrollView 
-        style={styles.content}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
       >
+        <View style={styles.centeredContainer}>
+          <View style={styles.content}>
         {/* Tipo de categoria */}
         <View style={styles.typeSelector}>
           <Pressable
@@ -304,7 +306,7 @@ export default function Categories({ navigation }: any) {
             </Pressable>
           </View>
         </View>
-      </ScrollView>
+        </View>        </View>      </ScrollView>
 
       <EditCategoryModal
         visible={editingCategory !== null}
@@ -323,7 +325,17 @@ export default function Categories({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingBottom: 70,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingBottom: 120,
+  },
+  centeredContainer: {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
   },
   header: {
     flexDirection: 'row',
@@ -342,8 +354,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   content: {
-    flex: 1,
-    padding: spacing.md,
+    padding: spacing.lg,
   },
   typeSelector: {
     flexDirection: 'row',

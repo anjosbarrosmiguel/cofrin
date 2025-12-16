@@ -36,42 +36,44 @@ export default function AppHeader(props?: any) {
   const topInset = Platform.OS === 'android' ? (StatusBar.currentHeight || insets.top || 8) : insets.top;
 
   return (
-    <SafeAreaView style={{ backgroundColor: colors.bgHeader }} edges={['top', 'left', 'right']}>
-      <View style={[styles.header, { paddingTop: topInset, backgroundColor: colors.bgHeader }]}>
-    
+    <View style={{ backgroundColor: colors.bgHeader }}>
+      <SafeAreaView edges={['top']}>
+        <View style={[styles.header, { paddingTop: topInset, backgroundColor: colors.bgHeader }]}>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.navContainer}>
+            {items.map(item => (
+              <Pressable
+                key={item.key}
+                onPress={() => navigation.navigate(item.route as any)}
+                style={[
+                  styles.navItem,
+                  currentRoute === item.route && [styles.navItemActive, { backgroundColor: colors.card, borderColor: colors.border }],
+                ]}
+                hitSlop={{ top: 6, bottom: 6, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Navegar para ${item.label}`}
+              >
+                <Text style={[styles.navText, currentRoute === item.route && { color: colors.primary }]}>{item.label}</Text>
+              </Pressable>
+            ))}
+          </ScrollView>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.navContainer}>
-        {items.map(item => (
-          <Pressable
-            key={item.key}
-            onPress={() => navigation.navigate(item.route as any)}
-            style={[
-              styles.navItem,
-              currentRoute === item.route && [styles.navItemActive, { backgroundColor: colors.card, borderColor: colors.border }],
-            ]}
-            hitSlop={{ top: 6, bottom: 6, left: 10, right: 10 }}
-            accessibilityRole="button"
-            accessibilityLabel={`Navegar para ${item.label}`}
-          >
-            <Text style={[styles.navText, currentRoute === item.route && { color: colors.primary }]}>{item.label}</Text>
+          <Pressable onPress={() => navigation.navigate('Configurações')} style={styles.avatarArea} accessibilityRole="button" hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} accessibilityLabel="Configurações">
+            <View style={[styles.avatarCircle, { backgroundColor: colors.card }]}>
+              <MaterialCommunityIcons name="piggy-bank" size={20} color={colors.primary} />
+            </View>
+            {showAvatarName && <Text style={styles.avatarName} numberOfLines={1}>{username}</Text>}
           </Pressable>
-        ))}
-      </ScrollView>
-
-      <Pressable onPress={() => navigation.navigate('Configurações')} style={styles.avatarArea} accessibilityRole="button" hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }} accessibilityLabel="Configurações">
-        <View style={[styles.avatarCircle, { backgroundColor: colors.card }]}>
-          <MaterialCommunityIcons name="piggy-bank" size={20} color={colors.primary} />
         </View>
-        {showAvatarName && <Text style={styles.avatarName} numberOfLines={1}>{username}</Text>}
-      </Pressable>
-      </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   header: {
     width: '100%',
+    maxWidth: 1200,
+    alignSelf: 'center',
     minHeight: 56,
     paddingHorizontal: 12,
     alignItems: 'center',

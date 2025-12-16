@@ -93,7 +93,7 @@ export default function CreditCardsCard({ cards = [], totalBills = 0, onCardPres
       <View style={styles.header}>
         <View style={styles.titleSection}>
           <Text style={[styles.title, { color: colors.text }]}>
-            Cartões de Crédito
+            Cartões de crédito
           </Text>
           <Text style={[styles.subtitle, { color: colors.textMuted }]}>
             {cards.length > 0 ? `${cards.length} cartão${cards.length > 1 ? 'ões' : ''}` : 'Nenhum cartão'}

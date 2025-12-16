@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { useAuth } from '../contexts/authContext';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -13,6 +13,8 @@ import { useMonthReport, useExpensesByCategory } from '../hooks/useFirebaseTrans
 import { useGoal } from '../hooks/useGoal';
 import CreateGoalModal from '../components/CreateGoalModal';
 import * as goalService from '../services/goalService';
+import { getAllCreditCards } from '../services/creditCardService';
+import { getBillDetails } from '../services/creditCardBillService';
 
 // Componente de stat card
 interface StatCardProps {
@@ -95,6 +97,16 @@ export default function Reports() {
   // Estado do modal de criação de meta
   const [showGoalModal, setShowGoalModal] = useState(false);
 
+  // Estado para faturas futuras
+  const [futureCommitments, setFutureCommitments] = useState<Array<{
+    month: number;
+    year: number;
+    monthName: string;
+    totalAmount: number;
+    percentage: number;
+  }>>([]);
+  const [loadingFuture, setLoadingFuture] = useState(false);
+
   // Criar ou atualizar meta
   const handleSaveGoal = async (data: {
     name: string;
@@ -135,6 +147,68 @@ export default function Reports() {
     'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
   ];
+
+  // Buscar faturas futuras (próximos 6 meses)
+  useEffect(() => {
+    const loadFutureCommitments = async () => {
+      if (!user || !report?.currentSalary) return;
+      
+      setLoadingFuture(true);
+      try {
+        const cards = await getAllCreditCards(user.uid);
+        const activeCards = cards.filter(c => !c.isArchived);
+        
+        if (activeCards.length === 0) {
+          setFutureCommitments([]);
+          return;
+        }
+
+        const months = [];
+        const currentSalary = report.currentSalary;
+        
+        // Próximos 6 meses (começando do próximo mês)
+        for (let i = 1; i <= 6; i++) {
+          let month = currentMonth + i;
+          let year = currentYear;
+          
+          while (month > 12) {
+            month -= 12;
+            year += 1;
+          }
+          
+          // Buscar total de faturas deste mês
+          let totalAmount = 0;
+          for (const card of activeCards) {
+            const billData = await getBillDetails(user.uid, card.id, month, year);
+            if (billData) {
+              totalAmount += billData.totalAmount;
+            }
+          }
+          
+          // Só adiciona se houver fatura
+          if (totalAmount > 0) {
+            const percentage = (totalAmount / currentSalary) * 100;
+            months.push({
+              month,
+              year,
+              monthName: monthNames[month - 1],
+              totalAmount,
+              percentage
+            });
+          }
+        }
+        
+        setFutureCommitments(months);
+      } catch (error) {
+        console.error('Erro ao carregar faturas futuras:', error);
+        setFutureCommitments([]);
+      } finally {
+        setLoadingFuture(false);
+      }
+    };
+
+    loadFutureCommitments();
+  }, [user, report?.currentSalary, currentMonth, currentYear]);
 
   // Mês anterior
   const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
@@ -391,29 +465,21 @@ export default function Reports() {
                   <MaterialCommunityIcons name="calendar-clock" size={24} color={colors.warning || '#F59E0B'} />
                 </View>
                 <Text style={[styles.cardTitle, { color: colors.text }]}>Compromissos de cartão</Text>
+                <View style={styles.infoIcon}>
+                  <MaterialCommunityIcons name="information" size={16} color={colors.textMuted} />
+                </View>
               </View>
               
-              <Text style={[styles.cardDescription, { color: colors.textMuted }]}>
-                Tudo que você registrar de receita na categoria Renda será usado para medir quanto da sua renda mensal está comprometida com o cartão de crédito.
+              <Text style={[styles.infoTooltip, { color: colors.textMuted }]}>
+                O cálculo considera sua renda mensal cadastrada e os valores lançados no cartão de crédito.
               </Text>
 
-              <View style={styles.futureRow}>
-                <View style={styles.futureItem}>
-                  <Text style={[styles.futureLabel, { color: colors.textMuted }]}>
-                    Fatura atual
-                  </Text>
-                  <Text style={[styles.futureValue, { color: colors.expense }]}>
-                    {formatCurrencyBRL(report?.totalCreditCardUsage || 0)}
-                  </Text>
-                </View>
-                
-                {report?.currentSalary ? (
-                  <View style={styles.futureItem}>
-                    <Text style={[styles.futureLabel, { color: colors.textMuted }]}>
-                      % da renda
-                    </Text>
+              {report?.currentSalary ? (
+                <>
+                  {/* Resumo principal - Percentual em destaque */}
+                  <View style={styles.commitmentMain}>
                     <Text style={[
-                      styles.futureValue, 
+                      styles.commitmentPercentage,
                       { 
                         color: report.debtPercentage <= 30 
                           ? colors.income 
@@ -422,28 +488,79 @@ export default function Reports() {
                           : colors.expense 
                       }
                     ]}>
-                      {report.debtPercentage <= 30 ? '🟢' : report.debtPercentage <= 40 ? '🟡' : '🔴'} {report.debtPercentage % 1 === 0 ? report.debtPercentage.toFixed(0) : report.debtPercentage.toFixed(1)}%
+                      {report.debtPercentage <= 30 ? '🟢' : report.debtPercentage <= 40 ? '🟡' : '🔴'} {report.debtPercentage % 1 === 0 ? report.debtPercentage.toFixed(0) : report.debtPercentage.toFixed(1)}% da renda
+                    </Text>
+                    <Text style={[styles.commitmentAmount, { color: colors.textMuted }]}>
+                      {formatCurrencyBRL(report?.totalCreditCardUsage || 0)} / mês
                     </Text>
                   </View>
-                ) : null}
-              </View>
 
-              {report?.currentSalary ? (
-                <View style={[styles.healthZone, { backgroundColor: colors.grayLight }]}>
-                  <View style={styles.healthZoneHeader}>
-                    <MaterialCommunityIcons name="cash-multiple" size={16} color={colors.textMuted} />
-                    <Text style={[styles.salaryText, { color: colors.textMuted }]}>
-                      Renda mensal: {formatCurrencyBRL(report.currentSalary)}
-                    </Text>
-                  </View>
-                  <View style={styles.healthZoneInfo}>
-                    <Text style={[styles.healthZoneText, { color: colors.textMuted }]}>
-                      🟢 <Text style={{ fontWeight: '600' }}>Até 30%</Text> = Zona saudável (recomendado){"\n"}
-                      🟡 <Text style={{ fontWeight: '600' }}>30-40%</Text> = Zona de atenção{"\n"}
-                      🔴 <Text style={{ fontWeight: '600' }}>Acima de 40%</Text> = Zona de risco
-                    </Text>
-                  </View>
-                </View>
+                  {/* Renda considerada */}
+                  <Text style={[styles.incomeReference, { color: colors.textMuted }]}>
+                    Renda considerada: {formatCurrencyBRL(report.currentSalary)}
+                  </Text>
+
+                  {/* Feedback contextual */}
+                  {report.debtPercentage > 40 && (
+                    <View style={[styles.contextualFeedback, { backgroundColor: colors.dangerBg }]}>
+                      <Text style={[styles.feedbackText, { color: colors.expense }]}>
+                        Risco financeiro: comprometimento elevado do cartão.
+                      </Text>
+                    </View>
+                  )}
+                  {report.debtPercentage > 30 && report.debtPercentage <= 40 && (
+                    <View style={[styles.contextualFeedback, { backgroundColor: colors.warningBg || '#FEF3C7' }]}>
+                      <Text style={[styles.feedbackText, { color: colors.warning || '#F59E0B' }]}>
+                        Atenção: seu cartão já compromete parte relevante da renda.
+                      </Text>
+                    </View>
+                  )}
+                  {report.debtPercentage <= 30 && (
+                    <View style={[styles.contextualFeedback, { backgroundColor: colors.successBg }]}>
+                      <Text style={[styles.feedbackText, { color: colors.income }]}>
+                        Seu comprometimento está dentro do recomendado.
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* Compromissos futuros */}
+                  {futureCommitments.length > 0 && (
+                    <View style={styles.futureCommitmentsSimple}>
+                      <Text style={[styles.futureCommitmentsTitle, { color: colors.text }]}>
+                        Próximos meses
+                      </Text>
+                      
+                      {futureCommitments.slice(0, 3).map((commitment) => {
+                        const emoji = commitment.percentage <= 30 ? '🟢' : commitment.percentage <= 40 ? '🟡' : '🔴';
+                        const monthShort = commitment.monthName.substring(0, 3);
+                        const yearShort = commitment.year.toString().substring(2);
+                        
+                        return (
+                          <View key={`${commitment.year}-${commitment.month}`} style={[styles.futureMonthSimple, { borderBottomColor: colors.border }]}>
+                            <Text style={[styles.futureMonthLabel, { color: colors.text }]}>
+                              {monthShort}/{yearShort}
+                            </Text>
+                            <Text style={[styles.futureMonthValue, { color: colors.textMuted }]}>
+                              {formatCurrencyBRL(commitment.totalAmount)}
+                            </Text>
+                            <Text style={styles.futureMonthEmoji}>
+                              {emoji}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                      
+                      {futureCommitments.length > 3 && (
+                        <View style={styles.futureInfoMessage}>
+                          <MaterialCommunityIcons name="information-outline" size={14} color={colors.textMuted} />
+                          <Text style={[styles.futureInfoText, { color: colors.textMuted }]}>
+                            Esta projeção serve como um alerta. Para acompanhamento detalhado, consulte a fatura do seu cartão.
+                          </Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </>
               ) : (
                 <View style={[styles.salaryInfo, { backgroundColor: colors.grayLight }]}>
                   <MaterialCommunityIcons name="information" size={16} color={colors.textMuted} />
@@ -848,6 +965,145 @@ const styles = StyleSheet.create({
     gap: spacing.xs,
   },
   healthAdviceText: {
+    fontSize: 12,
+    flex: 1,
+    fontWeight: '500',
+  },
+  // Novos estilos para Compromissos de cartão refatorado
+  infoIcon: {
+    marginLeft: 'auto',
+    opacity: 0.6,
+  },
+  infoTooltip: {
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: spacing.md,
+    fontStyle: 'italic',
+  },
+  commitmentMain: {
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    gap: spacing.xs,
+  },
+  commitmentPercentage: {
+    fontSize: 32,
+    fontWeight: '700',
+    letterSpacing: -0.5,
+  },
+  commitmentAmount: {
+    fontSize: 14,
+  },
+  incomeReference: {
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  contextualFeedback: {
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.md,
+  },
+  feedbackText: {
+    fontSize: 12,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+  futureCommitmentsSimple: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.08)',
+  },
+  futureMonthSimple: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.sm,
+    borderBottomWidth: 1,
+    gap: spacing.sm,
+  },
+  futureMonthLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    width: 60,
+  },
+  futureMonthValue: {
+    fontSize: 13,
+    flex: 1,
+  },
+  futureMonthEmoji: {
+    fontSize: 18,
+  },
+  futureInfoMessage: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spacing.xs,
+    marginTop: spacing.md,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0,0,0,0.05)',
+  },
+  futureInfoText: {
+    fontSize: 11,
+    lineHeight: 16,
+    flex: 1,
+    fontStyle: 'italic',
+  },
+  futureCommitments: {
+    padding: spacing.md,
+    borderRadius: borderRadius.sm,
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  futureCommitmentsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    marginBottom: spacing.xs,
+  },
+  futureCommitmentsTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  futureCommitmentsDesc: {
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: spacing.sm,
+  },
+  futureMonthItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.05)',
+  },
+  futureMonthLeft: {
+    flex: 1,
+  },
+  futureMonthName: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  futureMonthAmount: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  futureMonthRight: {
+    alignItems: 'flex-end',
+  },
+  futureMonthPercent: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  futureWarning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    padding: spacing.sm,
+    borderRadius: borderRadius.sm,
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+  },
+  futureWarningText: {
     fontSize: 12,
     flex: 1,
     fontWeight: '500',

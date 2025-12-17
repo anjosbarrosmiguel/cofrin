@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { View, Text, StyleSheet, ScrollView, Pressable, RefreshControl } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useRoute, useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCustomAlert } from "../hooks/useCustomAlert";
 import CustomAlert from "../components/CustomAlert";
 import TransactionsList, { TransactionListItem } from '../components/transactions/TransactionsList';
@@ -15,6 +16,7 @@ import { useTransactionRefresh } from '../contexts/transactionRefreshContext';
 import { formatCurrencyBRL } from '../utils/format';
 import AppHeader from '../components/AppHeader';
 import MainLayout from '../components/MainLayout';
+import { FOOTER_HEIGHT } from '../components/AppFooter';
 import { spacing, borderRadius, getShadow } from '../theme';
 import type { Transaction, TransactionStatus } from '../types/firebase';
 import {
@@ -41,6 +43,13 @@ export default function Launches() {
   const { user } = useAuth();
   const route = useRoute();
   const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
+  
+  // Calcular posição do summary bar considerando insets
+  const summaryBottom = useMemo(
+    () => FOOTER_HEIGHT + Math.max(insets.bottom, 8) + 24,
+    [insets.bottom]
+  );
   
   // Parâmetros de navegação (filtro por conta)
   const params = (route.params as RouteParams) || {};
@@ -63,8 +72,8 @@ export default function Launches() {
   const [editModalVisible, setEditModalVisible] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<EditableTransaction | null>(null);
   
-  // Estado para painel de previsão expandido
-  const [forecastExpanded, setForecastExpanded] = useState(false);
+  // Estado para tooltip de saldo previsto
+  const [showForecastTooltip, setShowForecastTooltip] = useState(false);
   
   // Estado para faturas de cartão de crédito
   const [creditCardBills, setCreditCardBills] = useState<CreditCardBillWithTransactions[]>([]);
@@ -201,16 +210,26 @@ export default function Launches() {
     let pendingIncome = 0;
     let pendingExpense = 0;
 
-    transactions.forEach((t: Transaction) => {
-      if (t.status === 'cancelled') return;
-      
-      if (t.status === 'completed') {
-        if (t.type === 'income') completedIncome += t.amount;
-        else if (t.type === 'expense') completedExpense += t.amount;
-      } else {
-        // pending
-        if (t.type === 'income') pendingIncome += t.amount;
-        else if (t.type === 'expense') pendingExpense += t.amount;
+    // Contar transações normais (exclui transações de cartão individuais)
+    transactions
+      .filter((t: Transaction) => !t.creditCardId) // Exclui apenas transações de cartão, mas INCLUI pagamentos de fatura
+      .forEach((t: Transaction) => {
+        if (t.status === 'cancelled') return;
+        
+        if (t.status === 'completed') {
+          if (t.type === 'income') completedIncome += t.amount;
+          else if (t.type === 'expense') completedExpense += t.amount;
+        } else {
+          // pending
+          if (t.type === 'income') pendingIncome += t.amount;
+          else if (t.type === 'expense') pendingExpense += t.amount;
+        }
+      });
+
+    // Adicionar faturas de cartão pendentes ao forecast
+    creditCardBills.forEach((bill) => {
+      if (!bill.isPaid && bill.totalAmount > 0) {
+        pendingExpense += bill.totalAmount;
       }
     });
 
@@ -225,7 +244,7 @@ export default function Launches() {
       realizedBalance,
       forecastBalance,
     };
-  }, [transactions, carryOverBalance]);
+  }, [transactions, carryOverBalance, creditCardBills]);
 
   // Navegação entre meses
   const goToPreviousMonth = () => {
@@ -498,100 +517,45 @@ export default function Launches() {
             </View>
           </View>
         </ScrollView>
+      </View>
 
-        {/* Summary Bar - Fixo acima do footer */}
-        <View style={[styles.summaryContainer, { backgroundColor: colors.card, borderTopColor: colors.border }]}>
-          {/* Painel expandido de previsão */}
-          {forecastExpanded && (
-            <View style={[styles.forecastPanel, { borderBottomColor: colors.border }]}>
-              <View style={styles.forecastRow}>
-                <View style={styles.forecastColumn}>
-                  <Text style={[styles.forecastLabel, { color: colors.textMuted }]}>Recebido</Text>
-                  <Text style={[styles.forecastValue, { color: incomeColor }]}>
-                    {formatCurrencyBRL(forecast.completedIncome)}
-                  </Text>
-                </View>
-                <View style={styles.forecastColumn}>
-                  <Text style={[styles.forecastLabel, { color: colors.textMuted }]}>A receber</Text>
-                  <Text style={[styles.forecastValue, { color: colors.textSecondary }]}>
-                    {formatCurrencyBRL(forecast.pendingIncome)}
-                  </Text>
-                </View>
-              </View>
-              <View style={styles.forecastRow}>
-                <View style={styles.forecastColumn}>
-                  <Text style={[styles.forecastLabel, { color: colors.textMuted }]}>Pago</Text>
-                  <Text style={[styles.forecastValue, { color: expenseColor }]}>
-                    {formatCurrencyBRL(forecast.completedExpense)}
-                  </Text>
-                </View>
-                <View style={styles.forecastColumn}>
-                  <Text style={[styles.forecastLabel, { color: colors.textMuted }]}>A pagar</Text>
-                  <Text style={[styles.forecastValue, { color: colors.textSecondary }]}>
-                    {formatCurrencyBRL(forecast.pendingExpense)}
-                  </Text>
-                </View>
-              </View>
-              <View style={[styles.forecastDivider, { backgroundColor: colors.border }]} />
-              <View style={styles.forecastRow}>
-                <View style={styles.forecastColumn}>
-                  <Text style={[styles.forecastLabel, { color: colors.textMuted }]}>Saldo realizado</Text>
-                  <Text style={[styles.forecastValue, { color: forecast.realizedBalance >= 0 ? balanceColor : expenseColor }]}>
-                    {formatCurrencyBRL(forecast.realizedBalance)}
-                  </Text>
-                </View>
-                <View style={styles.forecastColumn}>
-                  <Text style={[styles.forecastLabel, { color: colors.textMuted }]}>Previsão final</Text>
-                  <Text style={[styles.forecastValue, { color: forecast.forecastBalance >= 0 ? balanceColor : expenseColor, fontWeight: '700' }]}>
-                    {formatCurrencyBRL(forecast.forecastBalance)}
-                  </Text>
-                </View>
-              </View>
-            </View>
-          )}
-          
-          {/* Botão de expandir/recolher */}
-          <Pressable
-            onPress={() => setForecastExpanded(!forecastExpanded)}
-            style={({ pressed }) => [styles.expandButton, pressed && { opacity: 0.7 }]}
-          >
-            <MaterialCommunityIcons 
-              name={forecastExpanded ? 'chevron-down' : 'chevron-up'} 
-              size={20} 
-              color={colors.primary} 
-            />
-          </Pressable>
-
-          {/* Resumo compacto */}
-          <View style={styles.summaryBar}>
-            {/* Saldo anterior (se existir) */}
-            {carryOverBalance !== 0 && (
-              <>
-                <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryValue, { color: carryOverBalance >= 0 ? colors.textSecondary : expenseColor, fontSize: 13 }]}>
-                    {formatCurrencyBRL(carryOverBalance)}
-                  </Text>
-                  <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>anterior</Text>
-                </View>
-                <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-              </>
-            )}
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: incomeColor }]}>{formatCurrencyBRL(totalIncome)}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>entradas</Text>
-            </View>
-            <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.summaryItem}>
-              <Text style={[styles.summaryValue, { color: expenseColor }]}>{formatCurrencyBRL(totalExpense)}</Text>
-              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>saídas</Text>
-            </View>
-            <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
-            <View style={styles.summaryItem}>
+      {/* Summary Bar - Fixo acima do footer */}
+      <View style={[styles.summaryContainer, { backgroundColor: colors.card, bottom: summaryBottom }, getShadow(colors)]}>
+        {/* Tooltip de Saldo Previsto */}
+        {showForecastTooltip && (
+          <View style={[styles.tooltipContainer, { backgroundColor: colors.bg }]}>
+            <Text style={[styles.tooltipLabel, { color: colors.textMuted }]}>Saldo Previsto</Text>
+            <Text style={[styles.tooltipValue, { color: forecast.forecastBalance >= 0 ? balanceColor : expenseColor }]}>
+              {formatCurrencyBRL(forecast.forecastBalance)}
+            </Text>
+          </View>
+        )}
+        
+        {/* Resumo simplificado */}
+        <View style={styles.summaryBar}>
+          <View style={styles.summaryItem}>
+            <Text style={[styles.summaryValue, { color: incomeColor }]}>{formatCurrencyBRL(totalIncome)}</Text>
+            <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>entradas</Text>
+          </View>
+          <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.summaryItem}>
+            <Text style={[styles.summaryValue, { color: expenseColor }]}>{formatCurrencyBRL(totalExpense)}</Text>
+            <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>saídas</Text>
+          </View>
+          <View style={[styles.summaryDivider, { backgroundColor: colors.border }]} />
+          <View style={styles.summaryItem}>
+            <View style={styles.summaryItemWithInfo}>
               <Text style={[styles.summaryValue, { color: balance >= 0 ? balanceColor : expenseColor }]}>
                 {formatCurrencyBRL(balance)}
               </Text>
-              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>saldo</Text>
+              <Pressable 
+                onPress={() => setShowForecastTooltip(!showForecastTooltip)}
+                style={({ pressed }) => [styles.infoIcon, pressed && { opacity: 0.5 }]}
+              >
+                <MaterialCommunityIcons name="information-outline" size={16} color={colors.textMuted} />
+              </Pressable>
             </View>
+            <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>saldo atual</Text>
           </View>
         </View>
       </View>
@@ -628,7 +592,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 120,
+    paddingBottom: 140,
   },
   centeredContainer: {
     maxWidth: 1200,
@@ -730,35 +694,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   summaryContainer: {
-    borderTopWidth: 1,
-  },
-  expandButton: {
-    alignItems: 'center',
-    paddingVertical: spacing.xs,
-  },
-  forecastPanel: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-  },
-  forecastRow: {
-    flexDirection: 'row',
-    marginBottom: spacing.sm,
-  },
-  forecastColumn: {
-    flex: 1,
-  },
-  forecastLabel: {
-    fontSize: 12,
-    marginBottom: 2,
-  },
-  forecastValue: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  forecastDivider: {
-    height: 1,
-    marginVertical: spacing.sm,
+    position: 'absolute',
+    left: 2,
+    right: 2,
+    borderRadius: borderRadius.lg,
+    zIndex: 10,
   },
   summaryBar: {
     paddingVertical: spacing.md,
@@ -769,6 +709,37 @@ const styles = StyleSheet.create({
   summaryItem: {
     flex: 1,
     alignItems: 'center',
+  },
+  summaryItemWithInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  infoIcon: {
+    padding: 2,
+  },
+  tooltipContainer: {
+    position: 'absolute',
+    top: -50,
+    alignSelf: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  tooltipLabel: {
+    fontSize: 11,
+    textAlign: 'center',
+    marginBottom: 2,
+  },
+  tooltipValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    textAlign: 'center',
   },
   summaryDivider: {
     width: 1,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,7 +8,8 @@ import {
   Modal,
   Dimensions,
   Text,
-  TextInput
+  TextInput,
+  ActivityIndicator
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -161,12 +162,16 @@ export default function AddTransactionModal({
   const [recurrenceType, setRecurrenceType] = useState<'installment' | 'fixed'>('installment'); // Parcelada ou Fixa
   const [repetitions, setRepetitions] = useState(1); // Número de repetições (1-72)
   const [saving, setSaving] = useState(false);
+  const [savingProgress, setSavingProgress] = useState<{ current: number; total: number } | null>(null);
 
   // Single picker state - evita modais aninhados
   const [activePicker, setActivePicker] = useState<PickerType>('none');
   
   // Date picker state for custom calendar
   const [tempDate, setTempDate] = useState(new Date());
+  
+  // Controlar autoFocus apenas na abertura inicial
+  const shouldAutoFocus = useRef(false);
   
   // Custom alert hook
   const { alertState, showAlert, hideAlert } = useCustomAlert();
@@ -189,21 +194,16 @@ export default function AddTransactionModal({
     return null;
   }, [type, accountId, useCreditCard, activeAccounts]);
   
-  // Verificar se pode confirmar (saldo suficiente para transferência)
+  // Verificar se pode confirmar
   const canConfirm = React.useMemo(() => {
     if (type === 'transfer') {
       // Não permitir transferência para a mesma conta
       if (accountId && toAccountId && accountId === toAccountId) {
         return false;
       }
-      // Verificar saldo suficiente
-      if (sourceAccount) {
-        const parsed = parseCurrency(amount);
-        return sourceAccount.balance >= 0 && sourceAccount.balance >= parsed;
-      }
     }
     return true;
-  }, [type, sourceAccount, amount, accountId, toAccountId]);
+  }, [type, accountId, toAccountId]);
 
   // Limpar categoria quando mudar para transferência
   useEffect(() => {
@@ -237,6 +237,9 @@ export default function AddTransactionModal({
   // Reset form when modal opens or populate with edit data
   useEffect(() => {
     if (visible) {
+      // Ativar autoFocus apenas na abertura
+      shouldAutoFocus.current = true;
+      
       // Recarregar listas quando abrir (corrige UI desatualizada após criar/editar/excluir)
       refreshCategories();
       refreshAccounts();
@@ -363,19 +366,6 @@ export default function AddTransactionModal({
       return;
     }
 
-    // Validar saldo para transferências e despesas (quando não usar cartão de crédito)
-    if ((type === 'transfer' || (type === 'despesa' && !useCreditCard)) && accountId) {
-      const sourceAccount = activeAccounts.find(a => a.id === accountId);
-      if (sourceAccount && sourceAccount.balance < parsed) {
-        showAlert(
-          'Saldo insuficiente', 
-          `Você não tem saldo suficiente na conta "${sourceAccount.name}".\n\nSaldo disponível: R$ ${sourceAccount.balance.toFixed(2).replace('.', ',')}\nValor da ${type === 'transfer' ? 'transferência' : 'despesa'}: R$ ${parsed.toFixed(2).replace('.', ',')}`,
-          [{ text: 'OK', style: 'default' }]
-        );
-        return;
-      }
-    }
-
     setSaving(true);
     try {
       // Map local type to Firebase type
@@ -472,6 +462,7 @@ export default function AddTransactionModal({
           let createdCount = 0;
 
           for (let i = 0; i < totalToCreate; i++) {
+            setSavingProgress({ current: i + 1, total: totalToCreate });
             const transactionDate = getNextDate(date, i);
             const transactionData = buildTransactionData(transactionDate, amountPerInstallment);
             const result = await createTransaction(transactionData);
@@ -479,6 +470,7 @@ export default function AddTransactionModal({
               createdCount++;
             }
           }
+          setSavingProgress(null);
 
           // Deletar a transação original
           if (createdCount > 0 && onDelete) {
@@ -508,6 +500,9 @@ export default function AddTransactionModal({
         let createdCount = 0;
 
         for (let i = 0; i < totalToCreate; i++) {
+          if (totalToCreate > 1) {
+            setSavingProgress({ current: i + 1, total: totalToCreate });
+          }
           const transactionDate = getNextDate(date, i);
           const transactionData = buildTransactionData(transactionDate, amountPerInstallment);
           const result = await createTransaction(transactionData);
@@ -515,6 +510,7 @@ export default function AddTransactionModal({
             createdCount++;
           }
         }
+        setSavingProgress(null);
 
         success = createdCount === totalToCreate;
         if (success) {
@@ -1093,7 +1089,10 @@ export default function AddTransactionModal({
         statusBarTranslucent
       >
         <View style={styles.centeredView}>
-          <Pressable style={styles.overlay} onPress={onClose} />
+          <Pressable 
+            style={styles.overlay} 
+            onPress={saving ? undefined : onClose}
+          />
           {/* Main Modal or Picker */}
           {activePicker !== 'none' ? (
             // Picker overlay
@@ -1152,7 +1151,8 @@ export default function AddTransactionModal({
                     placeholderTextColor="rgba(255,255,255,0.6)"
                     selectionColor="#fff"
                     editable={activeAccounts.length > 0}
-                    autoFocus={activeAccounts.length > 0}
+                    autoFocus={activeAccounts.length > 0 && shouldAutoFocus.current}
+                    onFocus={() => { shouldAutoFocus.current = false; }}
                   />
                 </View>
                 {/* Onboarding message if no accounts */}
@@ -1234,7 +1234,26 @@ export default function AddTransactionModal({
                           label="Para (conta destino)"
                           value={toAccountName || 'Selecione'}
                           icon="bank-transfer-in"
-                          onPress={() => setActivePicker('toAccount')}
+                          onPress={() => {
+                            if (activeAccounts.length <= 1) {
+                              showAlert(
+                                'Mais contas necessárias',
+                                'É preciso ter mais de uma conta cadastrada para fazer transferências.',
+                                [
+                                  { text: 'Cancelar', style: 'cancel' },
+                                  {
+                                    text: 'Criar conta',
+                                    onPress: () => {
+                                      onClose();
+                                      navigation.navigate('ConfigureAccounts');
+                                    }
+                                  }
+                                ]
+                              );
+                            } else {
+                              setActivePicker('toAccount');
+                            }
+                          }}
                         />
                       </>
                     ) : (
@@ -1243,6 +1262,8 @@ export default function AddTransactionModal({
                         value={useCreditCard ? creditCardName : (accountName || 'Selecione')}
                         icon={useCreditCard ? 'credit-card' : 'bank-outline'}
                         onPress={() => setActivePicker('account')}
+                        subtitle={!useCreditCard && sourceAccount ? `Saldo atual: ${formatCurrency(Math.round(sourceAccount.balance * 100).toString())}` : undefined}
+                        subtitleColor={!useCreditCard && sourceAccount && sourceAccount.balance < 0 ? colors.danger : colors.textMuted}
                       />
                     )}
                     <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -1378,18 +1399,30 @@ export default function AddTransactionModal({
                       (saving || !canConfirm) && { opacity: 0.6 },
                     ]}
                   >
-                    <MaterialCommunityIcons name={saving ? 'loading' : 'check'} size={20} color="#fff" />
+                    {saving ? (
+                      <ActivityIndicator size="small" color="#fff" />
+                    ) : (
+                      <MaterialCommunityIcons name="check" size={20} color="#fff" />
+                    )}
                     <Text style={styles.saveButtonText}>
-                      {saving ? (isEditMode ? 'Atualizando...' : 'Salvando...') : (isEditMode ? 'Atualizar' : 'Confirmar')}
+                      {saving 
+                        ? (savingProgress 
+                            ? `Criando ${savingProgress.current}/${savingProgress.total}...`
+                            : (isEditMode ? 'Atualizando...' : 'Salvando...')
+                          )
+                        : (isEditMode ? 'Atualizar' : 'Confirmar')
+                      }
                     </Text>
                   </Pressable>
                 </View>
                 {/* Botão Cancelar */}
                 <Pressable
                   onPress={onClose}
+                  disabled={saving}
                   style={({ pressed }) => [
                     styles.cancelButton,
                     pressed && { opacity: 0.7 },
+                    saving && { opacity: 0.5 },
                   ]}
                 >
                   <Text style={[styles.cancelButtonText, { color: colors.text }]}>Cancelar</Text>

@@ -554,6 +554,130 @@ export async function getExpensesByCategory(
   return byCategory;
 }
 
+// Buscar gastos por categoria para múltiplos meses (para análise temporal)
+export async function getCategoryExpensesOverTime(
+  userId: string,
+  startYear: number,
+  endYear: number
+): Promise<{
+  monthlyData: Array<{
+    month: number;
+    year: number;
+    categories: Map<string, { categoryId: string; categoryName: string; categoryIcon: string; total: number }>;
+  }>;
+  yearlyData: Array<{
+    year: number;
+    categories: Map<string, { categoryId: string; categoryName: string; categoryIcon: string; total: number }>;
+  }>;
+}> {
+  // Buscar todas as transações de despesa do usuário (query mais simples sem índice composto)
+  const q = query(
+    transactionsRef,
+    where('userId', '==', userId),
+    where('type', '==', 'expense')
+  );
+
+  const snapshot = await getDocs(q);
+  const allTransactions = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Transaction[];
+
+  // Filtrar por ano no código
+  const transactions = allTransactions.filter(t => 
+    t.year >= startYear && t.year <= endYear
+  );
+
+  // Agrupar por mês
+  const monthlyMap = new Map<string, Transaction[]>();
+  const yearlyMap = new Map<number, Transaction[]>();
+
+  for (const t of transactions) {
+    if (t.status === 'cancelled' || !t.categoryId) continue;
+
+    // Mensal
+    const monthKey = `${t.year}-${String(t.month).padStart(2, '0')}`;
+    if (!monthlyMap.has(monthKey)) {
+      monthlyMap.set(monthKey, []);
+    }
+    monthlyMap.get(monthKey)!.push(t);
+
+    // Anual
+    if (!yearlyMap.has(t.year)) {
+      yearlyMap.set(t.year, []);
+    }
+    yearlyMap.get(t.year)!.push(t);
+  }
+
+  // Processar dados mensais
+  const monthlyData: Array<{
+    month: number;
+    year: number;
+    categories: Map<string, { categoryId: string; categoryName: string; categoryIcon: string; total: number }>;
+  }> = [];
+
+  for (const [monthKey, monthTransactions] of monthlyMap.entries()) {
+    const [yearStr, monthStr] = monthKey.split('-');
+    const year = parseInt(yearStr);
+    const month = parseInt(monthStr);
+
+    const categories = new Map<string, { categoryId: string; categoryName: string; categoryIcon: string; total: number }>();
+
+    for (const t of monthTransactions) {
+      const existing = categories.get(t.categoryId!);
+      if (existing) {
+        existing.total += t.amount;
+      } else {
+        categories.set(t.categoryId!, {
+          categoryId: t.categoryId!,
+          categoryName: t.categoryName || 'Sem categoria',
+          categoryIcon: t.categoryIcon || 'dots-horizontal',
+          total: t.amount,
+        });
+      }
+    }
+
+    monthlyData.push({ month, year, categories });
+  }
+
+  // Ordenar mensais por data (mais recente primeiro)
+  monthlyData.sort((a, b) => {
+    if (a.year !== b.year) return b.year - a.year;
+    return b.month - a.month;
+  });
+
+  // Processar dados anuais
+  const yearlyData: Array<{
+    year: number;
+    categories: Map<string, { categoryId: string; categoryName: string; categoryIcon: string; total: number }>;
+  }> = [];
+
+  for (const [year, yearTransactions] of yearlyMap.entries()) {
+    const categories = new Map<string, { categoryId: string; categoryName: string; categoryIcon: string; total: number }>();
+
+    for (const t of yearTransactions) {
+      const existing = categories.get(t.categoryId!);
+      if (existing) {
+        existing.total += t.amount;
+      } else {
+        categories.set(t.categoryId!, {
+          categoryId: t.categoryId!,
+          categoryName: t.categoryName || 'Sem categoria',
+          categoryIcon: t.categoryIcon || 'dots-horizontal',
+          total: t.amount,
+        });
+      }
+    }
+
+    yearlyData.push({ year, categories });
+  }
+
+  // Ordenar anuais (mais recente primeiro)
+  yearlyData.sort((a, b) => b.year - a.year);
+
+  return { monthlyData, yearlyData };
+}
+
 // ==========================================
 // SALDO HISTÓRICO
 // ==========================================

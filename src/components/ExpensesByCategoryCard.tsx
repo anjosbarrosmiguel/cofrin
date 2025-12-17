@@ -1,6 +1,7 @@
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../contexts/themeContext';
 import { spacing, borderRadius, getShadow } from '../theme';
 import { formatCurrencyBRL } from '../utils/format';
@@ -26,6 +27,7 @@ export default function ExpensesByCategoryCard({
   showTitle = true 
 }: Props) {
   const { colors } = useAppTheme();
+  const navigation = useNavigation<any>();
 
   // Calcular percentual de cada categoria
   const expensesWithPercentage = expenses.map(expense => ({
@@ -49,7 +51,11 @@ export default function ExpensesByCategoryCard({
   // Se não há gastos
   if (expenses.length === 0 || totalExpenses === 0) {
     return (
-      <View style={[styles.card, { backgroundColor: colors.card }, getShadow(colors)]}>
+      <TouchableOpacity 
+        style={[styles.card, { backgroundColor: colors.card }, getShadow(colors)]}
+        onPress={() => navigation.navigate('CategoryDetails')}
+        activeOpacity={0.7}
+      >
         {showTitle && (
           <View style={styles.header}>
             <View style={[styles.iconCircle, { backgroundColor: colors.dangerBg }]}>
@@ -65,12 +71,16 @@ export default function ExpensesByCategoryCard({
             Nenhum gasto registrado neste mês
           </Text>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   }
 
   return (
-    <View style={[styles.card, { backgroundColor: colors.card }, getShadow(colors)]}>
+    <TouchableOpacity 
+      style={[styles.card, { backgroundColor: colors.card }, getShadow(colors)]}
+      onPress={() => navigation.navigate('CategoryDetails')}
+      activeOpacity={0.7}
+    >
       {showTitle && (
         <View style={styles.header}>
           <View style={[styles.iconCircle, { backgroundColor: colors.dangerBg }]}>
@@ -201,7 +211,7 @@ export default function ExpensesByCategoryCard({
           </Text>
         </View>
       )}
-    </View>
+    </TouchableOpacity>
   );
 }
 

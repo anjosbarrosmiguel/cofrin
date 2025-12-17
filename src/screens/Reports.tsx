@@ -290,7 +290,7 @@ export default function Reports() {
       const cardEmoji = cardPercentage <= 30 ? '🟢' : cardPercentage <= 40 ? '🟡' : '🔴';
       highlights.push({
         icon: 'credit-card',
-        text: `Uso do cartão: ${cardPercentage.toFixed(0)}% da renda ${cardEmoji} (zona ${cardZone})`,
+        text: `Uso do cartão: ${cardPercentage.toFixed(0)}% das receitas ${cardEmoji} (zona ${cardZone})`,
         color: cardPercentage <= 30 ? colors.income : cardPercentage <= 40 ? (colors.warning || '#F59E0B') : colors.expense
       });
     }
@@ -320,7 +320,7 @@ export default function Reports() {
           ? 'Você terminou o mês com saldo positivo e manteve seus gastos sob controle. Continue assim!'
           : 'Você está mantendo um bom controle financeiro. Pequenos ajustes podem deixar seu saldo ainda mais positivo.',
         highlights,
-        advice: 'Manter o uso do cartão abaixo de 30% da renda ajuda a preservar sua saúde financeira.'
+        advice: 'Manter o uso do cartão abaixo de 30% das receitas ajuda a preservar sua saúde financeira.'
       };
     }
 
@@ -330,7 +330,7 @@ export default function Reports() {
       if (cardPercentage > 30 && monthBalance < 0) {
         summary = 'Você terminou o mês com saldo negativo e o uso do cartão está acima do recomendado. Pequenos ajustes podem melhorar sua situação.';
       } else if (cardPercentage > 30) {
-        summary = 'O uso do cartão está acima do recomendado. Considere reduzir um pouco para evitar comprometer demais sua renda.';
+        summary = 'O uso do cartão está acima do recomendado. Considere reduzir um pouco para evitar comprometer demais suas receitas.';
       } else if (monthBalance < 0) {
         summary = 'Você gastou mais do que recebeu este mês. Veja onde é possível economizar para equilibrar suas finanças.';
       } else {
@@ -344,7 +344,7 @@ export default function Reports() {
         subtitle: 'Alguns pontos merecem cuidado',
         summary,
         highlights,
-        advice: 'Revise seus gastos principais e veja onde é possível reduzir. Até 30% da renda no cartão é o ideal.'
+        advice: 'Revise seus gastos principais e veja onde é possível reduzir. Até 30% das receitas no cartão é o ideal.'
       };
     }
 
@@ -354,7 +354,7 @@ export default function Reports() {
     if (cardPercentage > 40 && monthBalance < 0) {
       summary = 'Sua situação precisa de atenção urgente: saldo negativo e uso alto do cartão podem comprometer seu orçamento.';
     } else if (cardPercentage > 40) {
-      summary = 'O uso do cartão está muito alto em relação à sua renda. Isso pode gerar dificuldades para pagar as faturas.';
+      summary = 'O uso do cartão está muito alto em relação às suas receitas. Isso pode gerar dificuldades para pagar as faturas.';
     } else if (currentBalance < 0) {
       summary = 'Você está com saldo negativo. É importante revisar seus gastos e buscar formas de equilibrar as contas.';
     } else {
@@ -467,7 +467,7 @@ export default function Reports() {
               </View>
               
               <Text style={[styles.infoTooltip, { color: colors.textMuted }]}>
-                O cálculo considera sua renda mensal cadastrada e os valores lançados no cartão de crédito.
+                O cálculo considera o total de suas receitas do mês e os valores lançados no cartão de crédito.
               </Text>
 
               {report?.currentSalary ? (
@@ -484,7 +484,7 @@ export default function Reports() {
                           : colors.expense 
                       }
                     ]}>
-                      {report.debtPercentage <= 30 ? '🟢' : report.debtPercentage <= 40 ? '🟡' : '🔴'} {report.debtPercentage % 1 === 0 ? report.debtPercentage.toFixed(0) : report.debtPercentage.toFixed(1)}% da renda
+                      {report.debtPercentage <= 30 ? '🟢' : report.debtPercentage <= 40 ? '🟡' : '🔴'} {report.debtPercentage % 1 === 0 ? report.debtPercentage.toFixed(0) : report.debtPercentage.toFixed(1)}% das receitas
                     </Text>
                     <Text style={[styles.commitmentAmount, { color: colors.textMuted }]}>
                       {formatCurrencyBRL(report?.totalCreditCardUsage || 0)} / mês
@@ -493,7 +493,7 @@ export default function Reports() {
 
                   {/* Renda considerada */}
                   <Text style={[styles.incomeReference, { color: colors.textMuted }]}>
-                    Renda considerada: {formatCurrencyBRL(report.currentSalary)}
+                    Total de receitas: {formatCurrencyBRL(report.currentSalary)}
                   </Text>
 
                   {/* Feedback contextual */}

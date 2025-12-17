@@ -871,26 +871,29 @@ export async function getCreditExpenses(
     .reduce((sum, t) => sum + t.amount, 0);
 }
 
-// Buscar renda atual (última receita com categoria "Renda")
+// Buscar renda atual (soma de todas as receitas do mês atual)
 export async function getCurrentSalary(userId: string): Promise<number> {
+  const today = new Date();
+  const currentMonth = today.getMonth() + 1; // 1-12
+  const currentYear = today.getFullYear();
+
   const q = query(
     transactionsRef,
     where('userId', '==', userId),
     where('type', '==', 'income'),
-    where('categoryName', '==', 'Renda')
+    where('month', '==', currentMonth),
+    where('year', '==', currentYear),
+    where('status', '==', 'completed')
   );
 
   const snapshot = await getDocs(q);
-  const salaryTransactions = snapshot.docs.map(doc => ({
+  const incomeTransactions = snapshot.docs.map(doc => ({
     id: doc.id,
     ...doc.data(),
   })) as Transaction[];
 
-  if (salaryTransactions.length === 0) return 0;
-
-  // Ordenar por data e pegar o mais recente
-  const sorted = salaryTransactions.sort((a, b) => b.date.toMillis() - a.date.toMillis());
-  return sorted[0].amount;
+  // Somar todas as receitas completadas do mês
+  return incomeTransactions.reduce((sum, t) => sum + t.amount, 0);
 }
 
 // Gastos futuros previstos (transações pendentes ou recorrentes para próximo mês)

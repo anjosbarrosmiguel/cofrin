@@ -6,18 +6,20 @@ import CustomAlert from "../components/CustomAlert";
 import { useRoute, useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../contexts/themeContext';
 import { useAuth } from '../contexts/authContext';
+import { useTransactionRefresh } from '../contexts/transactionRefreshContext';
 import { useAccounts } from '../hooks/useAccounts';
 import AppHeader from '../components/AppHeader';
 import MainLayout from '../components/MainLayout';
 import { spacing, borderRadius, getShadow } from '../theme';
 import { formatCurrencyBRL } from '../utils/format';
 import {
-    getBillDetails,
-    payBill,
-    unpayBill,
-    getMonthName,
-    CreditCardBillWithTransactions
+  getBillDetails,
+  payBill,
+  unpayBill,
+  getMonthName,
+  CreditCardBillWithTransactions
 } from '../services/creditCardBillService';
+import { deleteTransaction } from '../services/transactionService';
 import type { Transaction } from '../types/firebase';
 
 interface RouteParams {
@@ -31,6 +33,7 @@ export default function CreditCardBillDetails() {
   const { alertState, showAlert, hideAlert } = useCustomAlert();
   const { colors } = useAppTheme();
   const { user } = useAuth();
+  const { triggerRefresh } = useTransactionRefresh();
   const navigation = useNavigation();
   const route = useRoute();
   const params = route.params as RouteParams;
@@ -203,6 +206,31 @@ export default function CreditCardBillDetails() {
               showAlert('Erro', 'Não foi possível pagar a fatura', [{ text: 'OK' }]);
             } finally {
               setPaying(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  // Deletar transação
+  const handleDeleteTransaction = async (transaction: Transaction) => {
+    showAlert(
+      'Excluir lançamento',
+      `Tem certeza que deseja excluir "${transaction.description}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Excluir',
+          onPress: async () => {
+            try {
+              await deleteTransaction(transaction);
+              triggerRefresh(); // Atualizar todos os componentes que usam transações
+              showAlert('Sucesso', 'Lançamento excluído com sucesso', [{ text: 'OK' }]);
+              loadBillDetails(); // Recarregar dados
+            } catch (error) {
+              console.error('Erro ao excluir transação:', error);
+              showAlert('Erro', 'Não foi possível excluir o lançamento', [{ text: 'OK' }]);
             }
           },
         },
@@ -411,6 +439,15 @@ export default function CreditCardBillDetails() {
                 ]}>
                   {t.type === 'expense' ? '-' : '+'}{formatCurrencyBRL(t.amount)}
                 </Text>
+                <Pressable
+                  style={({ pressed }) => [
+                    styles.deleteButton,
+                    pressed && { opacity: 0.6 }
+                  ]}
+                  onPress={() => handleDeleteTransaction(t)}
+                >
+                  <MaterialCommunityIcons name="delete-outline" size={20} color={colors.expense} />
+                </Pressable>
               </View>
             ))}
           </View>
@@ -709,6 +746,11 @@ const styles = StyleSheet.create({
   transactionAmount: {
     fontSize: 15,
     fontWeight: '600',
+    marginRight: spacing.sm,
+  },
+  deleteButton: {
+    padding: spacing.xs,
+    marginLeft: spacing.xs,
   },
   emptyState: {
     alignItems: 'center',

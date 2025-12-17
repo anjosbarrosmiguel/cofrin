@@ -1,13 +1,16 @@
-import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity, Modal, RefreshControl, Pressable } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/authContext';
 import { useAppTheme } from '../contexts/themeContext';
-import { useState, useEffect, useMemo } from 'react';
+import { useTransactionRefresh } from '../contexts/transactionRefreshContext';
+import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { spacing, borderRadius, getShadow } from '../theme';
 import { formatCurrencyBRL } from '../utils/format';
 import * as transactionService from '../services/transactionService';
 import MainLayout from '../components/MainLayout';
+import AppHeader from '../components/AppHeader';
 import { useNavigation } from '@react-navigation/native';
 
 type ViewMode = 'monthly' | 'yearly';
@@ -28,8 +31,10 @@ export default function CategoryDetails() {
   const { user } = useAuth();
   const { colors } = useAppTheme();
   const navigation = useNavigation();
+  const { refreshKey } = useTransactionRefresh();
   const [viewMode, setViewMode] = useState<ViewMode>('monthly');
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   
   // Período selecionado
   const today = new Date();
@@ -44,10 +49,13 @@ export default function CategoryDetails() {
     loadData();
   }, [user]);
 
-  const loadData = async () => {
+  const loadData = async (isRefreshing = false) => {
     if (!user) return;
 
-    setLoading(true);
+    if (!isRefreshing) {
+      setLoading(true);
+    }
+    
     try {
       const currentYear = new Date().getFullYear();
       const data = await transactionService.getCategoryExpensesOverTime(
@@ -60,9 +68,33 @@ export default function CategoryDetails() {
     } catch (error) {
       console.error('Erro ao carregar dados de categorias:', error);
     } finally {
-      setLoading(false);
+      if (isRefreshing) {
+        setRefreshing(false);
+      } else {
+        setLoading(false);
+      }
     }
   };
+
+  // Refresh quando refreshKey mudar (após salvar transação)
+  useEffect(() => {
+    if (refreshKey > 0) {
+      loadData(true);
+    }
+  }, [refreshKey]);
+
+  // Refresh quando a tela ganhar foco
+  useFocusEffect(
+    useCallback(() => {
+      loadData(true);
+    }, [user])
+  );
+
+  // Pull to refresh
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadData(true);
+  }, [user]);
 
   // Navegação de mês
   const goToPreviousMonth = () => {
@@ -86,6 +118,13 @@ export default function CategoryDetails() {
       setSelectedMonth(selectedMonth + 1);
     }
   };
+
+  const goToToday = () => {
+    setSelectedMonth(today.getMonth() + 1);
+    setSelectedYear(today.getFullYear());
+  };
+
+  const isCurrentMonth = selectedMonth === today.getMonth() + 1 && selectedYear === today.getFullYear();
 
   // Dados do período atual
   const currentPeriodData = useMemo(() => {
@@ -293,95 +332,118 @@ export default function CategoryDetails() {
   return (
     <MainLayout>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: colors.card }]}>
-          <View style={styles.headerTop}>
-            <TouchableOpacity onPress={() => navigation.goBack()}>
-              <MaterialCommunityIcons name="chevron-left" size={28} color={colors.text} />
-            </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: colors.text }]}>Categorias</Text>
-            <View style={{ width: 28 }} />
-          </View>
-
-          {/* Navegação de período */}
-          {viewMode === 'monthly' ? (
-            <View style={styles.periodNavigation}>
-              <TouchableOpacity onPress={goToPreviousMonth} style={styles.navButton}>
-                <MaterialCommunityIcons name="chevron-left" size={24} color={colors.text} />
-              </TouchableOpacity>
-              
-              <Text style={[styles.periodText, { color: colors.text }]}>
-                {MONTH_NAMES[selectedMonth - 1]} / {selectedYear}
-              </Text>
-              
-              <TouchableOpacity 
-                onPress={goToNextMonth} 
-                style={styles.navButton}
-                disabled={selectedYear === today.getFullYear() && selectedMonth === today.getMonth() + 1}
-              >
-                <MaterialCommunityIcons 
-                  name="chevron-right" 
-                  size={24} 
-                  color={
-                    selectedYear === today.getFullYear() && selectedMonth === today.getMonth() + 1
-                      ? colors.textMuted
-                      : colors.text
-                  } 
-                />
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <TouchableOpacity 
-              style={styles.yearSelector}
-              onPress={() => setShowYearPicker(true)}
-            >
-              <Text style={[styles.yearSelectorText, { color: colors.text }]}>
-                Ano: {selectedYear}
-              </Text>
-              <MaterialCommunityIcons name="chevron-down" size={20} color={colors.text} />
-            </TouchableOpacity>
-          )}
-
-          {/* Toggle View Mode */}
-          <View style={[styles.viewModeToggle, { backgroundColor: colors.grayLight }]}>
-            <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                viewMode === 'monthly' && { backgroundColor: colors.card }
-              ]}
-              onPress={() => setViewMode('monthly')}
-            >
-              <Text style={[
-                styles.toggleText,
-                { color: viewMode === 'monthly' ? colors.primary : colors.textMuted }
-              ]}>
-                Mês
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.toggleButton,
-                viewMode === 'yearly' && { backgroundColor: colors.card }
-              ]}
-              onPress={() => setViewMode('yearly')}
-            >
-              <Text style={[
-                styles.toggleText,
-                { color: viewMode === 'yearly' ? colors.primary : colors.textMuted }
-              ]}>
-                Ano
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Content */}
+        <AppHeader />
+        
         <ScrollView 
           style={styles.scrollView}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={colors.primary}
+              colors={[colors.primary]}
+            />
+          }
         >
+          {/* Header Card */}
+          <View style={[styles.headerCard, { backgroundColor: colors.card }, getShadow(colors)]}>
+            {viewMode === 'monthly' ? (
+              <>
+                {/* Navegação de mês */}
+                <View style={styles.monthNav}>
+                  <Pressable 
+                    onPress={goToPreviousMonth}
+                    style={({ pressed }) => [styles.navButton, pressed && { opacity: 0.7 }]}
+                  >
+                    <MaterialCommunityIcons name="chevron-left" size={28} color={colors.primary} />
+                  </Pressable>
+                  
+                  <Pressable 
+                    onPress={goToToday}
+                    style={({ pressed }) => [styles.monthDisplay, pressed && { opacity: 0.8 }]}
+                  >
+                    <Text style={[styles.monthText, { color: colors.text }]}>
+                      {MONTH_NAMES[selectedMonth - 1]}
+                    </Text>
+                    <Text style={[styles.yearText, { color: colors.textMuted }]}>
+                      {selectedYear}
+                    </Text>
+                  </Pressable>
+                  
+                  <Pressable 
+                    onPress={goToNextMonth}
+                    style={({ pressed }) => [styles.navButton, pressed && { opacity: 0.7 }]}
+                  >
+                    <MaterialCommunityIcons name="chevron-right" size={28} color={colors.primary} />
+                  </Pressable>
+                </View>
+
+                {/* Botão Ir para hoje */}
+                {!isCurrentMonth && (
+                  <View style={styles.todayButtonContainer}>
+                    <Pressable 
+                      onPress={goToToday}
+                      style={({ pressed }) => [
+                        styles.todayButton, 
+                        { backgroundColor: colors.primaryBg },
+                        pressed && { opacity: 0.8 }
+                      ]}
+                    >
+                      <MaterialCommunityIcons name="calendar-today" size={16} color={colors.primary} />
+                      <Text style={[styles.todayButtonText, { color: colors.primary }]}>Ir para hoje</Text>
+                    </Pressable>
+                  </View>
+                )}
+              </>
+            ) : (
+              <TouchableOpacity 
+                style={styles.yearSelector}
+                onPress={() => setShowYearPicker(true)}
+              >
+                <Text style={[styles.yearSelectorText, { color: colors.text }]}>
+                  Ano: {selectedYear}
+                </Text>
+                <MaterialCommunityIcons name="chevron-down" size={20} color={colors.text} />
+              </TouchableOpacity>
+            )}
+
+            {/* Toggle View Mode */}
+            <View style={[styles.viewModeToggle, { backgroundColor: colors.grayLight }]}>
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  viewMode === 'monthly' && { backgroundColor: colors.card }
+                ]}
+                onPress={() => setViewMode('monthly')}
+              >
+                <Text style={[
+                  styles.toggleText,
+                  { color: viewMode === 'monthly' ? colors.primary : colors.textMuted }
+                ]}>
+                  Mês
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.toggleButton,
+                  viewMode === 'yearly' && { backgroundColor: colors.card }
+                ]}
+                onPress={() => setViewMode('yearly')}
+              >
+                <Text style={[
+                  styles.toggleText,
+                  { color: viewMode === 'yearly' ? colors.primary : colors.textMuted }
+                ]}>
+                  Ano
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {/* Content */}
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.primary} />
@@ -438,35 +500,54 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    padding: spacing.lg,
-    paddingBottom: spacing.md,
+  scrollView: {
+    flex: 1,
   },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  scrollContent: {
+    padding: spacing.lg,
+  },
+  headerCard: {
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
     marginBottom: spacing.md,
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-  },
-  periodNavigation: {
+  monthNav: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.md,
-    gap: spacing.md,
+    marginBottom: spacing.sm,
   },
   navButton: {
     padding: spacing.xs,
   },
-  periodText: {
-    fontSize: 16,
+  monthDisplay: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+  },
+  monthText: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  yearText: {
+    fontSize: 14,
+    marginTop: 2,
+  },
+  todayButtonContainer: {
+    alignItems: 'center',
+    marginBottom: spacing.sm,
+  },
+  todayButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: spacing.xs,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.sm,
+    gap: spacing.xs,
+  },
+  todayButtonText: {
+    fontSize: 13,
     fontWeight: '600',
-    minWidth: 160,
-    textAlign: 'center',
   },
   yearSelector: {
     flexDirection: 'row',
@@ -494,12 +575,6 @@ const styles = StyleSheet.create({
   toggleText: {
     fontSize: 14,
     fontWeight: '600',
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    padding: spacing.lg,
   },
   loadingContainer: {
     padding: spacing.xl * 2,

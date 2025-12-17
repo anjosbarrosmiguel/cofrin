@@ -2,7 +2,7 @@ import { View, StyleSheet, ScrollView, useWindowDimensions } from "react-native"
 import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../contexts/authContext";
 import { useAppTheme } from "../contexts/themeContext";
-import { useTransactions, useExpensesByCategory } from "../hooks/useFirebaseTransactions";
+import { useTransactions, useExpensesByCategory, useMonthReport } from "../hooks/useFirebaseTransactions";
 import { useAccounts } from "../hooks/useAccounts";
 import { useCreditCards } from "../hooks/useCreditCards";
 import { useGoal } from "../hooks/useGoal";
@@ -47,6 +47,9 @@ export default function Home() {
     month: currentMonth, 
     year: currentYear 
   });
+
+  // Hook de relatório do mês (inclui despesas de cartão corretamente)
+  const { report } = useMonthReport(currentMonth, currentYear);
 
   // Hook de contas do Firebase
   const { accounts, refresh: refreshAccounts } = useAccounts();
@@ -258,7 +261,7 @@ export default function Home() {
           <View style={{ flex: 1 }}>
             <ExpensesByCategoryCard 
               expenses={categoryExpenses}
-              totalExpenses={totalExpense}
+              totalExpenses={report?.expense || totalExpense}
               maxItems={3}
               showTitle={true}
             />

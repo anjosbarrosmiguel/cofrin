@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "meu-app-cofrin",
-    "slug": "meu-app-cofrin",
+    "name": "Cofrin",
+    "slug": "cofrin",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -16,6 +16,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.cofrin.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
@@ -28,6 +29,12 @@
     },
     "plugins": [
       "expo-web-browser"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "eca86ed8-6c06-4c4c-b6bb-0e722efe2101"
+      }
+    },
+    "owner": "thiagoanjos"
   }
 }

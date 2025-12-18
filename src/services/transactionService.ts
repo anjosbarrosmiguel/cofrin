@@ -3,22 +3,22 @@
 // ==========================================
 
 import {
-  collection,
-  doc,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  getDocs,
-  getDoc,
-  query,
-  where, Timestamp
+    collection,
+    doc,
+    addDoc,
+    updateDoc,
+    deleteDoc,
+    getDocs,
+    getDoc,
+    query,
+    where, Timestamp
 } from 'firebase/firestore';
 import { db, COLLECTIONS } from './firebase';
 import {
-  Transaction,
-  CreateTransactionInput,
-  UpdateTransactionInput,
-  TransactionType,
+    Transaction,
+    CreateTransactionInput,
+    UpdateTransactionInput,
+    TransactionType,
 } from '../types/firebase';
 import { updateAccountBalance } from './accountService';
 import { getCategoryById } from './categoryService';
@@ -394,19 +394,47 @@ export async function updateTransaction(
   data: UpdateTransactionInput,
   oldTransaction: Transaction
 ): Promise<void> {
+  // Determinar estados antigos e novos
   const oldWasCompleted = oldTransaction.status === 'completed';
   const newStatus = data.status ?? oldTransaction.status;
   const newWillBeCompleted = newStatus === 'completed';
+  
+  const oldType = oldTransaction.type;
+  const newType = data.type ?? oldTransaction.type;
+  
+  const oldAmount = oldTransaction.amount;
+  const newAmount = data.amount ?? oldTransaction.amount;
+  
+  const oldAccountId = oldTransaction.accountId;
+  const newAccountId = data.accountId !== undefined ? data.accountId : oldTransaction.accountId;
+  
+  const oldToAccountId = oldTransaction.toAccountId;
+  const newToAccountId = data.toAccountId !== undefined ? data.toAccountId : oldTransaction.toAccountId;
+  
+  const oldCreditCardId = oldTransaction.creditCardId;
+  const newCreditCardId = data.creditCardId !== undefined ? data.creditCardId : oldTransaction.creditCardId;
 
-  // Reverter saldos antigos APENAS se a transação antiga era completed
-  if (!oldTransaction.creditCardId && oldWasCompleted) {
-    await updateBalancesForTransaction(
-      { ...oldTransaction, type: oldTransaction.type },
-      true
-    );
+  // ===== REVERTER IMPACTOS DA TRANSAÇÃO ANTIGA =====
+  if (oldWasCompleted) {
+    if (oldCreditCardId) {
+      // Reverter uso do cartão de crédito antigo
+      const oldUsageAmount = oldType === 'expense' ? oldAmount : -oldAmount;
+      await updateCreditCardUsage(oldCreditCardId, -oldUsageAmount);
+    } else if (oldAccountId) {
+      // Reverter saldo da conta antiga
+      await updateBalancesForTransaction(
+        {
+          type: oldType,
+          amount: oldAmount,
+          accountId: oldAccountId,
+          toAccountId: oldToAccountId,
+        } as any,
+        true // reverse = true
+      );
+    }
   }
 
-  // Atualizar transação
+  // ===== ATUALIZAR DOCUMENTO NO FIRESTORE =====
   const docRef = doc(db, COLLECTIONS.TRANSACTIONS, transactionId);
   
   const updateData: any = {
@@ -421,12 +449,36 @@ export async function updateTransaction(
     updateData.year = transactionDate.getFullYear();
   }
 
+  // Se está removendo o cartão explicitamente (mudando para conta)
+  if (data.creditCardId === null || data.creditCardId === '') {
+    updateData.creditCardId = null;
+    updateData.creditCardName = null;
+  }
+
+  // Remover campos undefined (Firestore não aceita undefined)
+  Object.keys(updateData).forEach(key => {
+    if (updateData[key] === undefined) {
+      delete updateData[key];
+    }
+  });
+
   await updateDoc(docRef, updateData);
 
-  // Aplicar novos saldos APENAS se a transação nova é completed
-  const newData = { ...oldTransaction, ...data };
-  if (!newData.creditCardId && newWillBeCompleted) {
-    await updateBalancesForTransaction(newData as any);
+  // ===== APLICAR IMPACTOS DA TRANSAÇÃO NOVA =====
+  if (newWillBeCompleted) {
+    if (newCreditCardId) {
+      // Aplicar uso no novo cartão de crédito
+      const newUsageAmount = newType === 'expense' ? newAmount : -newAmount;
+      await updateCreditCardUsage(newCreditCardId, newUsageAmount);
+    } else if (newAccountId) {
+      // Aplicar saldo na nova conta
+      await updateBalancesForTransaction({
+        type: newType,
+        amount: newAmount,
+        accountId: newAccountId,
+        toAccountId: newToAccountId,
+      } as any);
+    }
   }
 }
 

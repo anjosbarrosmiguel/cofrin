@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Platform,
-  Pressable,
-  Modal,
-  Dimensions,
-  Text,
-  TextInput,
-  ActivityIndicator
+    View,
+    StyleSheet,
+    ScrollView,
+    Platform,
+    Pressable,
+    Modal,
+    Dimensions,
+    Text,
+    TextInput,
+    ActivityIndicator
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
@@ -422,13 +422,26 @@ export default function AddTransactionModal({
           description: description.trim() || categoryName,
           date: Timestamp.fromDate(transactionDate),
           recurrence,
-          recurrenceType: recurrence !== 'none' && repetitions > 1 ? recurrenceType : undefined,
           status: transactionStatus,
         };
 
-        // Adicionar accountId apenas se não for cartão de crédito ou se não for despesa com cartão
-        if (!(useCreditCard && type === 'despesa') && accountId) {
+        // Adicionar recurrenceType apenas se tiver valor
+        if (recurrence !== 'none' && repetitions > 1) {
+          data.recurrenceType = recurrenceType;
+        }
+
+        // Tratar conta e cartão de crédito
+        if (useCreditCard && type === 'despesa' && creditCardId) {
+          // Despesa com cartão de crédito
+          data.creditCardId = creditCardId;
+          data.accountId = accountId || undefined; // Conta de pagamento da fatura
+        } else {
+          // Transação de conta (não é cartão)
           data.accountId = accountId;
+          // Se está editando e removendo cartão, definir como null
+          if (isEditMode && editTransaction?.creditCardId) {
+            data.creditCardId = null;
+          }
         }
 
         // Add optional fields only if they have values
@@ -437,9 +450,6 @@ export default function AddTransactionModal({
         }
         if (type === 'transfer' && toAccountId) {
           data.toAccountId = toAccountId;
-        }
-        if (useCreditCard && type === 'despesa' && creditCardId) {
-          data.creditCardId = creditCardId;
         }
         // Add seriesId for recurring transactions
         if (seriesId) {

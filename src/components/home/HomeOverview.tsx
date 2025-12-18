@@ -145,32 +145,34 @@ export default function HomeOverview({
           </View>
         </View>
 
-        {/* Card Ações Rápidas */}
-        <View style={[styles.actionsCard, { backgroundColor: colors.card }, getShadow(colors)]}>
-          <Text style={[styles.actionsTitle, { color: colors.text }]}>
-            Acesso rápido
-          </Text>
-          <View style={styles.actionsGrid}>
-            <ActionButton 
-              icon="minus-circle" 
-              color={colors.expense} 
-              label="DESPESA" 
-              onPress={() => openModal('despesa')} 
-            />
-            <ActionButton 
-              icon="plus-circle" 
-              color={colors.income} 
-              label="RECEITA" 
-              onPress={() => openModal('receita')} 
-            />
-            <ActionButton 
-              icon="swap-horizontal-circle" 
-              color="#8B9DC3" 
-              label="TRANSF." 
-              onPress={() => openModal('transfer')} 
-            />
+        {/* Card Ações Rápidas - Apenas em Desktop */}
+        {isDesktop && (
+          <View style={[styles.actionsCard, { backgroundColor: colors.card }, getShadow(colors)]}>
+            <Text style={[styles.actionsTitle, { color: colors.text }]}>
+              Acesso rápido
+            </Text>
+            <View style={styles.actionsGrid}>
+              <ActionButton 
+                icon="minus-circle" 
+                color={colors.expense} 
+                label="DESPESA" 
+                onPress={() => openModal('despesa')} 
+              />
+              <ActionButton 
+                icon="plus-circle" 
+                color={colors.income} 
+                label="RECEITA" 
+                onPress={() => openModal('receita')} 
+              />
+              <ActionButton 
+                icon="swap-horizontal-circle" 
+                color="#8B9DC3" 
+                label="TRANSF." 
+                onPress={() => openModal('transfer')} 
+              />
+            </View>
           </View>
-        </View>
+        )}
       </View>
 
       <AddTransactionModal

@@ -11,7 +11,7 @@ import { useEffect, useMemo, useCallback, useState } from "react";
 import AppHeader from "../components/AppHeader";
 import MainLayout from "../components/MainLayout";
 import HomeOverview from "../components/home/HomeOverview";
-import FinancialHealthCard from "../components/home/FinancialHealthCard";
+import AccountsCard from "../components/home/AccountsCard";
 import TopCategoryCard from "../components/home/TopCategoryCard";
 import CreditCardsCard from "../components/home/CreditCardsCard";
 import GoalCard from "../components/home/GoalCard";
@@ -207,25 +207,16 @@ export default function Home() {
 
             <View style={{ height: spacing.lg }} />
 
-            {/* 2. Saúde financeira do mês */}
-            <FinancialHealthCard 
-              income={totalIncome}
-              expense={totalExpense}
-              balance={balance}
+            {/* 2. Minhas contas */}
+            <AccountsCard 
+              accounts={accounts}
+              onAccountPress={handleAccountPress}
+              onAddPress={() => navigation.navigate('ConfigureAccounts')}
             />
 
             <View style={{ height: spacing.lg }} />
 
-            {/* 3. Onde você gastou (categoria principal) */}
-            <TopCategoryCard 
-              expenses={categoryExpenses}
-              totalExpenses={report?.expense || totalExpense}
-              onPress={() => navigation.navigate('Relatórios')}
-            />
-
-            <View style={{ height: spacing.lg }} />
-
-            {/* 4. Meus cartões de crédito */}
+            {/* 3. Meus cartões de crédito */}
             <CreditCardsCard 
               cards={activeCards}
               onCardPress={handleCreditCardPress}
@@ -234,13 +225,22 @@ export default function Home() {
 
             <View style={{ height: spacing.lg }} />
 
-            {/* 5. Meta financeira */}
+            {/* 4. Meta financeira */}
             <GoalCard 
               goal={goal}
               progressPercentage={progressPercentage}
               onCreatePress={() => setShowGoalModal(true)}
               onGoalPress={() => setShowGoalModal(true)}
               onAddPress={() => setShowAddToGoalModal(true)}
+            />
+
+            <View style={{ height: spacing.lg }} />
+
+            {/* 5. Onde você gastou (categoria principal) */}
+            <TopCategoryCard 
+              expenses={categoryExpenses}
+              totalExpenses={report?.expense || totalExpense}
+              onPress={() => navigation.navigate('Relatórios')}
             />
 
             {/* Modais */}

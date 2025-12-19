@@ -635,7 +635,7 @@ export async function getMonthTotals(
   let expense = 0;
 
   for (const t of transactions) {
-    if (t.status === 'cancelled') continue;
+    if (t.status !== 'completed') continue;
     
     if (t.type === 'income') {
       income += t.amount;
@@ -662,7 +662,7 @@ export async function getExpensesByCategory(
   const byCategory = new Map<string, { categoryId: string; categoryName: string; categoryIcon: string; total: number }>();
 
   for (const t of transactions) {
-    if (t.status === 'cancelled' || !t.categoryId) continue;
+    if (t.status !== 'completed' || !t.categoryId) continue;
 
     const existing = byCategory.get(t.categoryId);
     if (existing) {
@@ -719,7 +719,7 @@ export async function getCategoryExpensesOverTime(
   const yearlyMap = new Map<number, Transaction[]>();
 
   for (const t of transactions) {
-    if (t.status === 'cancelled' || !t.categoryId) continue;
+    if (t.status !== 'completed' || !t.categoryId) continue;
 
     // Mensal
     const monthKey = `${t.year}-${String(t.month).padStart(2, '0')}`;

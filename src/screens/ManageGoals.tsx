@@ -198,6 +198,14 @@ export default function ManageGoals() {
   const GoalCard = ({ goal }: { goal: Goal }) => {
     const progressPercentage = goalService.calculateGoalProgress(goal.currentAmount, goal.targetAmount);
     const isCompleted = !!goal.completedAt;
+    
+    // Calcular tempo restante e aporte mensal
+    const timeRemaining = goalService.calculateTimeRemaining(goal.targetDate);
+    const monthlyContribution = goalService.calculateMonthlyContribution(
+      goal.currentAmount,
+      goal.targetAmount,
+      goal.targetDate
+    );
 
     return (
       <View style={[styles.goalCard, { backgroundColor: colors.card }, getShadow(colors)]}>
@@ -248,6 +256,51 @@ export default function ManageGoals() {
               {Math.round(progressPercentage)}% concluído
             </Text>
           </View>
+          
+          {/* Informações de tempo e aporte */}
+          {!isCompleted && timeRemaining && (
+            <View style={styles.timeInfoSection}>
+              <View style={styles.timeInfoRow}>
+                <View style={styles.timeInfoItem}>
+                  <MaterialCommunityIcons 
+                    name="calendar-clock" 
+                    size={16} 
+                    color={timeRemaining.isOverdue ? colors.expense : colors.textMuted} 
+                  />
+                  <Text style={[
+                    styles.timeInfoLabel, 
+                    { color: timeRemaining.isOverdue ? colors.expense : colors.textMuted }
+                  ]}>
+                    {timeRemaining.isOverdue ? 'Prazo:' : 'Faltam:'}
+                  </Text>
+                  <Text style={[
+                    styles.timeInfoValue, 
+                    { color: timeRemaining.isOverdue ? colors.expense : colors.text }
+                  ]}>
+                    {timeRemaining.formattedText}
+                  </Text>
+                </View>
+              </View>
+              
+              {monthlyContribution && !timeRemaining.isOverdue && (
+                <View style={styles.timeInfoRow}>
+                  <View style={styles.timeInfoItem}>
+                    <MaterialCommunityIcons 
+                      name="cash-multiple" 
+                      size={16} 
+                      color={colors.textMuted} 
+                    />
+                    <Text style={[styles.timeInfoLabel, { color: colors.textMuted }]}>
+                      Aporte necessário:
+                    </Text>
+                    <Text style={[styles.timeInfoValue, { color: colors.primary, fontWeight: '600' }]}>
+                      {formatCurrencyBRL(monthlyContribution.monthlyAmount)} {monthlyContribution.formattedText}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </View>
+          )}
         </Pressable>
 
         {/* Ações */}
@@ -509,10 +562,37 @@ const styles = StyleSheet.create({
   progressPercentage: {
     fontSize: 12,
   },
+  timeInfoSection: {
+    marginTop: spacing.md,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(0, 0, 0, 0.05)',
+    gap: spacing.md,
+  },
+  timeInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  timeInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    flex: 1,
+  },
+  timeInfoLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  timeInfoValue: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
   actions: {
     flexDirection: 'row',
     gap: spacing.sm,
     flexWrap: 'wrap',
+    marginTop: spacing.md,
   },
   actionButton: {
     flexDirection: 'row',

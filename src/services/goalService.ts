@@ -346,3 +346,83 @@ export function calculateGoalProgress(currentAmount: number, targetAmount: numbe
   if (targetAmount === 0) return 0;
   return Math.min((currentAmount / targetAmount) * 100, 100);
 }
+
+// Calcular tempo restante até a data alvo
+export function calculateTimeRemaining(targetDate: Timestamp | undefined): {
+  months: number;
+  days: number;
+  isOverdue: boolean;
+  formattedText: string;
+} | null {
+  if (!targetDate) return null;
+
+  const now = new Date();
+  const target = targetDate.toDate();
+  
+  // Calcular diferença em milissegundos
+  const diffMs = target.getTime() - now.getTime();
+  const isOverdue = diffMs < 0;
+  
+  // Calcular dias totais
+  const totalDays = Math.abs(Math.floor(diffMs / (1000 * 60 * 60 * 24)));
+  
+  // Calcular meses e dias restantes
+  const months = Math.floor(totalDays / 30);
+  const days = totalDays % 30;
+  
+  // Formatar texto
+  let formattedText = '';
+  if (isOverdue) {
+    formattedText = 'Meta vencida';
+  } else if (months > 0 && days > 0) {
+    formattedText = `${months} ${months === 1 ? 'mês' : 'meses'} e ${days} ${days === 1 ? 'dia' : 'dias'}`;
+  } else if (months > 0) {
+    formattedText = `${months} ${months === 1 ? 'mês' : 'meses'}`;
+  } else if (days > 0) {
+    formattedText = `${days} ${days === 1 ? 'dia' : 'dias'}`;
+  } else {
+    formattedText = 'Hoje';
+  }
+  
+  return {
+    months,
+    days,
+    isOverdue,
+    formattedText,
+  };
+}
+
+// Calcular aporte mensal necessário
+export function calculateMonthlyContribution(
+  currentAmount: number,
+  targetAmount: number,
+  targetDate: Timestamp | undefined
+): {
+  monthlyAmount: number;
+  formattedText: string;
+} | null {
+  if (!targetDate) return null;
+  
+  const timeRemaining = calculateTimeRemaining(targetDate);
+  if (!timeRemaining || timeRemaining.isOverdue) return null;
+  
+  const remainingAmount = targetAmount - currentAmount;
+  if (remainingAmount <= 0) return { monthlyAmount: 0, formattedText: 'Meta concluída' };
+  
+  // Calcular total de meses (considerando dias como fração)
+  const totalMonths = timeRemaining.months + (timeRemaining.days / 30);
+  
+  if (totalMonths <= 0) {
+    return {
+      monthlyAmount: remainingAmount,
+      formattedText: 'Aporte total necessário',
+    };
+  }
+  
+  const monthlyAmount = remainingAmount / totalMonths;
+  
+  return {
+    monthlyAmount,
+    formattedText: 'por mês',
+  };
+}

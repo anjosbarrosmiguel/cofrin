@@ -13,10 +13,10 @@ interface Props {
   onAddPress?: () => void;
 }
 
-// Cores para os cartões baseado no nome
+// Cores para os cartões baseado no nome (paleta harmônica com roxo)
 const getCardColor = (name: string, customColor?: string): string => {
   if (customColor) return customColor;
-  const colors = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4', '#ef4444'];
+  const colors = ['#5B3CC4', '#7B5CD6', '#2FAF8E', '#E07A3F', '#ec4899', '#06b6d4', '#3b82f6'];
   const index = name.charCodeAt(0) % colors.length;
   return colors[index];
 };
@@ -37,8 +37,8 @@ export default function CreditCardsCard({ cards = [], totalBills = 0, onCardPres
     const isOverdue = !isPaid && today > card.dueDay;
     
     const getStatusBadge = () => {
-      if (isOverdue) return { text: 'Vencida', color: '#EF4444' };
-      if (isPending) return { text: 'Pendente', color: '#9CA3AF' };
+      if (isOverdue) return { text: 'Vencida', color: '#C4572D' };
+      if (isPending) return { text: 'Pendente', color: '#9A96B0' };
       return null;
     };
     
@@ -50,8 +50,8 @@ export default function CreditCardsCard({ cards = [], totalBills = 0, onCardPres
         style={({ pressed }) => [
           styles.cardItem,
           { 
-            backgroundColor: '#F9FAFB',
-            borderColor: '#E5E7EB',
+            backgroundColor: colors.grayLight,
+            borderColor: colors.border,
             opacity: pressed ? 0.7 : 1,
           }
         ]}

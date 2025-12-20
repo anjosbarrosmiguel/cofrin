@@ -40,11 +40,11 @@ function CreditCardBillItemComponent({
   const title = `Fatura ${creditCardName}`;
   const subtitle = `${monthName}/${billYear}`;
   
-  // Cor do valor - vermelho para despesa
-  const amountColor = '#dc2626';
+  // Cor do valor - laranja para despesa (sem vermelho)
+  const amountColor = colors.expense;
   
   // Badge de status - verde se pago, cinza se pendente
-  const badgeColor = isPaid ? '#10b981' : '#94a3b8';
+  const badgeColor = isPaid ? colors.success : colors.textMuted;
   const badgeIcon = isPaid ? 'check' : 'clock-outline';
   const badgeText = isPaid ? 'Paga' : 'Pendente';
 

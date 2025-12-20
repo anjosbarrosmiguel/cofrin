@@ -1,23 +1,23 @@
 import { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  Pressable,
-  ActivityIndicator,
-  StyleSheet,
-  Platform,
-  ScrollView,
+    View,
+    Text,
+    TextInput,
+    Pressable,
+    ActivityIndicator,
+    StyleSheet,
+    Platform,
+    ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { register } from "../services/auth";
 
-// Cor principal da tela de registro (verde do app)
+// Design System Roxo Premium
 const REGISTER_COLORS = {
-  primary: '#0F9D8C',
-  primaryDark: '#0d9488',
-  primaryLight: '#14b8a6',
+  primary: '#5B3CC4',      // roxo principal
+  primaryDark: '#4A2FA8',  // roxo escuro
+  primaryLight: '#7B5CD6', // roxo claro
 };
 
 export default function Register({ navigation }: any) {
@@ -214,7 +214,7 @@ export default function Register({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F9D8C',
+    backgroundColor: '#5B3CC4',
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -304,14 +304,14 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   error: {
-    color: '#dc2626',
+    color: '#C4572D',
     marginBottom: 12,
     textAlign: 'center',
     fontSize: 14,
     lineHeight: 20,
   },
   primaryButton: {
-    backgroundColor: '#0F9D8C',
+    backgroundColor: '#5B3CC4',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   loginTextBold: {
-    color: '#0F9D8C',
+    color: '#5B3CC4',
     fontWeight: '700',
   },
   termsButton: {

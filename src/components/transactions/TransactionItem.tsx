@@ -40,11 +40,11 @@ function TransactionItemComponent({
 }: Props) {
   const { colors } = useAppTheme();
   
-  // Cores específicas para cada tipo de transação
-  const incomeColor = '#10b981';  // Verde claro
-  const expenseColor = '#dc2626'; // Vermelho
-  const transferColor = '#64748b'; // Cinza
-  const goalColor = colors.primary; // Cor da meta (teal)
+  // Cores específicas para cada tipo de transação (usando theme tokens)
+  const incomeColor = colors.income;  // Verde elegante
+  const expenseColor = colors.expense; // Laranja escuro (sem vermelho)
+  const transferColor = colors.textMuted; // Cinza
+  const goalColor = colors.primary; // Cor da meta (roxo)
   
   const getColor = () => {
     if (goalName) return goalColor; // Aporte em meta usa cor primária
@@ -62,7 +62,7 @@ function TransactionItemComponent({
     : [category, account].filter(Boolean).join(' • ');
   
   // Cor e ícone do status
-  const statusColor = status === 'completed' ? '#10b981' : '#94a3b8';
+  const statusColor = status === 'completed' ? colors.success : colors.textMuted;
   const statusIcon = status === 'completed' ? 'thumb-up' : 'thumb-down';
 
   return (

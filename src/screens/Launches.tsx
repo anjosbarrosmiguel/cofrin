@@ -377,8 +377,8 @@ export default function Launches() {
     (selectedYear === today.getFullYear() && selectedMonth > (today.getMonth() + 1));
 
   // Cores específicas para o resumo
-  const incomeColor = '#10b981';
-  const expenseColor = '#dc2626';
+  const incomeColor = colors.income;
+  const expenseColor = colors.expense;
   const balanceColor = colors.primary;
 
   return (

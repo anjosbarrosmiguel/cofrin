@@ -2,10 +2,11 @@ import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
+// Design System Roxo Premium
 const TERMS_COLORS = {
-  primary: '#0F9D8C',
-  primaryDark: '#0d9488',
-  primaryLight: '#14b8a6',
+  primary: '#5B3CC4',      // roxo principal
+  primaryDark: '#4A2FA8',  // roxo escuro
+  primaryLight: '#7B5CD6', // roxo claro
 };
 
 export default function Terms({ navigation }: any) {
@@ -206,7 +207,7 @@ export default function Terms({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F9D8C',
+    backgroundColor: '#5B3CC4',
   },
   header: {
     paddingTop: 16,
@@ -357,7 +358,7 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(0,0,0,0.1)',
   },
   acceptButton: {
-    backgroundColor: '#0F9D8C',
+    backgroundColor: '#5B3CC4',
     paddingVertical: 14,
     borderRadius: 12,
     flexDirection: 'row',

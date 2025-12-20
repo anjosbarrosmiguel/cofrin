@@ -42,7 +42,7 @@ export default function Goals() {
       author: 'T. Harv Eker',
       description: 'Descubra como sua mentalidade sobre dinheiro afeta sua vida financeira.',
       icon: 'head-lightbulb', 
-      color: '#10b981' 
+      color: '#2FAF8E' 
     },
     { 
       id: '4', 

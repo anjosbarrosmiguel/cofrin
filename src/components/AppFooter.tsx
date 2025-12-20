@@ -19,8 +19,8 @@ export default function AppFooter({ onHome, onAdd, onLaunches, onReports, onOthe
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
 
-  // Cor fixa para ícones inativos - cinza escuro para boa legibilidade
-  const inactiveIconColor = '#64748b';
+  // Cor fixa para ícones inativos - cinza arroxeado do design system
+  const inactiveIconColor = '#9A96B0';
 
   const IconButton = ({ icon, onPress, isActive }: { icon: string; onPress: () => void; isActive?: boolean }) => (
     <Pressable

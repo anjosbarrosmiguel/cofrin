@@ -20,9 +20,9 @@ interface Props {
   onAddPress?: () => void;
 }
 
-// Get avatar background color based on account name
+// Get avatar background color based on account name (paleta harmônica com roxo)
 const getAvatarColor = (name: string): string => {
-  const colors = ['#3b82f6', '#10b981', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4'];
+  const colors = ['#5B3CC4', '#7B5CD6', '#2FAF8E', '#3b82f6', '#ec4899', '#06b6d4'];
   const index = name.charCodeAt(0) % colors.length;
   return colors[index];
 };

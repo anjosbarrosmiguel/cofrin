@@ -11,18 +11,18 @@ interface Props {
   onDetailsPress?: () => void;
 }
 
-// Cores para as categorias
+// Cores para as categorias (paleta sem vermelho, harmônica com roxo)
 const CATEGORY_COLORS = [
-  '#EF4444', // vermelho
-  '#F97316', // laranja
-  '#F59E0B', // amarelo
-  '#84CC16', // verde limão
-  '#22C55E', // verde
-  '#14B8A6', // teal
-  '#06B6D4', // cyan
+  '#5B3CC4', // roxo principal
+  '#7B5CD6', // roxo claro
+  '#C4572D', // laranja escuro
+  '#E07A3F', // laranja atenção
+  '#2FAF8E', // verde elegante
+  '#3DC9A0', // verde claro
   '#3B82F6', // azul
-  '#8B5CF6', // roxo
+  '#06B6D4', // cyan
   '#EC4899', // rosa
+  '#F59E0B', // âmbar
 ];
 
 type TopCount = 3 | 5 | 10;

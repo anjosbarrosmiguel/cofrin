@@ -41,100 +41,100 @@ interface ThemeColors {
   grayLight: string;
 }
 
-// Tema Claro (original)
+// Tema Claro - Design System Roxo Premium
 const lightTheme: ThemeColors = {
-  bg: '#f8fafc',
-  bgHeader: '#2563eb',
-  card: '#ffffff',
-  surface: '#ffffff',
+  bg: '#F9F8FD',           // off-white arroxeado
+  bgHeader: '#5B3CC4',     // roxo principal
+  card: '#FFFFFF',
+  surface: '#FFFFFF',
   
-  text: '#1e293b',
-  textSecondary: '#64748b',
-  textMuted: '#94a3b8',
-  textInverse: '#ffffff',
+  text: '#1F1B2E',         // preto arroxeado
+  textSecondary: '#4B475C',
+  textMuted: '#9A96B0',
+  textInverse: '#FFFFFF',
   
-  primary: '#2563eb',
-  primaryLight: '#3b82f6',
-  primaryDark: '#1d4ed8',
-  primaryBg: '#eff6ff',
+  primary: '#5B3CC4',      // roxo principal
+  primaryLight: '#7B5CD6',
+  primaryDark: '#4A2FA8',
+  primaryBg: '#EDE9FF',    // roxo suave
   
-  success: '#10b981',
-  successBg: '#ecfdf5',
-  danger: '#ef4444',
-  dangerBg: '#fef2f2',
-  warning: '#f59e0b',
-  warningBg: '#fffbeb',
+  success: '#2FAF8E',      // verde elegante
+  successBg: '#E8F7F3',
+  danger: '#C4572D',       // laranja escuro (SEM vermelho)
+  dangerBg: '#FFF1E8',
+  warning: '#E07A3F',      // laranja atenção
+  warningBg: '#FFF1E8',
   
-  income: '#10b981',
-  expense: '#ef4444',
+  income: '#2FAF8E',       // verde
+  expense: '#C4572D',      // laranja escuro
   
-  border: '#e2e8f0',
-  gray: '#64748b',
-  grayLight: '#f1f5f9',
+  border: '#E6E2F0',
+  gray: '#9A96B0',
+  grayLight: '#F1EFF9',
 };
 
-// Tema Escuro
+// Tema Escuro - Design System Roxo Premium
 const darkTheme: ThemeColors = {
-  bg: '#0f172a',
-  bgHeader: '#1e293b',
-  card: '#1e293b',
-  surface: '#334155',
+  bg: '#0f0d1a',           // preto arroxeado
+  bgHeader: '#1a1528',
+  card: '#1a1528',
+  surface: '#252033',
   
-  text: '#f1f5f9',
-  textSecondary: '#94a3b8',
-  textMuted: '#64748b',
-  textInverse: '#0f172a',
+  text: '#f1f0f5',
+  textSecondary: '#a8a3b8',
+  textMuted: '#6b6580',
+  textInverse: '#0f0d1a',
   
-  primary: '#3b82f6',
-  primaryLight: '#60a5fa',
-  primaryDark: '#2563eb',
-  primaryBg: '#1e3a5f',
+  primary: '#7B5CD6',      // roxo claro para dark mode
+  primaryLight: '#9B7EF0',
+  primaryDark: '#5B3CC4',
+  primaryBg: '#2a2040',
   
-  success: '#34d399',
-  successBg: '#064e3b',
-  danger: '#f87171',
-  dangerBg: '#7f1d1d',
-  warning: '#fbbf24',
-  warningBg: '#78350f',
+  success: '#3DC9A0',      // verde claro
+  successBg: '#1a2f2a',
+  danger: '#E07A3F',       // laranja (SEM vermelho)
+  dangerBg: '#2f1a15',
+  warning: '#F0A060',
+  warningBg: '#2f2515',
   
-  income: '#34d399',
-  expense: '#f87171',
+  income: '#3DC9A0',
+  expense: '#E07A3F',
   
-  border: '#334155',
-  gray: '#94a3b8',
-  grayLight: '#1e293b',
+  border: '#352f45',
+  gray: '#6b6580',
+  grayLight: '#1a1528',
 };
 
-// Tema Teal (azul-esverdeado) - o favorito!
+// Tema Teal -> Convertido para Roxo Premium (mantém nome por compatibilidade)
 const tealTheme: ThemeColors = {
-  bg: '#f0fdfa',
-  bgHeader: '#0d9488',
-  card: '#ffffff',
-  surface: '#ffffff',
+  bg: '#F9F8FD',           // off-white arroxeado
+  bgHeader: '#5B3CC4',     // roxo principal
+  card: '#FFFFFF',
+  surface: '#FFFFFF',
   
-  text: '#134e4a',
-  textSecondary: '#0f766e',
-  textMuted: '#64748b',
-  textInverse: '#ffffff',
+  text: '#1F1B2E',         // preto arroxeado
+  textSecondary: '#4B475C',
+  textMuted: '#9A96B0',
+  textInverse: '#FFFFFF',
   
-  primary: '#0d9488',
-  primaryLight: '#14b8a6',
-  primaryDark: '#0f766e',
-  primaryBg: '#ccfbf1',
+  primary: '#5B3CC4',      // roxo principal
+  primaryLight: '#7B5CD6',
+  primaryDark: '#4A2FA8',
+  primaryBg: '#EDE9FF',    // roxo suave
   
-  success: '#10b981',
-  successBg: '#ecfdf5',
-  danger: '#ef4444',
-  dangerBg: '#fef2f2',
-  warning: '#f59e0b',
-  warningBg: '#fffbeb',
+  success: '#2FAF8E',      // verde elegante
+  successBg: '#E8F7F3',
+  danger: '#C4572D',       // laranja escuro (SEM vermelho)
+  dangerBg: '#FFF1E8',
+  warning: '#E07A3F',      // laranja atenção
+  warningBg: '#FFF1E8',
   
-  income: '#10b981',
-  expense: '#ef4444',
+  income: '#2FAF8E',       // verde
+  expense: '#C4572D',      // laranja escuro
   
-  border: '#cbd5e1',
-  gray: '#64748b',
-  grayLight: '#f1f5f9',
+  border: '#E6E2F0',
+  gray: '#9A96B0',
+  grayLight: '#F1EFF9',
 };
 
 const themes: Record<ThemeMode, ThemeColors> = {

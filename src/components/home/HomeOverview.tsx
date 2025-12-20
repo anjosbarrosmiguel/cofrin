@@ -65,12 +65,12 @@ export default function HomeOverview({
       </View>
 
       {/* Card Hero - Resumo do Mês */}
-      <View style={[styles.heroCard, { backgroundColor: '#fff' }, getShadow(colors)]}>
-        <Text style={[styles.heroTitle, { color: '#6B7280' }]}>
+      <View style={[styles.heroCard, { backgroundColor: colors.card }, getShadow(colors)]}>
+        <Text style={[styles.heroTitle, { color: colors.textSecondary }]}>
           Resumo de {capitalizedMonth}
         </Text>
         
-        <Text style={[styles.heroValue, { color: '#10B981' }]}>
+        <Text style={[styles.heroValue, { color: balance >= 0 ? colors.income : colors.expense }]}>
           {formatCurrencyBRL(balance)}
         </Text>
 
@@ -78,20 +78,20 @@ export default function HomeOverview({
         <View style={styles.statsContainer}>
           <View style={styles.statRow}>
             <View style={styles.statIconLabel}>
-              <MaterialCommunityIcons name="arrow-up" size={16} color="#10B981" />
-              <Text style={[styles.statLabel, { color: '#6B7280' }]}>Receitas</Text>
+              <MaterialCommunityIcons name="arrow-up" size={16} color={colors.income} />
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Receitas</Text>
             </View>
-            <Text style={[styles.statValue, { color: '#10B981' }]}>
+            <Text style={[styles.statValue, { color: colors.income }]}>
               {formatCurrencyBRL(revenue)}
             </Text>
           </View>
 
           <View style={styles.statRow}>
             <View style={styles.statIconLabel}>
-              <MaterialCommunityIcons name="arrow-down" size={16} color="#EF4444" />
-              <Text style={[styles.statLabel, { color: '#6B7280' }]}>Despesas</Text>
+              <MaterialCommunityIcons name="arrow-down" size={16} color={colors.expense} />
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>Despesas</Text>
             </View>
-            <Text style={[styles.statValue, { color: '#6B7280' }]}>
+            <Text style={[styles.statValue, { color: colors.expense }]}>
               {formatCurrencyBRL(expenses)}
             </Text>
           </View>

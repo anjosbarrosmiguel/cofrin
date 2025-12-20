@@ -339,14 +339,14 @@ export default function CreditCardBillDetails() {
                 <Text style={[styles.dueDateText, { color: colors.textMuted }]}>Vencimento: {bill.dueDate.toDate().toLocaleDateString('pt-BR')}</Text>
               )}
               {bill?.isPaid ? (
-                <View style={[styles.statusBadge, { backgroundColor: '#10b98120' }]}>
-                  <MaterialCommunityIcons name="check-circle" size={14} color="#10b981" />
-                  <Text style={[styles.statusText, { color: '#10b981' }]}>Paga</Text>
+                <View style={[styles.statusBadge, { backgroundColor: colors.successBg }]}>
+                  <MaterialCommunityIcons name="check-circle" size={14} color={colors.success} />
+                  <Text style={[styles.statusText, { color: colors.success }]}>Paga</Text>
                 </View>
               ) : (
-                <View style={[styles.statusBadge, { backgroundColor: '#f9731620' }]}>
-                  <MaterialCommunityIcons name="clock-outline" size={14} color="#f97316" />
-                  <Text style={[styles.statusText, { color: '#f97316' }]}>Pagamento Pendente</Text>
+                <View style={[styles.statusBadge, { backgroundColor: colors.warningBg }]}>
+                  <MaterialCommunityIcons name="clock-outline" size={14} color={colors.warning} />
+                  <Text style={[styles.statusText, { color: colors.warning }]}>Pagamento Pendente</Text>
                 </View>
               )}
             </View>
@@ -362,13 +362,13 @@ export default function CreditCardBillDetails() {
           <View style={[styles.summaryRow, { borderTopColor: colors.border }]}>
             <View style={styles.summaryItem}>
               <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Despesas</Text>
-              <Text style={[styles.summaryValue, { color: '#dc2626' }]}>
+              <Text style={[styles.summaryValue, { color: colors.expense }]}>
                 {formatCurrencyBRL(-summary.expenses)}
               </Text>
             </View>
             <View style={styles.summaryItem}>
               <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>Estornos</Text>
-              <Text style={[styles.summaryValue, { color: '#10b981' }]}>
+              <Text style={[styles.summaryValue, { color: colors.income }]}>
                 {formatCurrencyBRL(summary.refunds)}
               </Text>
             </View>

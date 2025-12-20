@@ -54,20 +54,20 @@ export default function FinancialHealthCard({ income, expense, balance }: Financ
   const statusConfig = {
     ok: {
       icon: 'check-circle',
-      color: '#10b981',
-      bgColor: '#d1fae5',
+      color: colors.success,      // verde elegante
+      bgColor: colors.successBg,
       label: 'Tudo certo'
     },
     warning: {
       icon: 'alert-circle',
-      color: '#f59e0b',
-      bgColor: '#fef3c7',
+      color: colors.warning,      // laranja atenção
+      bgColor: colors.warningBg,
       label: 'Atenção'
     },
     risk: {
       icon: 'alert-octagon',
-      color: '#ef4444',
-      bgColor: '#fee2e2',
+      color: colors.danger,       // laranja escuro (SEM vermelho)
+      bgColor: colors.dangerBg,
       label: 'Risco'
     }
   };

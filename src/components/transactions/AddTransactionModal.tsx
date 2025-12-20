@@ -352,11 +352,11 @@ export default function AddTransactionModal({
     }
   }, [activePicker, date]);
 
-  // Colors based on type
+  // Colors based on type (usando theme tokens)
   const typeColors = {
-    despesa: '#dc2626',
-    receita: '#10b981',
-    transfer: '#64748b',
+    despesa: colors.expense,
+    receita: colors.income,
+    transfer: colors.textMuted,
   };
   
   const headerColor = typeColors[type];
@@ -1413,21 +1413,21 @@ export default function AddTransactionModal({
                       }}
                       style={({ pressed }) => [
                         styles.deleteButton,
-                        { borderColor: '#dc2626' },
-                        pressed && { opacity: 0.8, backgroundColor: '#dc262610' },
+                        { borderColor: colors.expense },
+                        pressed && { opacity: 0.8, backgroundColor: colors.expense + '10' },
                       ]}
                     >
-                      <MaterialCommunityIcons name="trash-can-outline" size={20} color="#dc2626" />
-                      <Text style={styles.deleteButtonText}>Excluir</Text>
+                      <MaterialCommunityIcons name="trash-can-outline" size={20} color={colors.expense} />
+                      <Text style={[styles.deleteButtonText, { color: colors.expense }]}>Excluir</Text>
                     </Pressable>
                   )}
-                  {/* Botão Salvar/Atualizar - sempre verde */}
+                  {/* Botão Salvar/Atualizar - verde sucesso */}
                   <Pressable
                     onPress={handleSave}
                     disabled={saving || !canConfirm}
                     style={({ pressed }) => [
                       styles.saveButton,
-                      { backgroundColor: '#10b981' },
+                      { backgroundColor: colors.success },
                       pressed && { opacity: 0.9 },
                       (saving || !canConfirm) && { opacity: 0.6 },
                     ]}
@@ -1661,7 +1661,6 @@ const styles = StyleSheet.create({
   deleteButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#dc2626',
     marginLeft: spacing.xs,
   },
   cancelButton: {

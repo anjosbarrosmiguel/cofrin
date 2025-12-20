@@ -5,12 +5,12 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { login, sendPasswordReset } from "../services/auth";
 import { useGoogleAuth } from "../services/googleAuth";
 
-// Cor principal da tela de login (azul-esverdeado)
+// Design System Roxo Premium
 const LOGIN_COLORS = {
-  primary: '#0d9488',      // teal-600
-  primaryDark: '#0f766e',  // teal-700
-  primaryLight: '#14b8a6', // teal-500
-  gradient: '#f0fdfa',     // teal-50
+  primary: '#5B3CC4',      // roxo principal
+  primaryDark: '#4A2FA8',  // roxo escuro
+  primaryLight: '#7B5CD6', // roxo claro
+  gradient: '#F9F8FD',     // off-white arroxeado
 };
 
 export default function Login({ navigation }: any) {
@@ -272,7 +272,7 @@ export default function Login({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F9D8C',
+    backgroundColor: '#5B3CC4',
   },
   scrollContent: {
     paddingHorizontal: 24,
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   forgotPasswordText: {
-    color: '#0F9D8C',
+    color: '#5B3CC4',
     fontWeight: '600',
     fontSize: 14,
   },
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(0,0,0,0.08)',
   },
   resetButton: {
-    backgroundColor: '#14b8a6',
+    backgroundColor: '#7B5CD6',
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   error: {
-    color: '#dc2626',
+    color: '#C4572D',
     marginBottom: 12,
     textAlign: 'center',
     fontSize: 14,
@@ -396,7 +396,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   primaryButton: {
-    backgroundColor: '#0F9D8C',
+    backgroundColor: '#5B3CC4',
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   registerTextBold: {
-    color: '#0F9D8C',
+    color: '#5B3CC4',
     fontWeight: '700',
   },
   loadingOverlay: {

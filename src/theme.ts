@@ -1,38 +1,47 @@
-// Centralized color palette & spacing. Use white + modern blue theme.
+// Design System Cofrin - Roxo Premium + Laranja Elegante
+// NÃO usar vermelho. Laranja apenas para alertas/negativos.
 import { Platform } from 'react-native';
 
 export const palette = {
-  // Backgrounds
-  white: '#ffffff',
-  bg: '#f8fafc',
-  card: '#ffffff',
+  // === BACKGROUNDS ===
+  bg: '#F9F8FD',           // off-white arroxeado (fundo principal)
+  card: '#FFFFFF',         // cards
+  surface: '#FFFFFF',      // superfícies
   
-  // Text colors
-  text: '#1e293b',
-  textSecondary: '#64748b',
-  textMuted: '#94a3b8',
+  // === TEXT ===
+  text: '#1F1B2E',         // títulos (preto arroxeado)
+  textDefault: '#4B475C',  // conteúdo padrão
+  textSecondary: '#8A8699', // texto secundário
+  textMuted: '#9A96B0',    // texto auxiliar / ícones inativos
+  textInverse: '#FFFFFF',  // texto sobre fundos escuros
   
-  // Primary colors
-  primary: '#2563eb',
-  primaryLight: '#3b82f6',
-  primaryBg: '#eff6ff',
+  // === PRIMARY (Roxo Marca) ===
+  primary: '#5B3CC4',      // roxo principal (botões, ícones ativos)
+  primaryLight: '#7B5CD6', // roxo claro
+  primaryDark: '#4A2FA8',  // roxo escuro
+  primaryBg: '#EDE9FF',    // fundo roxo suave (ícones, cards destacados)
   
-  // Status colors
-  success: '#10b981',
-  successBg: '#ecfdf5',
-  danger: '#ef4444',
-  dangerBg: '#fef2f2',
-  warning: '#f59e0b',
-  warningBg: '#fffbeb',
+  // === STATUS ===
+  success: '#2FAF8E',      // verde elegante (saldo positivo)
+  successBg: '#E8F7F3',    // fundo verde suave
+  danger: '#C4572D',       // laranja escuro (negativo, SEM vermelho)
+  dangerBg: '#FFF1E8',     // fundo laranja suave
+  warning: '#E07A3F',      // laranja atenção
+  warningBg: '#FFF1E8',    // fundo alerta
   
-  // Transaction colors
-  income: '#10b981',
-  expense: '#ef4444',
+  // === TRANSACTIONS ===
+  income: '#2FAF8E',       // receita (verde)
+  expense: '#C4572D',      // despesa (laranja escuro)
   
-  // Neutral
-  gray: '#64748b',
-  grayLight: '#f1f5f9',
-  border: '#e2e8f0',
+  // === NEUTRAL ===
+  gray: '#9A96B0',         // cinza arroxeado
+  grayLight: '#F1EFF9',    // cinza claro
+  border: '#E6E2F0',       // bordas
+  progressBg: '#E8E6F3',   // fundo barras de progresso
+  
+  // === BUTTONS ===
+  buttonDisabledBg: '#D6D2E3',
+  buttonDisabledText: '#9A96B0',
 };
 
 export const spacing = { 

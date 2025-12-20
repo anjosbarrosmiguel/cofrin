@@ -26,10 +26,10 @@ const getAccountIcon = (type: string): string => {
 const getAccountColor = (type: string): string => {
   switch (type) {
     case 'checking': return '#3b82f6';
-    case 'savings': return '#10b981';
-    case 'investment': return '#8b5cf6';
-    case 'cash': return '#f59e0b';
-    default: return '#6b7280';
+    case 'savings': return '#2FAF8E';  // verde elegante do design system
+    case 'investment': return '#5B3CC4'; // roxo principal
+    case 'cash': return '#E07A3F';  // laranja atenção
+    default: return '#9A96B0';  // cinza arroxeado
   }
 };
 

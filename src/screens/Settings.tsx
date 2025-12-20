@@ -1,8 +1,9 @@
-import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, Platform, ActivityIndicator } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/themeContext";
 import { useAuth } from "../contexts/authContext";
 import { useCustomAlert } from "../hooks/useCustomAlert";
+import { useState } from "react";
 import CustomAlert from "../components/CustomAlert";
 import SettingsFooter from "../components/SettingsFooter";
 import { spacing, borderRadius, getShadow } from "../theme";
@@ -22,6 +23,7 @@ export default function Settings({ navigation }: any) {
   const { user } = useAuth();
   const { alertState, showAlert, hideAlert } = useCustomAlert();
   const insets = useSafeAreaInsets();
+  const [deleting, setDeleting] = useState(false);
 
   const bottomPad = useMemo(
     () => 56 + spacing.sm + Math.max(insets.bottom, 8) + spacing.lg,
@@ -44,13 +46,85 @@ export default function Settings({ navigation }: any) {
     { id: "about", label: "Sobre o app", icon: "information-outline", screen: "About" },
   ];
 
+  const dangerItems: MenuItem[] = [
+    { id: "delete_account", label: "Deletar conta", icon: "delete-forever", danger: true },
+  ];
+
   function handlePress(item: MenuItem) {
-    if (item.screen) {
+    if (item.id === 'delete_account') {
+      handleDeleteAccount();
+    } else if (item.screen) {
       navigation.navigate(item.screen);
     }
   }
 
+  async function handleDeleteAccount() {
+    showAlert(
+      'Deletar conta',
+      'Tem certeza que deseja deletar sua conta? Todos os seus dados serão permanentemente removidos e essa ação não pode ser desfeita.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Deletar',
+          style: 'destructive',
+          onPress: confirmDeleteAccount,
+        },
+      ]
+    );
+  }
+
+  async function confirmDeleteAccount() {
+    if (!user?.uid) return;
+
+    setDeleting(true);
+    try {
+      // Importar serviços necessários
+      const { deleteDoc, collection, query, where, getDocs } = await import('firebase/firestore');
+      const { deleteUser } = await import('firebase/auth');
+      const { db, COLLECTIONS } = await import('../services/firebase');
+
+      // Deletar todas as coleções do usuário
+      const collectionsToDelete = [
+        COLLECTIONS.TRANSACTIONS,
+        COLLECTIONS.CATEGORIES,
+        COLLECTIONS.ACCOUNTS,
+        COLLECTIONS.CREDIT_CARDS,
+        COLLECTIONS.CREDIT_CARD_BILLS,
+        COLLECTIONS.GOALS,
+      ];
+
+      for (const collectionName of collectionsToDelete) {
+        const q = query(
+          collection(db, collectionName),
+          where('userId', '==', user.uid)
+        );
+        const snapshot = await getDocs(q);
+        
+        // Deletar documentos em lotes
+        const deletePromises = snapshot.docs.map(doc => deleteDoc(doc.ref));
+        await Promise.all(deletePromises);
+      }
+
+      // Deletar a conta do Firebase Auth
+      if (user) {
+        await deleteUser(user as any);
+      }
+
+      // Nota: O logout é automático após deletar a conta do Firebase Auth
+      showAlert('Conta deletada', 'Sua conta e todos os dados foram removidos com sucesso.');
+    } catch (error: any) {
+      console.error('Erro ao deletar conta:', error);
+      showAlert('Erro', error.message || 'Não foi possível deletar a conta. Tente novamente.');
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   function renderMenuItem(item: MenuItem, isLast: boolean) {
+    const iconBgColor = item.danger ? colors.dangerBg : colors.primaryBg;
+    const iconColor = item.danger ? colors.danger : colors.primary;
+    const textColor = item.danger ? colors.danger : colors.text;
+
     return (
       <View key={item.id}>
         <Pressable
@@ -59,16 +133,21 @@ export default function Settings({ navigation }: any) {
             styles.row,
             { backgroundColor: pressed ? colors.grayLight : 'transparent' },
           ]}
+          disabled={deleting}
         >
-          <View style={[styles.iconCircle, { backgroundColor: colors.primaryBg }]}>
-            <MaterialCommunityIcons name={item.icon as any} size={20} color={colors.primary} />
+          <View style={[styles.iconCircle, { backgroundColor: iconBgColor }]}>
+            <MaterialCommunityIcons name={item.icon as any} size={20} color={iconColor} />
           </View>
-          <Text style={[styles.rowText, { color: colors.text }]}>{item.label}</Text>
-          <MaterialCommunityIcons 
-            name="chevron-right"
-            size={20} 
-            color={colors.textMuted} 
-          />
+          <Text style={[styles.rowText, { color: textColor }]}>{item.label}</Text>
+          {deleting && item.danger ? (
+            <ActivityIndicator size="small" color={colors.danger} />
+          ) : (
+            <MaterialCommunityIcons 
+              name="chevron-right"
+              size={20} 
+              color={colors.textMuted} 
+            />
+          )}
         </Pressable>
         {!isLast && (
           <View style={[styles.divider, { backgroundColor: colors.border }]} />
@@ -134,6 +213,16 @@ export default function Settings({ navigation }: any) {
           </Text>
           <View style={[styles.card, { backgroundColor: colors.card }, getShadow(colors)]}>
             {secondaryItems.map((item, idx) => renderMenuItem(item, idx === secondaryItems.length - 1))}
+          </View>
+        </View>
+
+        {/* Zona de perigo */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: colors.danger }]}>
+            ZONA DE PERIGO
+          </Text>
+          <View style={[styles.card, { backgroundColor: colors.card }, getShadow(colors)]}>
+            {dangerItems.map((item, idx) => renderMenuItem(item, idx === dangerItems.length - 1))}
           </View>
         </View>
         </View>

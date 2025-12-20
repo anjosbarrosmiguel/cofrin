@@ -44,6 +44,8 @@ export default function Login({ navigation }: any) {
         message = "Senha incorreta. Tente novamente ou recupere a senha.";
       } else if (code.includes("auth/invalid-email")) {
         message = "Email inválido. Verifique o formato do email.";
+      } else if (code.includes("auth/invalid-credential")) {
+        message = "Usuário ou senha inválidos. Tente novamente ou clique em 'Esqueci minha senha'.";
       } else if (code.includes("auth/network-request-failed")) {
         message = "Sem conexão. Verifique sua internet e tente novamente.";
       }
@@ -155,7 +157,7 @@ export default function Login({ navigation }: any) {
             onPress={() => { setShowReset(!showReset); if (!showReset) setResetEmail(email); }}
             style={styles.forgotPasswordLink}
           >
-            <Text style={styles.forgotPasswordText}>{showReset ? "Fechar" : "Esqueceu sua senha?"}</Text>
+            <Text style={styles.forgotPasswordText}>{showReset ? "Fechar" : "Esqueci minha senha"}</Text>
           </Pressable>
 
           {showReset && (

@@ -3,25 +3,25 @@
 // ==========================================
 
 import {
-    collection,
-    doc,
-    addDoc,
-    updateDoc,
-    deleteDoc,
-    getDocs,
-    getDoc,
-    query,
-    where, Timestamp,
-    writeBatch
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  getDocs,
+  getDoc,
+  query,
+  where, Timestamp,
+  writeBatch
 } from 'firebase/firestore';
 import { db, COLLECTIONS } from './firebase';
 import {
-    Category,
-    CreateCategoryInput,
-    UpdateCategoryInput,
-    CategoryType,
-    DEFAULT_EXPENSE_CATEGORIES,
-    DEFAULT_INCOME_CATEGORIES,
+  Category,
+  CreateCategoryInput,
+  UpdateCategoryInput,
+  CategoryType,
+  DEFAULT_EXPENSE_CATEGORIES,
+  DEFAULT_INCOME_CATEGORIES,
 } from '../types/firebase';
 
 const categoriesRef = collection(db, COLLECTIONS.CATEGORIES);
@@ -118,12 +118,68 @@ export async function updateCategory(
   });
 }
 
+// Transferir todas as transações de uma categoria para outra
+export async function transferTransactionsToCategory(
+  userId: string,
+  fromCategoryId: string,
+  toCategoryId: string
+): Promise<number> {
+  const transactionsRef = collection(db, COLLECTIONS.TRANSACTIONS);
+  
+  // Buscar todas as transações da categoria de origem (incluir userId para validar permissões)
+  const q = query(
+    transactionsRef,
+    where('userId', '==', userId),
+    where('categoryId', '==', fromCategoryId)
+  );
+  
+  const snapshot = await getDocs(q);
+  
+  if (snapshot.empty) return 0;
+  
+  // Buscar dados da categoria de destino
+  const toCategory = await getCategoryById(toCategoryId);
+  if (!toCategory) {
+    throw new Error('Categoria de destino não encontrada');
+  }
+  
+  // Atualizar todas as transações em batch
+  const batch = writeBatch(db);
+  
+  snapshot.docs.forEach((docSnapshot) => {
+    const docRef = doc(db, COLLECTIONS.TRANSACTIONS, docSnapshot.id);
+    batch.update(docRef, {
+      categoryId: toCategoryId,
+      categoryName: toCategory.name,
+      categoryIcon: toCategory.icon,
+      updatedAt: Timestamp.now(),
+    });
+  });
+  
+  await batch.commit();
+  return snapshot.size;
+}
+
 // Deletar categoria
 export async function deleteCategory(categoryId: string): Promise<void> {
   // Verificar se é a categoria protegida
   const category = await getCategoryById(categoryId);
-  if (category?.isDefault && category.name === 'Renda') {
-    throw new Error('A categoria Renda não pode ser removida pois é usada para cálculos de relatórios.');
+  
+  if (!category) {
+    throw new Error('Categoria não encontrada');
+  }
+  
+  // Proteger categorias essenciais
+  if (category.name === 'Renda' && category.type === 'income') {
+    throw new Error('A categoria Renda não pode ser removida pois é essencial para o sistema.');
+  }
+  
+  if (category.name === 'Outros') {
+    throw new Error('A categoria Outros não pode ser removida pois é essencial para o sistema.');
+  }
+  
+  if (category.isMetaCategory || category.name === 'Meta') {
+    throw new Error('A categoria Meta não pode ser removida pois é usada para lançamentos de objetivos.');
   }
   
   const docRef = doc(db, COLLECTIONS.CATEGORIES, categoryId);

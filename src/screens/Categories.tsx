@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable, StyleSheet, Platform, ScrollView } fr
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/themeContext";
+import { useAuth } from "../contexts/authContext";
 import { spacing, borderRadius, getShadow } from "../theme";
 import { useCategories } from "../hooks/useCategories";
 import { CategoryType, CATEGORY_ICONS, Category } from "../types/firebase";
@@ -13,6 +14,7 @@ import SettingsFooter from "../components/SettingsFooter";
 
 export default function Categories({ navigation }: any) {
   const { colors } = useAppTheme();
+  const { user } = useAuth();
   const { alertState, showAlert, hideAlert } = useCustomAlert();
   const insets = useSafeAreaInsets();
   
@@ -65,30 +67,118 @@ export default function Categories({ navigation }: any) {
     }
   }
 
-  function handleDelete(categoryId: string, categoryName: string) {
+  async function handleDelete(categoryId: string, categoryName: string) {
     // Fechar a modal de edição primeiro
     setEditingCategory(null);
     
-    // Mostrar alerta de confirmação
-    showAlert(
-      'Excluir categoria',
-      `Deseja realmente excluir a categoria "${categoryName}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Excluir', 
-          style: 'destructive',
-          onPress: async () => {
-            const result = await deleteCategory(categoryId);
-            if (result) {
-              showAlert('Sucesso', 'Categoria excluída com sucesso!');
-            } else {
-              showAlert('Erro', 'Não foi possível excluir a categoria');
-            }
-          }
-        },
-      ]
-    );
+    // Verificar se é uma categoria protegida
+    const category = currentCategories.find(c => c.id === categoryId);
+    if (!category) return;
+    
+    if (category.name === 'Renda' && category.type === 'income') {
+      showAlert('Ação não permitida', 'A categoria Renda não pode ser removida pois é essencial para o sistema.');
+      return;
+    }
+    
+    if (category.name === 'Outros') {
+      showAlert('Ação não permitida', 'A categoria Outros não pode ser removida pois é essencial para o sistema.');
+      return;
+    }
+    
+    if (category.isMetaCategory || category.name === 'Meta') {
+      showAlert('Ação não permitida', 'A categoria Meta não pode ser removida pois é usada para lançamentos de objetivos.');
+      return;
+    }
+    
+    // Verificar se há transações associadas
+    try {
+      const { getTransactionCountByCategory } = await import('../services/transactionService');
+      
+      if (!user?.uid) return;
+      
+      const transactionCount = await getTransactionCountByCategory(user.uid, categoryId);
+      
+      if (transactionCount > 0) {
+        // Tem transações: mostrar opção de transferir
+        const otherCategories = currentCategories.filter(c => c.id !== categoryId && c.name !== categoryName);
+        
+        if (otherCategories.length === 0) {
+          showAlert('Erro', 'Não é possível excluir esta categoria pois ela possui lançamentos e não há outra categoria disponível para transferi-los.');
+          return;
+        }
+        
+        // Mostrar modal de seleção de categoria
+        showAlert(
+          'Transferir lançamentos',
+          `Esta categoria possui ${transactionCount} lançamento(s). Escolha uma categoria para transferir esses lançamentos:`,
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            ...otherCategories.slice(0, 3).map(cat => ({
+              text: cat.name,
+              onPress: async () => {
+                await confirmDeleteWithTransfer(categoryId, categoryName, cat.id, cat.name);
+              }
+            }))
+          ]
+        );
+      } else {
+        // Sem transações: confirmar exclusão direta
+        showAlert(
+          'Excluir categoria',
+          `Deseja realmente excluir a categoria "${categoryName}"?`,
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { 
+              text: 'Excluir', 
+              style: 'destructive',
+              onPress: async () => {
+                const result = await deleteCategory(categoryId);
+                if (result) {
+                  showAlert('Sucesso', 'Categoria excluída com sucesso!');
+                } else {
+                  showAlert('Erro', 'Não foi possível excluir a categoria');
+                }
+              }
+            },
+          ]
+        );
+      }
+    } catch (error: any) {
+      showAlert('Erro', error.message || 'Erro ao verificar lançamentos da categoria');
+    }
+  }
+  
+  async function confirmDeleteWithTransfer(
+    fromCategoryId: string,
+    fromCategoryName: string,
+    toCategoryId: string,
+    toCategoryName: string
+  ) {
+    try {
+      const { transferTransactionsToCategory } = await import('../services/categoryService');
+      
+      if (!user?.uid) {
+        showAlert('Erro', 'Usuário não autenticado');
+        return;
+      }
+      
+      // Transferir transações
+      const count = await transferTransactionsToCategory(user.uid, fromCategoryId, toCategoryId);
+      
+      // Excluir categoria
+      const result = await deleteCategory(fromCategoryId);
+      
+      if (result) {
+        showAlert(
+          'Sucesso', 
+          `${count} lançamento(s) foram transferidos para "${toCategoryName}" e a categoria "${fromCategoryName}" foi excluída.`
+        );
+      } else {
+        showAlert('Erro', 'Não foi possível excluir a categoria');
+      }
+    } catch (error: any) {
+      showAlert('Erro', error.message || 'Erro ao excluir categoria');
+    }
   }
 
   const icons = CATEGORY_ICONS[categoryType];

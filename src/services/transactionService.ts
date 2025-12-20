@@ -746,6 +746,21 @@ export async function getExpensesByCategory(
   return byCategory;
 }
 
+// Contar transações por categoria
+export async function getTransactionCountByCategory(
+  userId: string,
+  categoryId: string
+): Promise<number> {
+  const q = query(
+    transactionsRef,
+    where('userId', '==', userId),
+    where('categoryId', '==', categoryId)
+  );
+  
+  const snapshot = await getDocs(q);
+  return snapshot.size;
+}
+
 // Buscar gastos por categoria para múltiplos meses (para análise temporal)
 export async function getCategoryExpensesOverTime(
   userId: string,

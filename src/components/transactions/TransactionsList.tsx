@@ -8,6 +8,7 @@ export interface TransactionListItem {
   date: string;
   title: string;
   account: string;
+  toAccountName?: string; // Para transferências - conta destino
   amount: number;
   type: 'paid' | 'received' | 'transfer';
   category?: string;
@@ -45,6 +46,7 @@ export default function TransactionsList({ items = [], onEditItem, onStatusPress
               key={tx.id}
               title={tx.title} 
               account={tx.account} 
+              toAccountName={tx.toAccountName}
               amount={tx.amount} 
               type={tx.type}
               category={tx.category}

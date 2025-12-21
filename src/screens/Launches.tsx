@@ -181,14 +181,20 @@ export default function Launches() {
       .map((t: Transaction) => {
         // Usar valor absoluto para garantir consistência
         const absAmount = Math.abs(t.amount);
-        // Aplicar sinal baseado no tipo
-        const amount = t.type === 'expense' ? -absAmount : absAmount;
+        // Aplicar sinal baseado no tipo (transferência é neutra - não é ganho nem perda)
+        const amount = t.type === 'expense' ? -absAmount : (t.type === 'transfer' ? absAmount : absAmount);
+        
+        // Para transferências, gerar título padronizado
+        const title = t.type === 'transfer'
+          ? `Transferência de ${t.accountName || 'Conta'} para ${t.toAccountName || 'Conta'}`
+          : t.description;
         
         return {
           id: t.id,
           date: t.date.toDate().toISOString().split('T')[0],
-          title: t.description,
+          title,
           account: t.accountName || '',
+          toAccountName: t.toAccountName, // Conta destino para transferências
           amount,
           type: t.type === 'transfer' ? 'transfer' : (t.type === 'expense' ? 'paid' : 'received'),
           category: t.categoryName,
@@ -202,6 +208,7 @@ export default function Launches() {
     date: string;
     title: string;
     account: string;
+    toAccountName?: string;
     amount: number;
     type: 'paid' | 'received' | 'transfer';
     category?: string;
@@ -229,11 +236,33 @@ export default function Launches() {
         if (t.status === 'completed') {
           if (t.type === 'income') completedIncome += t.amount;
           else if (t.type === 'expense') completedExpense += t.amount;
-          // Transferências não afetam saldo total (apenas movem entre contas)
+          else if (t.type === 'transfer') {
+            // Transferências só afetam o saldo quando há filtro de conta
+            if (filterAccountId) {
+              // Se a conta filtrada é a ORIGEM da transferência = saída (despesa)
+              if (t.accountId === filterAccountId) {
+                completedExpense += t.amount;
+              }
+              // Se a conta filtrada é o DESTINO da transferência = entrada (receita)
+              if (t.toAccountId === filterAccountId) {
+                completedIncome += t.amount;
+              }
+            }
+            // Sem filtro: transferências não afetam saldo total (apenas movem entre contas)
+          }
         } else {
           // pending
           if (t.type === 'income') pendingIncome += t.amount;
           else if (t.type === 'expense') pendingExpense += t.amount;
+          else if (t.type === 'transfer' && filterAccountId) {
+            // Transferências pendentes também contam quando há filtro
+            if (t.accountId === filterAccountId) {
+              pendingExpense += t.amount;
+            }
+            if (t.toAccountId === filterAccountId) {
+              pendingIncome += t.amount;
+            }
+          }
         }
       });
 
@@ -255,7 +284,7 @@ export default function Launches() {
       realizedBalance,
       forecastBalance,
     };
-  }, [transactions, carryOverBalance, creditCardBills]);
+  }, [transactions, carryOverBalance, creditCardBills, filterAccountId]);
 
   // Navegação entre meses
   const goToPreviousMonth = () => {

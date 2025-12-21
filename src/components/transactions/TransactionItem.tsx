@@ -9,6 +9,7 @@ interface Props {
   icon?: string; // letter or emoji
   title: string;
   account?: string;
+  toAccountName?: string; // Para transferências - conta destino
   amount: number; // numeric value; positive = income, negative = expense
   type?: 'received' | 'paid' | 'transfer';
   category?: string;
@@ -26,6 +27,7 @@ function TransactionItemComponent({
   icon = '◻', 
   title, 
   account, 
+  toAccountName,
   amount, 
   type, 
   category,
@@ -56,14 +58,30 @@ function TransactionItemComponent({
   const color = isLocked ? colors.textMuted : getColor();
   const initial = title.charAt(0).toUpperCase();
 
-  // Subtítulo: categoria + conta (ou indicação de meta)
+  // Subtítulo: para transferência mostra apenas conta origem, para outros mostra categoria + conta
   const subtitle = goalName 
     ? `Meta • ${account || ''}`.replace(/ • $/, '')
-    : [category, account].filter(Boolean).join(' • ');
+    : type === 'transfer'
+      ? account || 'Transferência'
+      : [category, account].filter(Boolean).join(' • ');
   
   // Cor e ícone do status
   const statusColor = status === 'completed' ? colors.success : colors.textMuted;
   const statusIcon = status === 'completed' ? 'thumb-up' : 'thumb-down';
+
+  // Determinar ícone a ser exibido
+  const renderIcon = () => {
+    if (goalName) {
+      return <MaterialCommunityIcons name="flag-checkered" size={18} color={color} />;
+    }
+    if (type === 'transfer') {
+      return <MaterialCommunityIcons name="swap-horizontal" size={18} color={color} />;
+    }
+    if (categoryIcon) {
+      return <MaterialCommunityIcons name={categoryIcon as any} size={18} color={color} />;
+    }
+    return <Text style={[styles.iconLabel, { color }]}>{initial}</Text>;
+  };
 
   return (
     <Pressable
@@ -79,15 +97,9 @@ function TransactionItemComponent({
         pressed && { backgroundColor: colors.grayLight },
       ]}
     >
-      {/* Ícone da categoria */}
+      {/* Ícone da categoria ou transferência */}
       <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
-        {goalName ? (
-          <MaterialCommunityIcons name="flag-checkered" size={18} color={color} />
-        ) : categoryIcon ? (
-          <MaterialCommunityIcons name={categoryIcon as any} size={18} color={color} />
-        ) : (
-          <Text style={[styles.iconLabel, { color }]}>{initial}</Text>
-        )}
+        {renderIcon()}
       </View>
       
       {/* Conteúdo central - Título e Subtítulo */}

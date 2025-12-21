@@ -20,7 +20,7 @@ import {
   UpdateTransactionInput,
   TransactionType,
 } from '../types/firebase';
-import { updateAccountBalance } from './accountService';
+import { updateAccountBalance, getAccounts } from './accountService';
 import { getCategoryById } from './categoryService';
 import { getAccountById } from './accountService';
 import { getCreditCardById, updateCreditCardUsage, recalculateCreditCardUsage } from './creditCardService';
@@ -970,6 +970,7 @@ export async function getCategoryExpensesOverTime(
 // Buscar saldo acumulado até antes de um mês específico
 // LÓGICA DE CONTA CORRENTE:
 // - Retorna o saldo CONSOLIDADO de todos os meses anteriores
+// - Inclui a soma dos saldos iniciais de todas as contas (includeInTotal)
 // - Cada movimentação é contada APENAS UMA VEZ
 // - Este saldo funciona como "saldo inicial" do mês consultado
 // - Pagamentos de fatura não são duplicados
@@ -982,6 +983,12 @@ export async function getCarryOverBalance(
   beforeMonth: number,
   beforeYear: number
 ): Promise<number> {
+  // Buscar todas as contas para obter a soma dos saldos iniciais
+  const accounts = await getAccounts(userId);
+  const totalInitialBalance = accounts
+    .filter(acc => acc.includeInTotal)
+    .reduce((sum, acc) => sum + (acc.initialBalance || 0), 0);
+
   // Buscar TODAS as transações do usuário
   const q = query(
     transactionsRef,
@@ -997,7 +1004,8 @@ export async function getCarryOverBalance(
   // Buscar faturas pendentes
   const pendingBills = await getPendingBillsMap(userId);
 
-  let carryOver = 0;
+  // Começar com a soma dos saldos iniciais de todas as contas
+  let carryOver = totalInitialBalance;
 
   for (const t of transactions) {
     // Apenas lançamentos concluídos entram no saldo histórico
@@ -1022,6 +1030,95 @@ export async function getCarryOverBalance(
         carryOver -= t.amount;
       }
       // Transferências não afetam o saldo total (apenas movem entre contas)
+    }
+  }
+
+  return carryOver;
+}
+
+// Buscar saldo acumulado de uma CONTA ESPECÍFICA até antes de um mês
+// Similar a getCarryOverBalance, mas:
+// 1. Considera APENAS transações da conta especificada
+// 2. Inclui o saldo inicial (initialBalance) da conta
+// 3. Transferências PARA esta conta são positivas
+// 4. Transferências DESTA conta são negativas
+export async function getAccountCarryOverBalance(
+  userId: string,
+  accountId: string,
+  beforeMonth: number,
+  beforeYear: number
+): Promise<number> {
+  // Buscar a conta para obter o saldo inicial
+  const account = await getAccountById(accountId);
+  if (!account) {
+    console.warn('Conta não encontrada:', accountId);
+    return 0;
+  }
+
+  // Começar com o saldo inicial da conta
+  let carryOver = account.initialBalance || 0;
+
+  // Buscar transações da conta
+  const q = query(
+    transactionsRef,
+    where('userId', '==', userId),
+    where('accountId', '==', accountId)
+  );
+
+  const snapshot = await getDocs(q);
+  const transactions = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Transaction[];
+
+  // Buscar também transferências PARA esta conta
+  const qToAccount = query(
+    transactionsRef,
+    where('userId', '==', userId),
+    where('toAccountId', '==', accountId)
+  );
+
+  const snapshotToAccount = await getDocs(qToAccount);
+  const transfersToAccount = snapshotToAccount.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Transaction[];
+
+  for (const t of transactions) {
+    // Apenas lançamentos concluídos
+    if (t.status !== 'completed') continue;
+    
+    // Ignorar transações de cartão de crédito (elas não afetam a conta diretamente)
+    if (t.creditCardId) continue;
+    
+    // Verificar se é de um mês ANTERIOR
+    const isBeforeMonth = 
+      t.year < beforeYear || 
+      (t.year === beforeYear && t.month < beforeMonth);
+    
+    if (isBeforeMonth) {
+      if (t.type === 'income') {
+        carryOver += t.amount;
+      } else if (t.type === 'expense') {
+        carryOver -= t.amount;
+      } else if (t.type === 'transfer') {
+        // Transferência DESTA conta = saída
+        carryOver -= t.amount;
+      }
+    }
+  }
+
+  // Adicionar transferências PARA esta conta
+  for (const t of transfersToAccount) {
+    if (t.status !== 'completed') continue;
+    
+    const isBeforeMonth = 
+      t.year < beforeYear || 
+      (t.year === beforeYear && t.month < beforeMonth);
+    
+    if (isBeforeMonth && t.type === 'transfer') {
+      // Transferência PARA esta conta = entrada
+      carryOver += t.amount;
     }
   }
 

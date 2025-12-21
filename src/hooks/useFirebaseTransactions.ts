@@ -84,11 +84,24 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
 
       // Carregar saldo acumulado dos meses anteriores (apenas se tiver mês/ano definido)
       if (targetMonth && targetYear) {
-        const carryOver = await transactionService.getCarryOverBalance(
-          user.uid,
-          targetMonth,
-          targetYear
-        );
+        let carryOver: number;
+        
+        if (accountId) {
+          // Se estiver filtrado por conta, usar função específica que inclui saldo inicial
+          carryOver = await transactionService.getAccountCarryOverBalance(
+            user.uid,
+            accountId,
+            targetMonth,
+            targetYear
+          );
+        } else {
+          // Caso geral: saldo consolidado de todas as contas
+          carryOver = await transactionService.getCarryOverBalance(
+            user.uid,
+            targetMonth,
+            targetYear
+          );
+        }
         setCarryOverBalance(carryOver);
       } else {
         setCarryOverBalance(0);
@@ -208,13 +221,31 @@ export function useTransactions(options: UseTransactionsOptions = {}) {
   // Calcular totais do mês atual (apenas concluídos para o saldo real)
   // Transações de cartão NÃO são contabilizadas aqui (aparecem via fatura)
   // Pagamentos de fatura (creditCardBillId) SÃO contabilizados como despesa real
-  const totalIncome = incomeTransactions
+  let totalIncome = incomeTransactions
     .filter(t => t.status === 'completed')
     .reduce((sum, t) => sum + t.amount, 0);
 
-  const totalExpense = expenseTransactions
+  let totalExpense = expenseTransactions
     .filter(t => t.status === 'completed')
     .reduce((sum, t) => sum + t.amount, 0);
+
+  // Quando há filtro por conta, transferências afetam o saldo:
+  // - Transferência SAINDO da conta filtrada = despesa
+  // - Transferência ENTRANDO na conta filtrada = receita
+  if (accountId) {
+    transferTransactions
+      .filter(t => t.status === 'completed')
+      .forEach(t => {
+        // Transferência saindo desta conta = despesa
+        if (t.accountId === accountId) {
+          totalExpense += t.amount;
+        }
+        // Transferência entrando nesta conta = receita
+        if (t.toAccountId === accountId) {
+          totalIncome += t.amount;
+        }
+      });
+  }
 
   // Saldo do mês (sem considerar histórico) - apenas lançamentos concluídos
   const monthBalance = totalIncome - totalExpense;

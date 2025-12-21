@@ -1,15 +1,16 @@
-import { View, Text, Pressable, StyleSheet, ScrollView, Platform, ActivityIndicator } from "react-native";
+import { View, Text, Pressable, StyleSheet, ScrollView, ActivityIndicator } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/themeContext";
 import { useAuth } from "../contexts/authContext";
 import { useCustomAlert } from "../hooks/useCustomAlert";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import CustomAlert from "../components/CustomAlert";
 import MainLayout from "../components/MainLayout";
+import SimpleHeader from "../components/SimpleHeader";
 import { FOOTER_HEIGHT } from "../components/AppFooter";
 import { spacing, borderRadius, getShadow } from "../theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useMemo } from "react";
+import { logout } from "../services/auth";
 
 interface MenuItem {
   id: string;
@@ -47,13 +48,38 @@ export default function Settings({ navigation }: any) {
     { id: "about", label: "Sobre o app", icon: "information-outline", screen: "About" },
   ];
 
+  const logoutItem: MenuItem = { id: "logout", label: "Sair do aplicativo", icon: "logout" };
+
   const dangerItems: MenuItem[] = [
     { id: "delete_account", label: "Deletar conta", icon: "delete-forever", danger: true },
   ];
 
+  const handleLogout = () => {
+    showAlert(
+      'Sair da conta',
+      'Tem certeza que deseja sair?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Sair', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+            } catch (error) {
+              showAlert('Erro', 'Não foi possível sair da conta');
+            }
+          }
+        },
+      ]
+    );
+  };
+
   function handlePress(item: MenuItem) {
     if (item.id === 'delete_account') {
       handleDeleteAccount();
+    } else if (item.id === 'logout') {
+      handleLogout();
     } else if (item.screen) {
       navigation.navigate(item.screen);
     }
@@ -163,29 +189,21 @@ export default function Settings({ navigation }: any) {
         style={[styles.scrollView, { backgroundColor: colors.bg }]} 
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
       >
-        {/* Header com perfil */}
-        <View style={[styles.header, { backgroundColor: colors.primary }]}>
-        <View style={styles.headerInner}>
-          {/* Botão voltar */}
-          <Pressable 
-            onPress={() => navigation.goBack()} 
-            style={styles.backButton}
-            hitSlop={12}
-          >
-            <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
-          </Pressable>
+        {/* Header simples */}
+        <SimpleHeader title="Configurações" />
 
-          <View style={styles.profileSection}>
-            <View style={styles.avatarCircle}>
-              <MaterialCommunityIcons name="account" size={40} color={colors.primary} />
+        {/* Perfil resumido */}
+        <View style={styles.centeredContainer}>
+          <View style={styles.profileCard}>
+            <View style={[styles.avatarCircle, { backgroundColor: colors.primaryBg }]}>
+              <MaterialCommunityIcons name="account" size={32} color={colors.primary} />
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.userName}>{userName}</Text>
-              <Text style={styles.userEmail}>{userEmail}</Text>
+              <Text style={[styles.userName, { color: colors.text }]}>{userName}</Text>
+              <Text style={[styles.userEmail, { color: colors.textSecondary }]}>{userEmail}</Text>
             </View>
           </View>
         </View>
-      </View>
 
       {/* Cards de menu */}
       <View style={styles.centeredContainer}>
@@ -197,6 +215,32 @@ export default function Settings({ navigation }: any) {
           </Text>
           <View style={[styles.card, { backgroundColor: colors.card }, getShadow(colors)]}>
             {menuItems.map((item, idx) => renderMenuItem(item, idx === menuItems.length - 1))}
+          </View>
+        </View>
+
+        {/* Sair do aplicativo */}
+        <View style={styles.section}>
+          <Text style={[styles.sectionTitle, { color: '#C2410C' }]}>
+            SAIR DO APLICATIVO
+          </Text>
+          <View style={[styles.card, { backgroundColor: colors.card }, getShadow(colors)]}>
+            <Pressable
+              onPress={handleLogout}
+              style={({ pressed }) => [
+                styles.row,
+                { backgroundColor: pressed ? colors.grayLight : 'transparent' },
+              ]}
+            >
+              <View style={[styles.iconCircle, { backgroundColor: '#FED7AA' }]}>
+                <MaterialCommunityIcons name="logout" size={20} color="#C2410C" />
+              </View>
+              <Text style={[styles.rowText, { color: '#C2410C' }]}>{logoutItem.label}</Text>
+              <MaterialCommunityIcons 
+                name="chevron-right"
+                size={20} 
+                color={colors.textMuted} 
+              />
+            </Pressable>
           </View>
         </View>
 
@@ -242,28 +286,16 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
   },
-  header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 24,
-  },
-  headerInner: {
-    maxWidth: 1200,
-    width: '100%',
-    alignSelf: 'center',
-    paddingHorizontal: spacing.lg,
-  },
-  backButton: {
-    marginBottom: spacing.md,
-  },
-  profileSection: {
+  profileCard: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.md,
   },
   avatarCircle: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
-    backgroundColor: '#fff',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -272,18 +304,16 @@ const styles = StyleSheet.create({
     marginLeft: spacing.md,
   },
   userName: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
+    fontSize: 18,
+    fontWeight: '600',
   },
   userEmail: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
   },
   menuContainer: {
     paddingHorizontal: spacing.lg,
-    marginTop: spacing.md,
+    marginTop: spacing.sm,
   },
   section: {
     marginBottom: spacing.lg,

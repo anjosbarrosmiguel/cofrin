@@ -1,14 +1,15 @@
 import { useMemo, useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, Platform, ScrollView } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/themeContext";
 import { useAuth } from "../contexts/authContext";
 import { spacing, borderRadius } from "../theme";
-import { updateUserProfile, logout } from "../services/auth";
+import { updateUserProfile } from "../services/auth";
 import CustomAlert from "../components/CustomAlert";
 import { useCustomAlert } from "../hooks";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import MainLayout from "../components/MainLayout";
+import SimpleHeader from "../components/SimpleHeader";
 import { FOOTER_HEIGHT } from "../components/AppFooter";
 
 export default function EditProfile({ navigation }: any) {
@@ -25,27 +26,6 @@ export default function EditProfile({ navigation }: any) {
   const currentName = user?.displayName || user?.email?.split('@')[0] || '';
   const [name, setName] = useState(currentName);
   const [loading, setLoading] = useState(false);
-
-  const handleLogout = () => {
-    showAlert(
-      'Sair da conta',
-      'Tem certeza que deseja sair?',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Sair', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await logout();
-            } catch (error) {
-              showAlert('Erro', 'Não foi possível sair da conta');
-            }
-          }
-        },
-      ]
-    );
-  };
 
   async function handleSave() {
     if (!name.trim()) return;
@@ -74,32 +54,14 @@ export default function EditProfile({ navigation }: any) {
       style={[styles.container, { backgroundColor: colors.bg }]}
       contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
     >
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.primary, paddingTop: insets.top || 16 }]}>
-        <View style={styles.headerInner}>
-          <Pressable 
-            onPress={() => navigation.goBack()} 
-            style={styles.backButton}
-            hitSlop={12}
-          >
-            <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
-          </Pressable>
-          <Text style={styles.headerTitle}>Editar Perfil</Text>
-          <Pressable 
-            onPress={handleLogout} 
-            style={styles.logoutButton}
-            hitSlop={12}
-          >
-            <MaterialCommunityIcons name="logout" size={22} color="#fff" />
-          </Pressable>
-        </View>
-      </View>
+      {/* Header simples */}
+      <SimpleHeader title="Editar Perfil" />
 
       <View style={styles.centeredContainer}>
         {/* Avatar */}
         <View style={styles.avatarSection}>
-          <View style={[styles.avatarCircle, { backgroundColor: colors.primary }]}>
-            <MaterialCommunityIcons name="account" size={48} color="#fff" />
+          <View style={[styles.avatarCircle, { backgroundColor: colors.primaryBg }]}>
+            <MaterialCommunityIcons name="account" size={48} color={colors.primary} />
           </View>
           <Text style={[styles.email, { color: colors.textSecondary }]}>{user?.email}</Text>
         </View>
@@ -152,30 +114,6 @@ const styles = StyleSheet.create({
     maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
-  },
-  header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 16,
-  },
-  headerInner: {
-    maxWidth: 1200,
-    width: '100%',
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-  },
-  backButton: {
-    padding: 4,
-  },
-  logoutButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
   },
   avatarSection: {
     alignItems: 'center',

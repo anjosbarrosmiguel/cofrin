@@ -1,11 +1,12 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Modal, Platform } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Modal } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/themeContext";
 import { useCustomAlert } from "../hooks/useCustomAlert";
 import CustomAlert from "../components/CustomAlert";
 import MainLayout from "../components/MainLayout";
+import SimpleHeader from "../components/SimpleHeader";
 import { useAuth } from "../contexts/authContext";
 import { spacing, borderRadius, getShadow } from "../theme";
 import { useCreditCards } from "../hooks/useCreditCards";
@@ -303,20 +304,8 @@ export default function CreditCards({ navigation }: any) {
   return (
     <MainLayout>
       <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.primary, paddingTop: insets.top || 16 }]}>
-        <View style={styles.headerInner}>
-          <Pressable 
-            onPress={() => navigation.goBack()} 
-            style={styles.backButton}
-            hitSlop={12}
-          >
-            <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
-          </Pressable>
-          <Text style={styles.headerTitle}>Cartões de Crédito</Text>
-          <View style={{ width: 24 }} />
-        </View>
-      </View>
+      {/* Header simples */}
+      <SimpleHeader title="Cartões de Crédito" />
 
       <ScrollView 
         style={styles.scrollView}
@@ -798,27 +787,6 @@ const styles = StyleSheet.create({
     maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
-  },
-  header: {
-    paddingTop: Platform.OS === 'ios' ? 60 : 40,
-    paddingBottom: 16,
-  },
-  headerInner: {
-    maxWidth: 1200,
-    width: '100%',
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#fff',
   },
   content: {
     padding: spacing.lg,

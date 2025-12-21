@@ -1,8 +1,9 @@
-import { View, Text, Pressable, StyleSheet, ScrollView } from "react-native";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/themeContext";
 import { spacing, borderRadius, getShadow } from "../theme";
 import MainLayout from "../components/MainLayout";
+import SimpleHeader from "../components/SimpleHeader";
 import { FOOTER_HEIGHT } from "../components/AppFooter";
 import { useMemo } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -65,20 +66,8 @@ export default function Education({ navigation }: any) {
   return (
     <MainLayout>
       <View style={[styles.container, { backgroundColor: colors.bg }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: colors.primary, paddingTop: insets.top || 16 }]}>
-        <View style={styles.headerInner}>
-          <Pressable
-            onPress={() => navigation.goBack()}
-            style={styles.backButton}
-            hitSlop={12}
-          >
-            <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
-          </Pressable>
-          <Text style={styles.headerTitle}>Educação Financeira</Text>
-          <View style={{ width: 24 }} />
-        </View>
-      </View>
+      {/* Header simples */}
+      <SimpleHeader title="Educação Financeira" />
 
       <ScrollView
         style={styles.scrollView}

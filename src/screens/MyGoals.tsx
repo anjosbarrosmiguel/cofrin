@@ -9,6 +9,7 @@ import { useAppTheme } from '../contexts/themeContext';
 import { useCompletedGoals } from '../hooks/useCompletedGoals';
 import { useTransactionRefresh } from '../contexts/transactionRefreshContext';
 import MainLayout from '../components/MainLayout';
+import SimpleHeader from '../components/SimpleHeader';
 import { spacing, borderRadius, getShadow } from '../theme';
 import { formatCurrencyBRL } from '../utils/format';
 import { Goal, Transaction } from '../types/firebase';
@@ -243,25 +244,17 @@ export default function MyGoals() {
     <MainLayout>
       <ScrollView
         style={[styles.root, { backgroundColor: colors.bg }]}
-        contentContainerStyle={[
-          styles.scrollContent,
-          { paddingTop: insets.top || 16 }
-        ]}
+        contentContainerStyle={styles.scrollContent}
       >
+        {/* Header simples */}
+        <SimpleHeader title="Meus Objetivos" />
+
         <View style={styles.centeredContainer}>
           <View style={styles.content}>
-            {/* Header */}
-            <View style={styles.header}>
-              <Pressable onPress={() => navigation.goBack()} style={styles.backButton}>
-                <MaterialCommunityIcons name="arrow-left" size={24} color={colors.text} />
-              </Pressable>
-              <View style={styles.headerTextContainer}>
-                <Text style={[styles.title, { color: '#4A2FA8' }]}>Meus Objetivos</Text>
-                <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-                  {goals.length} {goals.length === 1 ? 'meta concluída' : 'metas concluídas'}
-                </Text>
-              </View>
-            </View>
+            {/* Contador de metas */}
+            <Text style={[styles.subtitle, { color: colors.textMuted, paddingHorizontal: spacing.lg, marginBottom: spacing.md }]}>
+              {goals.length} {goals.length === 1 ? 'meta concluída' : 'metas concluídas'}
+            </Text>
 
             {/* Lista de metas */}
             {goals.length > 0 ? (

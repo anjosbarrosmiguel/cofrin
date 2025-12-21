@@ -10,7 +10,7 @@ import { spacing, borderRadius, getShadow } from '../theme';
 import { formatCurrencyBRL } from '../utils/format';
 import * as transactionService from '../services/transactionService';
 import MainLayout from '../components/MainLayout';
-import AppHeader from '../components/AppHeader';
+import SimpleHeader from '../components/SimpleHeader';
 import { useNavigation } from '@react-navigation/native';
 
 type ViewMode = 'monthly' | 'yearly';
@@ -348,7 +348,7 @@ export default function CategoryDetails() {
   return (
     <MainLayout>
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <AppHeader />
+        <SimpleHeader title="Categorias" />
         
         <ScrollView 
           style={styles.scrollView}

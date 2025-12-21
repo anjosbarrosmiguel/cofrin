@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Text, StyleSheet, Animated, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Animated, Pressable } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '../contexts/themeContext';
@@ -99,20 +99,20 @@ export default function Snackbar({
   const snackColors = getColors();
 
   return (
-    <Animated.View 
-      style={[
-        styles.container, 
-        { 
-          backgroundColor: snackColors.bg,
-          bottom: insets.bottom + 140,
-          opacity: fadeAnim,
-          transform: [{ translateY }],
-        },
-        getShadow(colors, 'lg')
-      ]}
-    >
-      <MaterialCommunityIcons 
-        name={getIcon()} 
+    <View style={[styles.wrapper, { bottom: insets.bottom + 140 }]}>
+      <Animated.View 
+        style={[
+          styles.container, 
+          { 
+            backgroundColor: snackColors.bg,
+            opacity: fadeAnim,
+            transform: [{ translateY }],
+          },
+          getShadow(colors, 'lg')
+        ]}
+      >
+        <MaterialCommunityIcons 
+          name={getIcon()} 
         size={20} 
         color={snackColors.icon} 
       />
@@ -129,22 +129,29 @@ export default function Snackbar({
       <Pressable onPress={handleDismiss} hitSlop={8}>
         <MaterialCommunityIcons name="close" size={18} color={snackColors.icon} style={{ opacity: 0.7 }} />
       </Pressable>
-    </Animated.View>
+      </Animated.View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  wrapper: {
     position: 'absolute',
-    left: spacing.md,
-    right: spacing.md,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 9999,
+    paddingHorizontal: spacing.md,
+  },
+  container: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingVertical: spacing.sm,
     paddingHorizontal: spacing.md,
     borderRadius: borderRadius.md,
     gap: spacing.sm,
-    zIndex: 9999,
+    maxWidth: 1200,
+    width: '100%',
   },
   message: {
     flex: 1,

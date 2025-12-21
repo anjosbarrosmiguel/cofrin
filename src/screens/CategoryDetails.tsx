@@ -363,6 +363,7 @@ export default function CategoryDetails() {
             />
           }
         >
+          <View style={styles.centeredContainer}>
           {/* Header Card */}
           <View style={[styles.headerCard, { backgroundColor: colors.card }, getShadow(colors)]}>
             {viewMode === 'monthly' ? (
@@ -549,6 +550,7 @@ export default function CategoryDetails() {
               )}
             </>
           )}
+          </View>
         </ScrollView>
 
         {renderYearPickerModal()}
@@ -566,6 +568,11 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: spacing.lg,
+  },
+  centeredContainer: {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
   },
   headerCard: {
     borderRadius: borderRadius.lg,

@@ -617,10 +617,10 @@ export default function Launches() {
       )}
 
       {/* Summary Bar - Fixo acima do footer */}
-      <View style={[styles.summaryContainer, { backgroundColor: colors.card, bottom: summaryBottom }, getShadow(colors)]}>
+      <View style={[styles.summaryContainer, { bottom: summaryBottom }]}>
         
         {/* Resumo simplificado */}
-        <View style={styles.summaryBar}>
+        <View style={[styles.summaryBar, { backgroundColor: colors.card }, getShadow(colors)]}>
           <View style={styles.summaryItem}>
             <Text style={[styles.summaryValue, { color: incomeColor }]}>{formatCurrencyBRL(totalIncome)}</Text>
             <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>entradas</Text>
@@ -782,9 +782,9 @@ const styles = StyleSheet.create({
   },
   summaryContainer: {
     position: 'absolute',
-    left: 2,
-    right: 2,
-    borderRadius: borderRadius.lg,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
     zIndex: 10,
   },
   summaryBar: {
@@ -792,6 +792,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
+    maxWidth: 1200,
+    width: '100%',
+    marginHorizontal: spacing.xs,
+    borderRadius: borderRadius.lg,
   },
   summaryItem: {
     flex: 1,

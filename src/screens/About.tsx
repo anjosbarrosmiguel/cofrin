@@ -2,7 +2,8 @@ import { View, Text, Pressable, StyleSheet, ScrollView, Platform } from "react-n
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/themeContext";
 import { spacing, borderRadius, getShadow } from "../theme";
-import SettingsFooter from "../components/SettingsFooter";
+import MainLayout from "../components/MainLayout";
+import { FOOTER_HEIGHT } from "../components/AppFooter";
 import { useMemo } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -11,12 +12,13 @@ export default function About({ navigation }: any) {
   const insets = useSafeAreaInsets();
 
   const bottomPad = useMemo(
-    () => 56 + spacing.sm + Math.max(insets.bottom, 8) + spacing.lg,
+    () => FOOTER_HEIGHT + 6 + Math.max(insets.bottom, 8) + spacing.lg,
     [insets.bottom]
   );
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <MainLayout>
+      <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.primary, paddingTop: insets.top || 16 }]}>
         <View style={styles.headerInner}>
@@ -83,9 +85,8 @@ export default function About({ navigation }: any) {
           </View>
         </View>
       </ScrollView>
-
-      <SettingsFooter navigation={navigation} />
-    </View>
+      </View>
+    </MainLayout>
   );
 }
 

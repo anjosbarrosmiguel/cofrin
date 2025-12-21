@@ -10,7 +10,7 @@ import { CategoryType, CATEGORY_ICONS, Category } from "../types/firebase";
 import { useCustomAlert } from "../hooks";
 import EditCategoryModal from "../components/EditCategoryModal";
 import CustomAlert from "../components/CustomAlert";
-import SettingsFooter from "../components/SettingsFooter";
+import MainLayout from "../components/MainLayout";
 
 export default function Categories({ navigation }: any) {
   const { colors } = useAppTheme();
@@ -185,7 +185,8 @@ export default function Categories({ navigation }: any) {
   const currentCategories = categoryType === 'expense' ? expenseCategories : incomeCategories;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <MainLayout>
+      <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.primary, paddingTop: insets.top || 16 }]}>
         <View style={styles.headerInner}>
@@ -413,8 +414,8 @@ export default function Categories({ navigation }: any) {
       />
 
       <CustomAlert {...alertState} onClose={hideAlert} />
-      <SettingsFooter navigation={navigation} />
-    </View>
+      </View>
+    </MainLayout>
   );
 }
 

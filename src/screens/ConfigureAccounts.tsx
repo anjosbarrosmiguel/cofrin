@@ -8,7 +8,7 @@ import { spacing, borderRadius, getShadow } from "../theme";
 import { useAccounts } from "../hooks/useAccounts";
 import { useCustomAlert } from "../hooks/useCustomAlert";
 import CustomAlert from "../components/CustomAlert";
-import SettingsFooter from "../components/SettingsFooter";
+import MainLayout from "../components/MainLayout";
 import { AccountType, ACCOUNT_TYPE_LABELS, Account } from "../types/firebase";
 import { formatCurrencyBRL } from "../utils/format";
 import { deleteTransactionsByAccount, countTransactionsByAccount } from "../services/transactionService";
@@ -491,7 +491,8 @@ export default function ConfigureAccounts({ navigation }: any) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <MainLayout>
+      <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.primary, paddingTop: insets.top || 16 }]}>
         <View style={styles.headerInner}>
@@ -1008,8 +1009,8 @@ export default function ConfigureAccounts({ navigation }: any) {
         buttons={alertState.buttons}
         onClose={hideAlert}
       />
-      <SettingsFooter navigation={navigation} />
-    </View>
+      </View>
+    </MainLayout>
   );
 }
 

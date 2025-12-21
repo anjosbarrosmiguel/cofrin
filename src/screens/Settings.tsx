@@ -5,7 +5,8 @@ import { useAuth } from "../contexts/authContext";
 import { useCustomAlert } from "../hooks/useCustomAlert";
 import { useState } from "react";
 import CustomAlert from "../components/CustomAlert";
-import SettingsFooter from "../components/SettingsFooter";
+import MainLayout from "../components/MainLayout";
+import { FOOTER_HEIGHT } from "../components/AppFooter";
 import { spacing, borderRadius, getShadow } from "../theme";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMemo } from "react";
@@ -26,7 +27,7 @@ export default function Settings({ navigation }: any) {
   const [deleting, setDeleting] = useState(false);
 
   const bottomPad = useMemo(
-    () => 56 + spacing.sm + Math.max(insets.bottom, 8) + spacing.lg,
+    () => FOOTER_HEIGHT + 6 + Math.max(insets.bottom, 8) + spacing.lg,
     [insets.bottom]
   );
 
@@ -157,9 +158,9 @@ export default function Settings({ navigation }: any) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <MainLayout>
       <ScrollView 
-        style={styles.scrollView} 
+        style={[styles.scrollView, { backgroundColor: colors.bg }]} 
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
       >
         {/* Header com perfil */}
@@ -182,13 +183,6 @@ export default function Settings({ navigation }: any) {
               <Text style={styles.userName}>{userName}</Text>
               <Text style={styles.userEmail}>{userEmail}</Text>
             </View>
-            <Pressable 
-              onPress={() => navigation.navigate('EditProfile')}
-              style={styles.editButton}
-              hitSlop={8}
-            >
-              <MaterialCommunityIcons name="pencil" size={18} color="#fff" />
-            </Pressable>
           </View>
         </View>
       </View>
@@ -229,8 +223,7 @@ export default function Settings({ navigation }: any) {
       </View>
       </ScrollView>
       <CustomAlert {...alertState} onClose={hideAlert} />
-      <SettingsFooter navigation={navigation} />
-    </View>
+    </MainLayout>
   );
 }
 
@@ -287,14 +280,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
-  },
-  editButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   menuContainer: {
     paddingHorizontal: spacing.lg,

@@ -9,14 +9,13 @@ type Props = {
   onHome: () => void;
   onAdd: () => void;
   onLaunches: () => void;
-  onReports: () => void;
-  onOthers: () => void;
+  onSettings: () => void;
 };
 
 // Compact bar height for all platforms (row height only; paddings are added separately)
 export const FOOTER_HEIGHT = 56;
 
-export default function AppFooter({ onHome, onAdd, onLaunches, onReports, onOthers }: Props) {
+export default function AppFooter({ onHome, onAdd, onLaunches, onSettings }: Props) {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
   const route = useRoute();
@@ -96,11 +95,7 @@ export default function AppFooter({ onHome, onAdd, onLaunches, onReports, onOthe
             </View>
 
             <View style={styles.slot}>
-              <IconButton icon="chart-bar" onPress={onReports} routeName="Relatórios" />
-            </View>
-
-            <View style={styles.slot}>
-              <IconButton icon="dots-horizontal" onPress={onOthers} routeName="Configurações" />
+              <IconButton icon="cog-outline" onPress={onSettings} routeName="Configurações" />
             </View>
           </View>
         </View>

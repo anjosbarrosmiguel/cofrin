@@ -4,11 +4,12 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/themeContext";
 import { useAuth } from "../contexts/authContext";
 import { spacing, borderRadius } from "../theme";
-import { updateUserProfile } from "../services/auth";
+import { updateUserProfile, logout } from "../services/auth";
 import CustomAlert from "../components/CustomAlert";
 import { useCustomAlert } from "../hooks";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import SettingsFooter from "../components/SettingsFooter";
+import MainLayout from "../components/MainLayout";
+import { FOOTER_HEIGHT } from "../components/AppFooter";
 
 export default function EditProfile({ navigation }: any) {
   const { colors } = useAppTheme();
@@ -17,13 +18,34 @@ export default function EditProfile({ navigation }: any) {
   const insets = useSafeAreaInsets();
 
   const bottomPad = useMemo(
-    () => 56 + spacing.sm + Math.max(insets.bottom, 8) + spacing.lg,
+    () => FOOTER_HEIGHT + 6 + Math.max(insets.bottom, 8) + spacing.lg,
     [insets.bottom]
   );
   
   const currentName = user?.displayName || user?.email?.split('@')[0] || '';
   const [name, setName] = useState(currentName);
   const [loading, setLoading] = useState(false);
+
+  const handleLogout = () => {
+    showAlert(
+      'Sair da conta',
+      'Tem certeza que deseja sair?',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Sair', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await logout();
+            } catch (error) {
+              showAlert('Erro', 'Não foi possível sair da conta');
+            }
+          }
+        },
+      ]
+    );
+  };
 
   async function handleSave() {
     if (!name.trim()) return;
@@ -47,6 +69,7 @@ export default function EditProfile({ navigation }: any) {
   }
 
   return (
+    <MainLayout>
     <ScrollView
       style={[styles.container, { backgroundColor: colors.bg }]}
       contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad }]}
@@ -62,7 +85,13 @@ export default function EditProfile({ navigation }: any) {
             <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
           </Pressable>
           <Text style={styles.headerTitle}>Editar Perfil</Text>
-          <View style={{ width: 24 }} />
+          <Pressable 
+            onPress={handleLogout} 
+            style={styles.logoutButton}
+            hitSlop={12}
+          >
+            <MaterialCommunityIcons name="logout" size={22} color="#fff" />
+          </Pressable>
         </View>
       </View>
 
@@ -107,8 +136,8 @@ export default function EditProfile({ navigation }: any) {
       </View>
 
       <CustomAlert {...alertState} onClose={hideAlert} />
-      <SettingsFooter navigation={navigation} />
     </ScrollView>
+    </MainLayout>
   );
 }
 
@@ -138,6 +167,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.lg,
   },
   backButton: {
+    padding: 4,
+  },
+  logoutButton: {
     padding: 4,
   },
   headerTitle: {

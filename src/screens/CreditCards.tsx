@@ -5,7 +5,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/themeContext";
 import { useCustomAlert } from "../hooks/useCustomAlert";
 import CustomAlert from "../components/CustomAlert";
-import SettingsFooter from "../components/SettingsFooter";
+import MainLayout from "../components/MainLayout";
 import { useAuth } from "../contexts/authContext";
 import { spacing, borderRadius, getShadow } from "../theme";
 import { useCreditCards } from "../hooks/useCreditCards";
@@ -301,7 +301,8 @@ export default function CreditCards({ navigation }: any) {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.bg }]}>
+    <MainLayout>
+      <View style={[styles.container, { backgroundColor: colors.bg }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: colors.primary, paddingTop: insets.top || 16 }]}>
         <View style={styles.headerInner}>
@@ -778,8 +779,8 @@ export default function CreditCards({ navigation }: any) {
         buttons={alertState.buttons}
         onClose={hideAlert}
       />
-      <SettingsFooter navigation={navigation} />
-    </View>
+      </View>
+    </MainLayout>
   );
 }
 

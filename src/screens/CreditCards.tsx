@@ -130,6 +130,15 @@ export default function CreditCards({ navigation }: any) {
       return;
     }
     
+    // Verificar se já existe um cartão com o mesmo nome
+    const nameExists = activeCards.some(
+      card => card.name.toLowerCase() === cardName.trim().toLowerCase()
+    );
+    if (nameExists) {
+      showAlert('Nome duplicado', 'Já existe um cartão com esse nome.', [{ text: 'OK', style: 'default' }]);
+      return;
+    }
+    
     setSaving(true);
     try {
       const cardData: any = {
@@ -225,6 +234,16 @@ export default function CreditCards({ navigation }: any) {
     
     if (closingDayNum < 1 || closingDayNum > 31 || dueDayNum < 1 || dueDayNum > 31) {
       showAlert('Erro', 'Os dias devem estar entre 1 e 31', [{ text: 'OK', style: 'default' }]);
+      return;
+    }
+    
+    // Verificar se já existe outro cartão com o mesmo nome
+    const nameExists = activeCards.some(
+      card => card.id !== editingCard.id && 
+              card.name.toLowerCase() === cardName.trim().toLowerCase()
+    );
+    if (nameExists) {
+      showAlert('Nome duplicado', 'Já existe um cartão com esse nome.', [{ text: 'OK', style: 'default' }]);
       return;
     }
 

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable, StyleSheet, ScrollView } from "react-native";
+import { View, Text, TextInput, Pressable, StyleSheet, ScrollView, Modal, Platform } from "react-native";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/themeContext";
@@ -8,7 +8,6 @@ import { spacing, borderRadius, getShadow } from "../theme";
 import { useCategories } from "../hooks/useCategories";
 import { useCustomAlert, useSnackbar } from "../hooks";
 import { CategoryType, CATEGORY_ICONS, Category } from "../types/firebase";
-import EditCategoryModal from "../components/EditCategoryModal";
 import CustomAlert from "../components/CustomAlert";
 import Snackbar from "../components/Snackbar";
 import MainLayout from "../components/MainLayout";
@@ -22,10 +21,19 @@ export default function Categories({ navigation }: any) {
   const insets = useSafeAreaInsets();
   
   const [categoryType, setCategoryType] = useState<CategoryType>('expense');
-  const [name, setName] = useState('');
-  const [selectedIcon, setSelectedIcon] = useState<string>('food');
   const [saving, setSaving] = useState(false);
+  
+  // Modal unificado para criar/editar
+  const [modalVisible, setModalVisible] = useState(false);
+  const [isCreateMode, setIsCreateMode] = useState(true);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  
+  // Estados unificados do formulário
+  const [categoryName, setCategoryName] = useState('');
+  const [categoryIcon, setCategoryIcon] = useState<string>('food');
+  
+  // Estado para controle de foco dos inputs
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   // Hook de categorias do Firebase
   const { 
@@ -37,19 +45,62 @@ export default function Categories({ navigation }: any) {
     deleteCategory,
   } = useCategories();
 
+  // Resetar estados do modal
+  function resetModalState() {
+    setCategoryName('');
+    setCategoryIcon(categoryType === 'expense' ? 'food' : 'briefcase');
+    setEditingCategory(null);
+    setFocusedField(null);
+  }
+
+  // Abrir modal para criar categoria
+  function openCreateModal() {
+    resetModalState();
+    setIsCreateMode(true);
+    setModalVisible(true);
+  }
+
+  // Abrir modal para editar categoria
+  function openEditModal(category: Category) {
+    setEditingCategory(category);
+    setCategoryName(category.name);
+    setCategoryIcon(category.icon);
+    setIsCreateMode(false);
+    setModalVisible(true);
+  }
+
+  // Verificar se houve alterações nos dados da categoria
+  function hasChanges(): boolean {
+    if (!editingCategory) return false;
+    return (
+      categoryName.trim() !== editingCategory.name ||
+      categoryIcon !== editingCategory.icon
+    );
+  }
+
   async function handleCreate() {
-    if (!name.trim()) return;
+    if (!categoryName.trim()) return;
+    
+    // Verificar se já existe uma categoria com o mesmo nome
+    const nameExists = currentCategories.some(
+      cat => cat.name.toLowerCase() === categoryName.trim().toLowerCase()
+    );
+    if (nameExists) {
+      showAlert('Nome duplicado', `Já existe uma categoria de ${categoryType === 'expense' ? 'despesa' : 'receita'} com esse nome.`);
+      return;
+    }
     
     setSaving(true);
     try {
       const result = await createCategory({
-        name: name.trim(),
-        icon: selectedIcon,
+        name: categoryName.trim(),
+        icon: categoryIcon,
         type: categoryType,
       });
 
       if (result) {
-        setName('');
+        resetModalState();
+        setModalVisible(false);
         showSnackbar('Categoria criada com sucesso!');
       } else {
         showAlert('Erro', 'Não foi possível criar a categoria');
@@ -61,18 +112,46 @@ export default function Categories({ navigation }: any) {
     }
   }
 
-  async function handleSave(categoryId: string, name: string, icon: string) {
-    const result = await updateCategory(categoryId, { name, icon });
-    if (result) {
-      showSnackbar('Categoria atualizada!');
-    } else {
-      showAlert('Erro', 'Não foi possível atualizar a categoria');
+  async function handleSaveEdit() {
+    if (!editingCategory || !categoryName.trim()) return;
+    
+    // Verificar se já existe outra categoria com o mesmo nome
+    const nameExists = currentCategories.some(
+      cat => cat.id !== editingCategory.id && 
+             cat.name.toLowerCase() === categoryName.trim().toLowerCase()
+    );
+    if (nameExists) {
+      showAlert('Nome duplicado', `Já existe uma categoria de ${categoryType === 'expense' ? 'despesa' : 'receita'} com esse nome.`);
+      return;
+    }
+    
+    setSaving(true);
+    try {
+      const result = await updateCategory(editingCategory.id, { 
+        name: categoryName.trim(), 
+        icon: categoryIcon 
+      });
+      if (result) {
+        resetModalState();
+        setModalVisible(false);
+        showSnackbar('Categoria atualizada!');
+      } else {
+        showAlert('Erro', 'Não foi possível atualizar a categoria');
+      }
+    } finally {
+      setSaving(false);
     }
   }
 
-  async function handleDelete(categoryId: string, categoryName: string) {
-    // Fechar a modal de edição primeiro
-    setEditingCategory(null);
+  async function handleDelete() {
+    if (!editingCategory) return;
+    
+    const categoryId = editingCategory.id;
+    const catName = editingCategory.name;
+    
+    // Fechar a modal primeiro
+    setModalVisible(false);
+    resetModalState();
     
     // Verificar se é uma categoria protegida
     const category = currentCategories.find(c => c.id === categoryId);
@@ -103,7 +182,7 @@ export default function Categories({ navigation }: any) {
       
       if (transactionCount > 0) {
         // Tem transações: mostrar opção de transferir
-        const otherCategories = currentCategories.filter(c => c.id !== categoryId && c.name !== categoryName);
+        const otherCategories = currentCategories.filter(c => c.id !== categoryId && c.name !== catName);
         
         if (otherCategories.length === 0) {
           showAlert('Erro', 'Não é possível excluir esta categoria pois ela possui lançamentos e não há outra categoria disponível para transferi-los.');
@@ -119,7 +198,7 @@ export default function Categories({ navigation }: any) {
             ...otherCategories.slice(0, 3).map(cat => ({
               text: cat.name,
               onPress: async () => {
-                await confirmDeleteWithTransfer(categoryId, categoryName, cat.id, cat.name);
+                await confirmDeleteWithTransfer(categoryId, catName, cat.id, cat.name);
               }
             }))
           ]
@@ -128,7 +207,7 @@ export default function Categories({ navigation }: any) {
         // Sem transações: confirmar exclusão direta
         showAlert(
           'Excluir categoria',
-          `Deseja realmente excluir a categoria "${categoryName}"?`,
+          `Deseja realmente excluir a categoria "${catName}"?`,
           [
             { text: 'Cancelar', style: 'cancel' },
             { 
@@ -201,7 +280,7 @@ export default function Categories({ navigation }: any) {
           <Pressable
             onPress={() => {
               setCategoryType('expense');
-              setSelectedIcon('food');
+              setCategoryIcon('food');
             }}
             style={[
               styles.typeButton,
@@ -226,7 +305,7 @@ export default function Categories({ navigation }: any) {
           <Pressable
             onPress={() => {
               setCategoryType('income');
-              setSelectedIcon('briefcase');
+              setCategoryIcon('briefcase');
             }}
             style={[
               styles.typeButton,
@@ -269,7 +348,7 @@ export default function Categories({ navigation }: any) {
                       <Pressable 
                         key={cat.id} 
                         style={styles.categoryChip}
-                        onPress={() => setEditingCategory(cat)}
+                        onPress={() => openEditModal(cat)}
                       >
                         <View style={[
                           styles.categoryIcon, 
@@ -298,88 +377,158 @@ export default function Categories({ navigation }: any) {
               </View>
             )}
 
-            {/* Nova categoria */}
-            <View style={styles.section}>
-              <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-                CRIAR NOVA CATEGORIA
-              </Text>
-              <View style={[styles.card, { backgroundColor: colors.card }, getShadow(colors)]}>
-                {/* Nome */}
-                <View style={styles.formGroup}>
-                  <Text style={[styles.label, { color: colors.text }]}>Nome da categoria</Text>
-                  <View style={[styles.inputContainer, { borderColor: colors.border }]}>
-                    <TextInput
-                      value={name}
-                      onChangeText={setName}
-                      placeholder="Ex: Restaurantes, Academia..."
-                      placeholderTextColor={colors.textMuted}
-                      style={[styles.input, { color: colors.text }]}
+            {/* Botão para criar nova categoria */}
+            <Pressable
+              onPress={openCreateModal}
+              style={({ pressed }) => [
+                styles.addCategoryButton,
+                { backgroundColor: categoryType === 'expense' ? colors.expense : colors.income },
+                pressed && { opacity: 0.9 },
+              ]}
+            >
+              <MaterialCommunityIcons name="plus" size={20} color="#fff" />
+              <Text style={styles.addCategoryButtonText}>Criar nova categoria</Text>
+            </Pressable>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Modal Fullscreen de Criar/Editar */}
+      <Modal
+        visible={modalVisible}
+        animationType="slide"
+        transparent={false}
+        onRequestClose={() => setModalVisible(false)}
+        statusBarTranslucent
+      >
+        <View style={[styles.fullscreenModal, { backgroundColor: colors.bg, paddingTop: insets.top }]}>
+          {/* Header moderno */}
+          <View style={[styles.fullscreenHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              {isCreateMode ? 'Nova Categoria' : 'Editar Categoria'}
+            </Text>
+            <Pressable
+              onPress={() => setModalVisible(false)}
+              style={({ pressed }) => [
+                styles.closeButton,
+                { backgroundColor: colors.bg === '#FFFFFF' ? '#f0f0f0' : 'rgba(255,255,255,0.1)' },
+                pressed && { transform: [{ scale: 0.95 }] },
+              ]}
+            >
+              <MaterialCommunityIcons name="close" size={22} color={colors.text} />
+            </Pressable>
+          </View>
+
+          <ScrollView 
+            style={styles.modalBody} 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: spacing.xl }}
+          >
+            {/* Nome */}
+            <View style={styles.formGroup}>
+              <Text style={[styles.label, { color: colors.text }]}>Nome da categoria</Text>
+              <View style={[
+                styles.inputContainer, 
+                { 
+                  borderColor: focusedField === 'name' ? (categoryType === 'expense' ? colors.expense : colors.income) : colors.border,
+                  borderWidth: focusedField === 'name' ? 2 : 1,
+                }
+              ]}>
+                <TextInput
+                  value={categoryName}
+                  onChangeText={setCategoryName}
+                  onFocus={() => setFocusedField('name')}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="Ex: Restaurantes, Academia..."
+                  placeholderTextColor={colors.textMuted}
+                  style={[
+                    styles.input, 
+                    { color: colors.text },
+                    Platform.select({ web: { outlineStyle: 'none' } as any }),
+                  ]}
+                />
+              </View>
+            </View>
+
+            {/* Ícone */}
+            <View style={styles.formGroup}>
+              <Text style={[styles.label, { color: colors.text }]}>Ícone</Text>
+              <View style={styles.iconGrid}>
+                {icons.map((icon) => (
+                  <Pressable
+                    key={icon}
+                    onPress={() => setCategoryIcon(icon)}
+                    style={[
+                      styles.iconOption,
+                      { 
+                        borderColor: categoryIcon === icon 
+                          ? (categoryType === 'expense' ? colors.expense : colors.income) 
+                          : colors.border,
+                      },
+                      categoryIcon === icon && { 
+                        backgroundColor: (categoryType === 'expense' ? colors.expense : colors.income) + '15' 
+                      },
+                    ]}
+                  >
+                    <MaterialCommunityIcons 
+                      name={icon as any} 
+                      size={22} 
+                      color={categoryIcon === icon 
+                        ? (categoryType === 'expense' ? colors.expense : colors.income) 
+                        : colors.textMuted
+                      } 
                     />
-                  </View>
-                </View>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
 
-                {/* Ícone */}
-                <View style={styles.formGroup}>
-                  <Text style={[styles.label, { color: colors.text }]}>Ícone</Text>
-                  <View style={styles.iconGrid}>
-                    {icons.map((icon) => (
-                      <Pressable
-                        key={icon}
-                        onPress={() => setSelectedIcon(icon)}
-                        style={[
-                          styles.iconOption,
-                          { 
-                            borderColor: selectedIcon === icon 
-                              ? (categoryType === 'expense' ? colors.expense : colors.income) 
-                              : colors.border,
-                          },
-                          selectedIcon === icon && { 
-                            backgroundColor: (categoryType === 'expense' ? colors.expense : colors.income) + '15' 
-                          },
-                        ]}
-                      >
-                        <MaterialCommunityIcons 
-                          name={icon as any} 
-                          size={22} 
-                          color={selectedIcon === icon 
-                            ? (categoryType === 'expense' ? colors.expense : colors.income) 
-                            : colors.textMuted
-                          } 
-                        />
-                      </Pressable>
-                    ))}
-                  </View>
-                </View>
+            {/* Botões de ação */}
+            <View style={styles.modalActionsColumn}>
+              {/* Modo edição: Excluir e Salvar */}
+              {!isCreateMode && (
+                <View style={styles.modalActions}>
+                  <Pressable
+                    onPress={handleDelete}
+                    style={({ pressed }) => [
+                      styles.actionButton,
+                      styles.deleteButton,
+                      { borderColor: colors.expense },
+                      pressed && { opacity: 0.7 },
+                    ]}
+                  >
+                    <MaterialCommunityIcons name="delete-outline" size={20} color={colors.expense} />
+                    <Text style={[styles.actionButtonText, { color: colors.expense }]}>Excluir</Text>
+                  </Pressable>
 
-                {/* Preview */}
-                <View style={[styles.previewContainer, { borderColor: colors.border }]}>
-                  <Text style={[styles.previewLabel, { color: colors.textMuted }]}>Preview:</Text>
-                  <View style={styles.previewChip}>
-                    <View style={[
-                      styles.categoryIcon, 
-                      { backgroundColor: (categoryType === 'expense' ? colors.expense : colors.income) + '20' }
-                    ]}>
-                      <MaterialCommunityIcons 
-                        name={selectedIcon as any} 
-                        size={16} 
-                        color={categoryType === 'expense' ? colors.expense : colors.income} 
-                      />
-                    </View>
-                    <Text style={[styles.categoryName, { color: colors.text }]}>
-                      {name || 'Nova categoria'}
+                  <Pressable
+                    onPress={handleSaveEdit}
+                    disabled={saving || !categoryName.trim() || !hasChanges()}
+                    style={({ pressed }) => [
+                      styles.actionButton,
+                      { backgroundColor: categoryType === 'expense' ? colors.expense : colors.income, borderColor: categoryType === 'expense' ? colors.expense : colors.income },
+                      pressed && { opacity: 0.9 },
+                      (saving || !categoryName.trim() || !hasChanges()) && { opacity: 0.6 },
+                    ]}
+                  >
+                    <MaterialCommunityIcons name="check" size={20} color="#fff" />
+                    <Text style={[styles.actionButtonText, { color: '#fff' }]}>
+                      {saving ? 'Salvando...' : 'Salvar'}
                     </Text>
-                  </View>
+                  </Pressable>
                 </View>
+              )}
 
-                {/* Botão */}
+              {/* Modo criação: Criar */}
+              {isCreateMode && (
                 <Pressable
                   onPress={handleCreate}
-                  disabled={saving || !name.trim()}
+                  disabled={saving || !categoryName.trim()}
                   style={({ pressed }) => [
                     styles.createButton,
                     { backgroundColor: categoryType === 'expense' ? colors.expense : colors.income },
                     pressed && { opacity: 0.9 },
-                    (saving || !name.trim()) && { opacity: 0.6 },
+                    (saving || !categoryName.trim()) && { opacity: 0.6 },
                   ]}
                 >
                   <MaterialCommunityIcons name="plus" size={20} color="#fff" />
@@ -387,19 +536,11 @@ export default function Categories({ navigation }: any) {
                     {saving ? 'Criando...' : 'Criar categoria'}
                   </Text>
                 </Pressable>
-              </View>
+              )}
             </View>
-          </View>
+          </ScrollView>
         </View>
-      </ScrollView>
-
-      <EditCategoryModal
-        visible={editingCategory !== null}
-        category={editingCategory}
-        onClose={() => setEditingCategory(null)}
-        onSave={handleSave}
-        onDelete={handleDelete}
-      />
+      </Modal>
 
       <CustomAlert {...alertState} onClose={hideAlert} />
       <Snackbar
@@ -524,6 +665,7 @@ const styles = StyleSheet.create({
   },
   formGroup: {
     marginBottom: spacing.md,
+    paddingHorizontal: spacing.md,
   },
   label: {
     fontSize: 14,
@@ -555,27 +697,80 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
   },
-  previewContainer: {
+  // Botão de adicionar categoria
+  addCategoryButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderTopWidth: 1,
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  addCategoryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Modal fullscreen
+  fullscreenModal: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  fullscreenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+  },
+  modalBody: {
+    flex: 1,
     paddingTop: spacing.md,
-    marginTop: spacing.sm,
+  },
+  modalActionsColumn: {
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
     gap: spacing.md,
   },
-  previewLabel: {
-    fontSize: 13,
+  modalActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
   },
-  previewChip: {
+  actionButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
     gap: spacing.xs,
+  },
+  deleteButton: {
+    backgroundColor: 'transparent',
+  },
+  actionButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
   },
   createButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: spacing.md,
     paddingVertical: 14,
     borderRadius: borderRadius.md,
     gap: spacing.sm,

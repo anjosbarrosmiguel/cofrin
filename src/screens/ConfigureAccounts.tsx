@@ -5,7 +5,6 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useAppTheme } from "../contexts/themeContext";
 import { useAuth } from "../contexts/authContext";
 import { spacing, borderRadius, getShadow } from "../theme";
-import { getModalContainerStyle } from "../utils/modalLayout";
 import { useAccounts } from "../hooks/useAccounts";
 import { useCustomAlert } from "../hooks/useCustomAlert";
 import { useSnackbar } from "../hooks/useSnackbar";
@@ -34,11 +33,6 @@ const ACCOUNT_TYPES: AccountTypeOption[] = [
   { id: 'other', icon: 'dots-horizontal', label: 'Outro' },
 ];
 
-const ACCOUNT_ICONS = [
-  'bank', 'piggy-bank', 'wallet',
-  'cash','chart-line', 'bitcoin',
-];
-
 export default function ConfigureAccounts({ navigation }: any) {
   const { colors } = useAppTheme();
   const { user } = useAuth();
@@ -47,13 +41,9 @@ export default function ConfigureAccounts({ navigation }: any) {
   const { triggerRefresh } = useTransactionRefresh();
   const insets = useSafeAreaInsets();
   
-  const [name, setName] = useState('');
-  const [selectedType, setSelectedType] = useState<AccountType>('checking');
-  const [selectedIcon, setSelectedIcon] = useState('bank');
-  const [initialBalance, setInitialBalance] = useState('');
-  const [includeInTotal, setIncludeInTotal] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [showIncludeTooltip, setShowIncludeTooltip] = useState(false);
   const [adjustBalanceValue, setAdjustBalanceValue] = useState('');
   const [adjustBalanceModalVisible, setAdjustBalanceModalVisible] = useState(false);
   
@@ -64,12 +54,20 @@ export default function ConfigureAccounts({ navigation }: any) {
     progress: null as { current: number; total: number } | null,
   });
 
-  // Estado para modal de edição
-  const [editModalVisible, setEditModalVisible] = useState(false);
+  // Modal unificado para criar/editar
+  const [modalVisible, setModalVisible] = useState(false);
+  const [isCreateMode, setIsCreateMode] = useState(true);
   const [editingAccount, setEditingAccount] = useState<Account | null>(null);
-  const [editName, setEditName] = useState('');
-  const [editType, setEditType] = useState<AccountType>('checking');
-  const [editIcon, setEditIcon] = useState('bank');
+  
+  // Estados unificados do formulário
+  const [accountName, setAccountName] = useState('');
+  const [accountType, setAccountType] = useState<AccountType>('checking');
+  const [accountIcon, setAccountIcon] = useState('bank');
+  const [accountInitialBalance, setAccountInitialBalance] = useState('');
+  const [accountIncludeInTotal, setAccountIncludeInTotal] = useState(true);
+  
+  // Estado para controle de foco dos inputs
+  const [focusedField, setFocusedField] = useState<string | null>(null);
 
   // Hook de contas do Firebase
   const { 
@@ -105,27 +103,33 @@ export default function ConfigureAccounts({ navigation }: any) {
   };
 
   async function handleCreate() {
-    if (!name.trim()) return;
+    if (!accountName.trim()) return;
+    
+    // Verificar se já existe uma conta com o mesmo nome
+    const nameExists = activeAccounts.some(
+      acc => acc.name.toLowerCase() === accountName.trim().toLowerCase()
+    );
+    if (nameExists) {
+      showAlert('Nome duplicado', 'Já existe uma conta com esse nome.', [{ text: 'OK', style: 'default' }]);
+      return;
+    }
     
     setSaving(true);
     try {
-      const balance = parseBalance(initialBalance);
+      const balance = parseBalance(accountInitialBalance);
       
       const result = await createAccount({
-        name: name.trim(),
-        type: selectedType,
-        icon: selectedIcon,
+        name: accountName.trim(),
+        type: accountType,
+        icon: accountIcon,
         initialBalance: balance,
-        includeInTotal,
+        includeInTotal: accountIncludeInTotal,
         isArchived: false,
       });
 
       if (result) {
-        setName('');
-        setInitialBalance('');
-        setSelectedType('checking');
-        setSelectedIcon('bank');
-        setIncludeInTotal(true);
+        resetModalState();
+        setModalVisible(false);
         triggerRefresh();
         showSnackbar('Conta criada com sucesso!');
       } else {
@@ -138,30 +142,74 @@ export default function ConfigureAccounts({ navigation }: any) {
     }
   }
 
-  // Abrir modal de edição
+  // Resetar estados do modal
+  function resetModalState() {
+    setAccountName('');
+    setAccountType('checking');
+    setAccountIcon('bank');
+    setAccountInitialBalance('');
+    setAccountIncludeInTotal(true);
+    setEditingAccount(null);
+    setShowTooltip(false);
+    setShowIncludeTooltip(false);
+    setFocusedField(null);
+  }
+
+  // Abrir modal para criar conta
+  function openCreateModal() {
+    resetModalState();
+    setIsCreateMode(true);
+    setModalVisible(true);
+  }
+
+  // Abrir modal para editar conta
   function openEditModal(account: Account) {
     setEditingAccount(account);
-    setEditName(account.name);
-    setEditType(account.type);
-    setEditIcon(account.icon || getAccountIcon(account.type));
-    setEditModalVisible(true);
+    setAccountName(account.name);
+    setAccountType(account.type);
+    setAccountIcon(account.icon || getAccountIcon(account.type));
+    setAccountInitialBalance('');
+    setAccountIncludeInTotal(account.includeInTotal !== false);
+    setIsCreateMode(false);
+    setModalVisible(true);
+  }
+
+  // Verificar se houve alterações nos dados da conta
+  function hasChanges(): boolean {
+    if (!editingAccount) return false;
+    const originalIcon = editingAccount.icon || getAccountIcon(editingAccount.type);
+    return (
+      accountName.trim() !== editingAccount.name ||
+      accountType !== editingAccount.type ||
+      accountIcon !== originalIcon
+    );
   }
 
   // Salvar edição
   async function handleSaveEdit() {
-    if (!editingAccount || !editName.trim()) return;
+    if (!editingAccount || !accountName.trim()) return;
+    
+    // Verificar se já existe outra conta com o mesmo nome
+    const nameExists = activeAccounts.some(
+      acc => acc.id !== editingAccount.id && 
+             acc.name.toLowerCase() === accountName.trim().toLowerCase()
+    );
+    if (nameExists) {
+      showAlert('Nome duplicado', 'Já existe uma conta com esse nome.', [{ text: 'OK', style: 'default' }]);
+      return;
+    }
 
     setSaving(true);
     try {
       const result = await updateAccount(editingAccount.id, {
-        name: editName.trim(),
-        type: editType,
-        icon: editIcon,
+        name: accountName.trim(),
+        type: accountType,
+        icon: accountIcon,
       });
 
       if (result) {
-        setEditModalVisible(false);
-        setEditingAccount(null);
+        setModalVisible(false);
+        resetModalState();
         triggerRefresh();
         showSnackbar('Conta atualizada!');
       } else {
@@ -217,8 +265,8 @@ export default function ConfigureAccounts({ navigation }: any) {
       const difference = newBalance - oldBalance;
       
       // Fechar modal e limpar estado
-      setEditModalVisible(false);
-      setEditingAccount(null);
+      setModalVisible(false);
+      resetModalState();
       
       // Notificar refresh para atualizar toda a UI
       triggerRefresh();
@@ -273,8 +321,8 @@ export default function ConfigureAccounts({ navigation }: any) {
       await setAccountBalance(editingAccount.id, newBalance);
       
       // Fechar modais e limpar estado
-      setEditModalVisible(false);
-      setEditingAccount(null);
+      setModalVisible(false);
+      resetModalState();
       
       // Notificar refresh para atualizar toda a UI
       triggerRefresh();
@@ -327,7 +375,7 @@ export default function ConfigureAccounts({ navigation }: any) {
           style: 'destructive',
           onPress: async () => {
             // Fechar o modal de edição primeiro
-            setEditModalVisible(false);
+            setModalVisible(false);
             
             // Mostrar loading overlay com progresso para operações longas
             setLoadingOverlay({
@@ -425,8 +473,8 @@ export default function ConfigureAccounts({ navigation }: any) {
           onPress: async () => {
             const result = await archiveAccount(editingAccount.id);
             if (result) {
-              setEditModalVisible(false);
-              setEditingAccount(null);
+              setModalVisible(false);
+              resetModalState();
               triggerRefresh();
             } else {
               showAlert('Erro', 'Não foi possível arquivar a conta', [{ text: 'OK', style: 'default' }]);
@@ -462,8 +510,8 @@ export default function ConfigureAccounts({ navigation }: any) {
           onPress: async () => {
             const result = await deleteAccount(editingAccount.id);
             if (result) {
-              setEditModalVisible(false);
-              setEditingAccount(null);
+              setModalVisible(false);
+              resetModalState();
               triggerRefresh();
               showSnackbar('Conta excluída!');
             } else {
@@ -614,319 +662,258 @@ export default function ConfigureAccounts({ navigation }: any) {
           </View>
         )}
 
-        {/* Nova conta */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>
-            CRIAR NOVA CONTA
-          </Text>
-          <View style={[styles.card, { backgroundColor: colors.card }, getShadow(colors)]}>
-            {/* Nome */}
-            <View style={styles.formGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Nome da conta</Text>
-              <View style={[styles.inputContainer, { borderColor: colors.border }]}>
-                <TextInput
-                  value={name}
-                  onChangeText={setName}
-                  placeholder="Ex: Nubank, Caixa, Carteira..."
-                  placeholderTextColor={colors.textMuted}
-                  style={[styles.input, { color: colors.text }]}
-                />
-              </View>
-            </View>
-
-            {/* Tipo */}
-            <View style={styles.formGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Tipo da conta</Text>
-              <View style={styles.typeGrid}>
-                {ACCOUNT_TYPES.map((type) => (
-                  <Pressable
-                    key={type.id}
-                    onPress={() => {
-                      setSelectedType(type.id);
-                      setSelectedIcon(type.icon);
-                    }}
-                    style={[
-                      styles.typeOption,
-                      { borderColor: selectedType === type.id ? colors.primary : colors.border },
-                      selectedType === type.id && { backgroundColor: colors.primaryBg },
-                    ]}
-                  >
-                    <MaterialCommunityIcons 
-                      name={type.icon as any} 
-                      size={22} 
-                      color={selectedType === type.id ? colors.primary : colors.textMuted} 
-                    />
-                    <Text 
-                      style={[
-                        styles.typeLabel, 
-                        { color: selectedType === type.id ? colors.primary : colors.textMuted },
-                      ]}
-                    >
-                      {type.label}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {/* Ícone */}
-            <View style={styles.formGroup}>
-              <Text style={[styles.label, { color: colors.text }]}>Ícone</Text>
-              <View style={styles.iconGrid}>
-                {ACCOUNT_ICONS.map((icon) => (
-                  <Pressable
-                    key={icon}
-                    onPress={() => setSelectedIcon(icon)}
-                    style={[
-                      styles.iconOption,
-                      { borderColor: selectedIcon === icon ? colors.primary : colors.border },
-                      selectedIcon === icon && { backgroundColor: colors.primaryBg },
-                    ]}
-                  >
-                    <MaterialCommunityIcons 
-                      name={icon as any} 
-                      size={22} 
-                      color={selectedIcon === icon ? colors.primary : colors.textMuted} 
-                    />
-                  </Pressable>
-                ))}
-              </View>
-            </View>
-
-            {/* Saldo inicial */}
-            <View style={styles.formGroup}>
-              <View style={styles.labelRow}>
-                <Text style={[styles.label, { color: colors.text }]}>Saldo inicial</Text>
-                <Pressable 
-                  onPress={() => setShowTooltip(!showTooltip)}
-                  hitSlop={8}
-                >
-                  <MaterialCommunityIcons 
-                    name="information-outline" 
-                    size={18} 
-                    color={colors.primary} 
-                  />
-                </Pressable>
-              </View>
-              {showTooltip && (
-                <View style={[styles.tooltip, { backgroundColor: colors.primaryBg, borderColor: colors.primary }]}>
-                  <Text style={[styles.tooltipText, { color: colors.text }]}>
-                    O saldo inicial representa quanto dinheiro você já tinha nessa conta ao começar a usar o app. Esse valor não é uma receita.
-                  </Text>
-                </View>
-              )}
-              <View style={[styles.inputContainer, { borderColor: colors.border }]}>
-                <Text style={[styles.currency, { color: colors.textMuted }]}>R$</Text>
-                <TextInput
-                  value={initialBalance}
-                  onChangeText={(v) => setInitialBalance(formatCurrency(v))}
-                  placeholder="0,00"
-                  placeholderTextColor={colors.textMuted}
-                  keyboardType="numeric"
-                  style={[styles.input, { color: colors.text }]}
-                />
-              </View>
-            </View>
-
-            {/* Incluir no total */}
-            <Pressable
-              onPress={() => setIncludeInTotal(!includeInTotal)}
-              style={styles.checkboxRow}
-            >
-              <View style={[
-                styles.checkbox,
-                { borderColor: colors.primary },
-                includeInTotal && { backgroundColor: colors.primary },
-              ]}>
-                {includeInTotal && (
-                  <MaterialCommunityIcons name="check" size={14} color="#fff" />
-                )}
-              </View>
-              <Text style={[styles.checkboxLabel, { color: colors.text }]}>
-                Incluir no saldo total
-              </Text>
-            </Pressable>
-
-            {/* Botão */}
-            <Pressable
-              onPress={handleCreate}
-              disabled={saving || !name.trim()}
-              style={({ pressed }) => [
-                styles.createButton,
-                { backgroundColor: colors.primary },
-                pressed && { opacity: 0.9 },
-                (saving || !name.trim()) && { opacity: 0.6 },
-              ]}
-            >
-              <MaterialCommunityIcons name="plus" size={20} color="#fff" />
-              <Text style={styles.createButtonText}>
-                {saving ? 'Criando...' : 'Criar conta'}
-              </Text>
-            </Pressable>
-          </View>
-        </View>
+        {/* Botão para cadastrar nova conta */}
+        <Pressable
+          onPress={openCreateModal}
+          style={({ pressed }) => [
+            styles.addAccountButton,
+            { backgroundColor: colors.primary },
+            pressed && { opacity: 0.9 },
+          ]}
+        >
+          <MaterialCommunityIcons name="plus" size={20} color="#fff" />
+          <Text style={styles.addAccountButtonText}>Cadastrar nova conta</Text>
+        </Pressable>
           </View>
         </View>
       </ScrollView>
 
-      {/* Modal de Edição */}
+      {/* Modal Fullscreen de Criar/Editar */}
       <Modal
-        visible={editModalVisible}
+        visible={modalVisible}
         animationType="slide"
-        transparent={true}
-        onRequestClose={() => setEditModalVisible(false)}
+        transparent={false}
+        onRequestClose={() => setModalVisible(false)}
+        statusBarTranslucent
       >
-        <View style={styles.modalOverlay}>
-          <View style={Platform.OS === 'web' ? { alignItems: 'center', width: '100%' } : undefined}>
-          <View style={[getModalContainerStyle(colors), { backgroundColor: colors.card }]}>
-            <ScrollView showsVerticalScrollIndicator={false}>
-            {/* Header do Modal */}
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>Editar Conta</Text>
-              <Pressable onPress={() => setEditModalVisible(false)} hitSlop={12}>
-                <MaterialCommunityIcons name="close" size={24} color={colors.textMuted} />
-              </Pressable>
-            </View>
-              {/* Nome */}
-              <View style={styles.formGroup}>
-                <Text style={[styles.label, { color: colors.text }]}>Nome da conta</Text>
-                <View style={[styles.inputContainer, { borderColor: colors.border }]}>
-                  <TextInput
-                    value={editName}
-                    onChangeText={setEditName}
-                    placeholder="Nome da conta"
-                    placeholderTextColor={colors.textMuted}
-                    style={[styles.input, { color: colors.text }]}
-                  />
-                </View>
-              </View>
+        <View style={[styles.fullscreenModal, { backgroundColor: colors.bg, paddingTop: insets.top }]}>
+          {/* Header moderno */}
+          <View style={[styles.fullscreenHeader, { borderBottomColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              {isCreateMode ? 'Nova Conta' : 'Editar Conta'}
+            </Text>
+            <Pressable
+              onPress={() => setModalVisible(false)}
+              style={({ pressed }) => [
+                styles.closeButton,
+                { backgroundColor: colors.bg === '#FFFFFF' ? '#f0f0f0' : 'rgba(255,255,255,0.1)' },
+                pressed && { transform: [{ scale: 0.95 }] },
+              ]}
+            >
+              <MaterialCommunityIcons name="close" size={22} color={colors.text} />
+            </Pressable>
+          </View>
 
-              {/* Saldo atual (somente leitura) */}
+          <ScrollView 
+            style={styles.modalBody} 
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: spacing.xl }}
+          >
+            {/* Nome */}
+            <View style={styles.formGroup}>
+              <Text style={[styles.label, { color: colors.text }]}>Nome da conta</Text>
+              <View style={[
+                styles.inputContainer, 
+                { 
+                  borderColor: focusedField === 'name' ? colors.primary : colors.border,
+                  borderWidth: focusedField === 'name' ? 2 : 1,
+                }
+              ]}>
+                <TextInput
+                  value={accountName}
+                  onChangeText={setAccountName}
+                  onFocus={() => setFocusedField('name')}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="Ex: Nubank, Caixa, Carteira..."
+                  placeholderTextColor={colors.textMuted}
+                  style={[
+                    styles.input, 
+                    { color: colors.text },
+                    Platform.select({ web: { outlineStyle: 'none' } as any }),
+                  ]}
+                />
+              </View>
+            </View>
+
+            {/* Saldo atual (somente para edição) */}
+            {!isCreateMode && editingAccount && (
               <View style={styles.formGroup}>
                 <Text style={[styles.label, { color: colors.text }]}>Saldo atual</Text>
-                <View style={[styles.balanceDisplay, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+                <View style={[styles.balanceDisplay, { backgroundColor: colors.card, borderColor: colors.border }]}>
                   <MaterialCommunityIcons name="cash" size={20} color={colors.textMuted} />
                   <Text style={[styles.balanceText, { color: colors.text }]}>
-                    {formatCurrencyBRL(editingAccount?.balance || 0)}
+                    {formatCurrencyBRL(editingAccount.balance || 0)}
                   </Text>
                 </View>
                 <Text style={[styles.helpText, { color: colors.textMuted }]}>
-                  Para ajustar o saldo, use lançamentos ou "Resetar conta"
+                  Para ajustar o saldo, use as opções abaixo
                 </Text>
               </View>
+            )}
 
-              {/* Tipo */}
+            {/* Saldo inicial (somente para criação) */}
+            {isCreateMode && (
               <View style={styles.formGroup}>
-                <Text style={[styles.label, { color: colors.text }]}>Tipo da conta</Text>
-                <View style={styles.chipGrid}>
-                  {ACCOUNT_TYPES.map((type) => {
-                    const isSelected = editType === type.id;
-                    return (
-                      <Pressable
-                        key={type.id}
-                        onPress={() => {
-                          setEditType(type.id);
-                          setEditIcon(type.icon);
-                        }}
-                        style={[
-                          styles.chip,
-                          { 
-                            backgroundColor: isSelected ? colors.primary : colors.bg,
-                            borderColor: isSelected ? colors.primary : colors.border,
-                          }
-                        ]}
-                      >
-                        <Text style={[
-                          styles.chipText,
-                          { color: isSelected ? '#fff' : colors.text }
-                        ]}>
-                          {type.label}
-                        </Text>
-                      </Pressable>
-                    );
-                  })}
+                <View style={styles.labelRow}>
+                  <Text style={[styles.label, { color: colors.text }]}>Saldo inicial</Text>
+                  <Pressable 
+                    onPress={() => setShowTooltip(!showTooltip)}
+                    hitSlop={8}
+                  >
+                    <MaterialCommunityIcons 
+                      name="information-outline" 
+                      size={18} 
+                      color={colors.primary} 
+                    />
+                  </Pressable>
                 </View>
-              </View>
+                {showTooltip && (
+                  <View style={[styles.tooltip, { backgroundColor: colors.primaryBg, borderColor: colors.primary }]}>
+                    <Text style={[styles.tooltipText, { color: colors.text }]}>
+                      O saldo inicial representa quanto dinheiro você já tinha nessa conta ao começar a usar o app. Esse valor não é uma receita.
+                    </Text>
+                  </View>
+                )}
+                <View style={[
+                  styles.inputContainer, 
+                  { 
+                    borderColor: focusedField === 'balance' ? colors.primary : colors.border,
+                    borderWidth: focusedField === 'balance' ? 2 : 1,
+                  }
+                ]}>
+                  <Text style={[styles.currency, { color: colors.textMuted }]}>R$</Text>
+                  <TextInput
+                    value={accountInitialBalance}
+                    onChangeText={(v) => setAccountInitialBalance(formatCurrency(v))}
+                    onFocus={() => setFocusedField('balance')}
+                    onBlur={() => setFocusedField(null)}
+                    placeholder="0,00"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="numeric"
+                    style={[
+                      styles.input, 
+                      { color: colors.text },
+                      Platform.select({ web: { outlineStyle: 'none' } as any }),
+                    ]}
+                  />
+                </View>
 
-              {/* Ícone */}
-              <View style={styles.formGroup}>
-                <Text style={[styles.label, { color: colors.text }]}>Ícone</Text>
-                <View style={styles.iconGridModal}>
-                  {ACCOUNT_ICONS.map((icon) => (
+                {/* Incluir no saldo total - abaixo do saldo inicial */}
+                <View style={styles.checkboxWithTooltip}>
+                  <Pressable
+                    onPress={() => setAccountIncludeInTotal(!accountIncludeInTotal)}
+                    style={styles.checkboxRow}
+                  >
+                    <View style={[
+                      styles.checkbox,
+                      { borderColor: colors.primary },
+                      accountIncludeInTotal && { backgroundColor: colors.primary },
+                    ]}>
+                      {accountIncludeInTotal && (
+                        <MaterialCommunityIcons name="check" size={14} color="#fff" />
+                      )}
+                    </View>
+                    <Text style={[styles.checkboxLabel, { color: colors.text }]}>
+                      Incluir no saldo total
+                    </Text>
+                  </Pressable>
+                  <Pressable 
+                    onPress={() => setShowIncludeTooltip(!showIncludeTooltip)}
+                    hitSlop={8}
+                    style={styles.checkboxInfoButton}
+                  >
+                    <MaterialCommunityIcons 
+                      name="information-outline" 
+                      size={18} 
+                      color={colors.primary} 
+                    />
+                  </Pressable>
+                </View>
+                {showIncludeTooltip && (
+                  <View style={[styles.tooltip, { backgroundColor: colors.primaryBg, borderColor: colors.primary }]}>
+                    <Text style={[styles.tooltipText, { color: colors.text }]}>
+                      Quando ativado, o saldo desta conta será somado ao seu patrimônio total exibido na tela inicial. Desative para contas que não representam seu dinheiro disponível (ex: investimentos de longo prazo).
+                    </Text>
+                  </View>
+                )}
+              </View>
+            )}
+
+            {/* Tipo da conta (ícone + label mesclados) */}
+            <View style={styles.formGroup}>
+              <Text style={[styles.label, { color: colors.text }]}>Tipo da conta</Text>
+              <View style={styles.typeGrid}>
+                {ACCOUNT_TYPES.map((type) => {
+                  const isSelected = accountType === type.id;
+                  return (
                     <Pressable
-                      key={icon}
-                      onPress={() => setEditIcon(icon)}
+                      key={type.id}
+                      onPress={() => {
+                        setAccountType(type.id);
+                        setAccountIcon(type.icon);
+                      }}
                       style={[
-                        styles.iconOptionSmall,
-                        { borderColor: editIcon === icon ? colors.primary : colors.border },
-                        editIcon === icon && { backgroundColor: colors.primaryBg },
+                        styles.typeOption,
+                        { borderColor: isSelected ? colors.primary : colors.border },
+                        isSelected && { backgroundColor: colors.primaryBg },
                       ]}
                     >
                       <MaterialCommunityIcons 
-                        name={icon as any} 
-                        size={18} 
-                        color={editIcon === icon ? colors.primary : colors.textMuted} 
+                        name={type.icon as any} 
+                        size={22} 
+                        color={isSelected ? colors.primary : colors.textMuted} 
                       />
+                      <Text 
+                        style={[
+                          styles.typeLabel, 
+                          { color: isSelected ? colors.primary : colors.textMuted },
+                        ]}
+                      >
+                        {type.label}
+                      </Text>
                     </Pressable>
-                  ))}
-                </View>
+                  );
+                })}
               </View>
+            </View>
 
-              {/* Ações */}
+            {/* Ações do modo edição */}
+            {!isCreateMode && (
               <View style={styles.modalActionsColumn}>
-                {/* Botão de Recalcular Saldo */}
-                <Pressable
-                  onPress={handleRecalculateBalance}
-                  style={({ pressed }) => [
-                    styles.resetButton,
-                    { backgroundColor: colors.income + '15', borderColor: colors.income },
-                    pressed && { opacity: 0.7 },
-                  ]}
-                >
-                  <MaterialCommunityIcons name="calculator" size={20} color={colors.income} />
-                  <View style={styles.resetButtonText}>
-                    <Text style={[styles.actionButtonText, { color: colors.income }]}>Recalcular saldo</Text>
-                    <Text style={[styles.resetHint, { color: colors.textMuted }]}>
-                      Corrige inconsistências com base nos lançamentos
-                    </Text>
-                  </View>
-                </Pressable>
-
-                {/* Botão de Ajustar Saldo */}
-                <Pressable
-                  onPress={handleAdjustBalance}
-                  style={({ pressed }) => [
-                    styles.resetButton,
-                    { backgroundColor: colors.primary + '15', borderColor: colors.primary },
-                    pressed && { opacity: 0.7 },
-                  ]}
-                >
-                  <MaterialCommunityIcons name="tune" size={20} color={colors.primary} />
-                  <View style={styles.resetButtonText}>
-                    <Text style={[styles.actionButtonText, { color: colors.primary }]}>Ajustar saldo da conta</Text>
-                    <Text style={[styles.resetHint, { color: colors.textMuted }]}>
+                {/* Botões de ação em linha */}
+                <View style={styles.actionButtonsRow}>
+                  {/* Botão de Ajustar Saldo */}
+                  <Pressable
+                    onPress={handleAdjustBalance}
+                    style={({ pressed }) => [
+                      styles.actionCardButton,
+                      { backgroundColor: colors.primary + '15', borderColor: colors.primary },
+                      pressed && { opacity: 0.7 },
+                    ]}
+                  >
+                    <MaterialCommunityIcons name="tune" size={24} color={colors.primary} />
+                    <Text style={[styles.actionCardTitle, { color: colors.primary }]}>Ajustar saldo</Text>
+                    <Text style={[styles.actionCardHint, { color: colors.textMuted }]}>
                       Corrige o saldo sem alterar o histórico
                     </Text>
-                  </View>
-                </Pressable>
+                  </Pressable>
 
-                {/* Botão de Resetar */}
-                <Pressable
-                  onPress={handleResetAccount}
-                  style={({ pressed }) => [
-                    styles.resetButton,
-                    { backgroundColor: colors.warning + '15', borderColor: colors.warning },
-                    pressed && { opacity: 0.7 },
-                  ]}
-                >
-                  <MaterialCommunityIcons name="refresh" size={20} color={colors.warning} />
-                  <View style={styles.resetButtonText}>
-                    <Text style={[styles.actionButtonText, { color: colors.warning }]}>Resetar conta</Text>
-                    <Text style={[styles.resetHint, { color: colors.textMuted }]}>
-                      Exclui todos os lançamentos e zera o saldo
+                  {/* Botão de Resetar */}
+                  <Pressable
+                    onPress={handleResetAccount}
+                    style={({ pressed }) => [
+                      styles.actionCardButton,
+                      { backgroundColor: colors.warning + '15', borderColor: colors.warning },
+                      pressed && { opacity: 0.7 },
+                    ]}
+                  >
+                    <MaterialCommunityIcons name="refresh" size={24} color={colors.warning} />
+                    <Text style={[styles.actionCardTitle, { color: colors.warning }]}>Zerar conta</Text>
+                    <Text style={[styles.actionCardHint, { color: colors.textMuted }]}>
+                      Exclui lançamentos e zera o saldo
                     </Text>
-                  </View>
-                </Pressable>
+                  </Pressable>
+                </View>
 
                 {/* Botões de Confirmar e Excluir */}
                 <View style={styles.modalActions}>
@@ -948,12 +935,12 @@ export default function ConfigureAccounts({ navigation }: any) {
 
                   <Pressable
                     onPress={handleSaveEdit}
-                    disabled={saving || !editName.trim()}
+                    disabled={saving || !accountName.trim() || !hasChanges()}
                     style={({ pressed }) => [
                       styles.actionButton,
                       { backgroundColor: colors.primary, borderColor: colors.primary },
                       pressed && { opacity: 0.9 },
-                      (saving || !editName.trim()) && { opacity: 0.6 },
+                      (saving || !accountName.trim() || !hasChanges()) && { opacity: 0.6 },
                     ]}
                   >
                     <MaterialCommunityIcons name="check" size={20} color="#fff" />
@@ -963,9 +950,27 @@ export default function ConfigureAccounts({ navigation }: any) {
                   </Pressable>
                 </View>
               </View>
-            </ScrollView>
-          </View>
-          </View>
+            )}
+
+            {/* Botão de criar (modo criação) */}
+            {isCreateMode && (
+              <Pressable
+                onPress={handleCreate}
+                disabled={saving || !accountName.trim()}
+                style={({ pressed }) => [
+                  styles.createButton,
+                  { backgroundColor: colors.primary },
+                  pressed && { opacity: 0.9 },
+                  (saving || !accountName.trim()) && { opacity: 0.6 },
+                ]}
+              >
+                <MaterialCommunityIcons name="plus" size={20} color="#fff" />
+                <Text style={styles.createButtonText}>
+                  {saving ? 'Criando...' : 'Criar conta'}
+                </Text>
+              </Pressable>
+            )}
+          </ScrollView>
         </View>
       </Modal>
 
@@ -1158,6 +1163,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
   },
+  // Botão de adicionar conta
+  addAccountButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: spacing.lg,
+    borderRadius: borderRadius.md,
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  addAccountButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Modal fullscreen
+  fullscreenModal: {
+    flex: 1,
+    overflow: 'hidden',
+  },
+  fullscreenHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
+  },
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   formGroup: {
     padding: spacing.md,
     paddingBottom: 0,
@@ -1258,8 +1299,18 @@ const styles = StyleSheet.create({
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
+    paddingVertical: spacing.sm,
     gap: spacing.sm,
+    flex: 1,
+  },
+  checkboxWithTooltip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: spacing.md,
+    paddingRight: spacing.sm,
+  },
+  checkboxInfoButton: {
+    padding: spacing.xs,
   },
   checkbox: {
     width: 22,
@@ -1328,12 +1379,36 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   modalBody: {
-    padding: spacing.md,
-    paddingTop: 0,
+    flex: 1,
+    paddingHorizontal: spacing.md,
   },
   modalActionsColumn: {
     paddingVertical: spacing.md,
+    gap: spacing.md,
+  },
+  actionButtonsRow: {
+    flexDirection: 'row',
     gap: spacing.sm,
+  },
+  actionCardButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    gap: 4,
+  },
+  actionCardTitle: {
+    fontSize: 13,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  actionCardHint: {
+    fontSize: 10,
+    textAlign: 'center',
+    marginTop: 2,
   },
   modalActions: {
     flexDirection: 'row',

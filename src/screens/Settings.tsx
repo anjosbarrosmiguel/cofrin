@@ -38,7 +38,7 @@ export default function Settings({ navigation }: any) {
   const menuItems: MenuItem[] = [
     { id: "edit_profile", label: "Editar perfil", icon: "account-edit", screen: "EditProfile" },
     { id: "accounts", label: "Configurar contas", icon: "bank", screen: "ConfigureAccounts" },
-    { id: "cards", label: "Cartões de crédito", icon: "credit-card", screen: "CreditCards" },
+    { id: "cards", label: "Configurar cartões de crédito", icon: "credit-card", screen: "CreditCards" },
     { id: "categories", label: "Configurar categorias", icon: "tag-multiple", screen: "Categories" },
   ];
 

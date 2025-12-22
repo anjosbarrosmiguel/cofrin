@@ -150,6 +150,7 @@ const styles = StyleSheet.create({
     borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
+    marginBottom: Platform.OS === 'android' ? 6 : 0,
     ...Platform.select({
       web: {
         boxShadow: '0px 4px 8px rgba(0, 0, 0, 0.15)',

@@ -1,6 +1,7 @@
 import RootNavigation from "./src/navigation";
 import { AuthProvider } from "./src/contexts/authContext";
 import { ThemeProvider } from "./src/contexts/themeContext";
+import { SystemNavigationBar } from "./src/components/SystemNavigationBar";
 import { TransactionsProvider } from './src/state/transactionsContext';
 import { TransactionRefreshProvider } from './src/contexts/transactionRefreshContext';
 import { Provider as PaperProvider, DefaultTheme } from 'react-native-paper';
@@ -49,6 +50,7 @@ export default function App() {
     <RecoilRootImpl>
       <SafeAreaProvider>
         <ThemeProvider>
+          <SystemNavigationBar />
           <PaperProvider theme={paperTheme}>
             <TransactionsProvider>
               <TransactionRefreshProvider>

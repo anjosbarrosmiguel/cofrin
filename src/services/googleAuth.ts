@@ -14,31 +14,33 @@ export function useGoogleAuth(onLogin?: () => void) {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
 
   const [request, response, promptAsync] = Google.useAuthRequest({
-    expoClientId: "1026415452462-bnqbtkpks7pts26n6l4eg22en1pradau.apps.googleusercontent.com",
-    webClientId: "1026415452462-bnqbtkpks7pts26n6l4eg22en1pradau.apps.googleusercontent.com",
     androidClientId: "1026415452462-5fq481lvavlqg8pon3sobamd9l6nmgjb.apps.googleusercontent.com",
-    //iosClientId: "1026415452462-3jti3vafhr81mjkrmftdv11edugdgm42.apps.googleusercontent.com",
-    scopes: ["openid", "profile", "email"],
-    responseType: "id_token", // <-- ESSENCIAL!
+    webClientId: "1026415452462-bnqbtkpks7pts26n6l4eg22en1pradau.apps.googleusercontent.com",
   });
 
   useEffect(() => {
     let mounted = true;
 
     if (response?.type === "success") {
-      const { id_token } = response.params;
+      const idToken = (response as any)?.params?.id_token as string | undefined;
+      const accessToken = (response as any)?.params?.access_token as string | undefined;
 
-      console.log("Google Response Params:", response.params);
-      
-      // Manter loading ativo durante toda a autenticação
+      if (!idToken && !accessToken) {
+        setIsAuthenticating(false);
+        showAlert(
+          "Erro no Login",
+          "Não foi possível obter as credenciais do Google. Tente novamente.",
+          [{ text: "OK", style: "default" }]
+        );
+        return;
+      }
+
       setIsAuthenticating(true);
 
-      const credential = GoogleAuthProvider.credential(id_token);
+      const credential = GoogleAuthProvider.credential(idToken ?? null, accessToken ?? null);
 
       signInWithCredential(auth, credential)
         .then(async (userCredential) => {
-          console.log("Login Google OK!");
-          
           const userId = userCredential.user.uid;
           
           // Verificar se usuário já tem contas cadastradas
@@ -46,14 +48,11 @@ export function useGoogleAuth(onLogin?: () => void) {
             const existingAccounts = await getAllAccounts(userId);
             
             if (existingAccounts.length === 0) {
-              console.log("Novo usuário Google, criando dados iniciais...");
               await Promise.all([
                 createDefaultCategories(userId),
                 createDefaultAccount(userId),
               ]);
-              console.log("Dados iniciais criados com sucesso!");
             } else {
-              console.log("Usuário já possui contas cadastradas, não criando dados duplicados.");
             }
           } catch (error) {
             console.error("Erro ao verificar/criar dados iniciais:", error);
@@ -91,11 +90,17 @@ export function useGoogleAuth(onLogin?: () => void) {
       if (result?.type !== 'success') {
         setIsAuthenticating(false);
       }
+      return result;
     } catch (error) {
       setIsAuthenticating(false);
       throw error;
     }
   }, [promptAsync]);
 
-  return { request, promptAsync: startGoogleAuth, isAuthenticating };
+  return {
+    request,
+    response,
+    promptAsync: startGoogleAuth,
+    isAuthenticating,
+  };
 }

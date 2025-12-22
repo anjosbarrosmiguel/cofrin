@@ -7,6 +7,7 @@ import { useTransactions, useExpensesByCategory, useIncomesByCategory, useMonthR
 import { useAccounts } from "../hooks/useAccounts";
 import { useCreditCards } from "../hooks/useCreditCards";
 import { useGoal } from "../hooks/useGoal";
+import { useAllGoals } from "../hooks/useAllGoals";
 import { useTransactionRefresh } from "../contexts/transactionRefreshContext";
 import { useEffect, useMemo, useCallback, useState } from "react";
 import MainLayout from "../components/MainLayout";
@@ -65,6 +66,9 @@ export default function Home() {
 
   // Hook de meta financeira
   const { goal, progressPercentage, refresh: refreshGoal } = useGoal();
+  
+  // Hook de todas as metas (para validar duplicatas)
+  const { goals: allGoals, refresh: refreshAllGoals } = useAllGoals();
 
   // Estado do modal de criação de meta
   const [showGoalModal, setShowGoalModal] = useState(false);
@@ -103,6 +107,7 @@ export default function Home() {
       }, true); // Definir como principal (primeira meta)
     }
     refreshGoal();
+    refreshAllGoals();
   };
 
   // Adicionar valor à meta (debita da conta selecionada e cria transação)
@@ -135,6 +140,7 @@ export default function Home() {
     // Atualizar dados
     refresh(); // Atualiza transações
     refreshGoal();
+    refreshAllGoals();
     refreshAccounts();
   };
 
@@ -143,6 +149,7 @@ export default function Home() {
     if (!goal || !user) return;
     await goalService.deleteGoal(goal.id, user.uid);
     refreshGoal();
+    refreshAllGoals();
     refresh(); // Atualiza transações pois podem ter sido modificadas
   };
 
@@ -267,6 +274,7 @@ export default function Home() {
               onSave={handleSaveGoal}
               onDelete={handleDeleteGoal}
               existingGoal={goal}
+              existingGoals={allGoals}
               progressPercentage={progressPercentage}
             />
 

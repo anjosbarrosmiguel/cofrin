@@ -6,10 +6,10 @@ import {
     Pressable,
     TextInput,
     ScrollView,
-    KeyboardAvoidingView,
     Platform,
 } from 'react-native';
 import { Text } from 'react-native-paper';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DatePickerCrossPlatform from './DatePickerCrossPlatform';
 import CustomAlert from './CustomAlert';
@@ -17,7 +17,6 @@ import CustomAlert from './CustomAlert';
 import { useAppTheme } from '../contexts/themeContext';
 import { spacing, borderRadius } from '../theme';
 import { Goal, GOAL_ICONS, GOAL_ICON_LABELS } from '../types/firebase';
-import { getModalContainerStyle } from '../utils/modalLayout';
 
 interface Props {
   visible: boolean;
@@ -30,6 +29,7 @@ interface Props {
   }) => Promise<void>;
   onDelete?: (confirmed: boolean) => Promise<void>;
   existingGoal?: Goal | null;
+  existingGoals?: Goal[]; // Lista de metas para validar duplicatas
   progressPercentage?: number;
   showSetPrimaryOption?: boolean; // Mostrar opção para definir como principal
   onSaveAsPrimary?: (data: {
@@ -45,12 +45,14 @@ export default function CreateGoalModal({
   onClose, 
   onSave, 
   onDelete, 
-  existingGoal, 
+  existingGoal,
+  existingGoals = [],
   progressPercentage = 0,
   showSetPrimaryOption = false,
   onSaveAsPrimary
 }: Props) {
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
   
   const [name, setName] = useState('');
   const [targetAmount, setTargetAmount] = useState('');
@@ -60,6 +62,13 @@ export default function CreateGoalModal({
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState('');
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
+  const [focusedField, setFocusedField] = useState<string | null>(null);
+  
+  // Valores originais para comparação (modo edição)
+  const [originalName, setOriginalName] = useState('');
+  const [originalAmount, setOriginalAmount] = useState('');
+  const [originalDate, setOriginalDate] = useState(new Date());
+  const [originalIcon, setOriginalIcon] = useState('piggy-bank');
 
   // Função para formatar número para moeda brasileira
   const formatNumberToCurrency = (num: number): string => {
@@ -72,31 +81,59 @@ export default function CreateGoalModal({
   // Preencher com dados existentes se estiver editando
   useEffect(() => {
     if (existingGoal) {
-      setName(existingGoal.name);
-      // Formatar o valor corretamente para exibição
-      setTargetAmount(formatNumberToCurrency(existingGoal.targetAmount));
-      // Se tem targetDate, usar; senão calcular com base no timeframe (legado)
+      const formattedAmount = formatNumberToCurrency(existingGoal.targetAmount);
+      let goalDate: Date;
+      
       if (existingGoal.targetDate) {
-        setTargetDate(existingGoal.targetDate.toDate());
+        goalDate = existingGoal.targetDate.toDate();
       } else {
         // Fallback: adicionar meses baseado no timeframe
         const now = new Date();
         const months = existingGoal.timeframe === 'short' ? 12 : existingGoal.timeframe === 'medium' ? 36 : 60;
         now.setMonth(now.getMonth() + months);
-        setTargetDate(now);
+        goalDate = now;
       }
+      
+      setName(existingGoal.name);
+      setTargetAmount(formattedAmount);
+      setTargetDate(goalDate);
       setIcon(existingGoal.icon || 'piggy-bank');
+      
+      // Guardar valores originais
+      setOriginalName(existingGoal.name);
+      setOriginalAmount(formattedAmount);
+      setOriginalDate(goalDate);
+      setOriginalIcon(existingGoal.icon || 'piggy-bank');
     } else {
       // Reset para nova meta
+      const defaultDate = new Date(); // Data de hoje
+      
       setName('');
       setTargetAmount('');
-      const defaultDate = new Date();
-      defaultDate.setMonth(defaultDate.getMonth() + 12); // 1 ano por padrão
       setTargetDate(defaultDate);
       setIcon('piggy-bank');
+      
+      // Limpar originais
+      setOriginalName('');
+      setOriginalAmount('');
+      setOriginalDate(defaultDate);
+      setOriginalIcon('piggy-bank');
     }
     setError('');
+    setFocusedField(null);
   }, [existingGoal, visible]);
+  
+  // Verificar se houve alterações (modo edição)
+  const hasChanges = (): boolean => {
+    if (!existingGoal) return true; // Modo criação sempre permite salvar
+    
+    return (
+      name.trim() !== originalName ||
+      targetAmount !== originalAmount ||
+      targetDate.getTime() !== originalDate.getTime() ||
+      icon !== originalIcon
+    );
+  };
 
   const handleSave = async () => {
     // Validações
@@ -119,6 +156,16 @@ export default function CreateGoalModal({
     
     if (selectedDate <= today) {
       setError('A data da meta deve ser no futuro');
+      return;
+    }
+    
+    // Validar nome duplicado
+    const nameExists = existingGoals.some(
+      goal => goal.id !== existingGoal?.id && 
+              goal.name.toLowerCase() === name.trim().toLowerCase()
+    );
+    if (nameExists) {
+      setError('Já existe uma meta com esse nome');
       return;
     }
 
@@ -189,143 +236,156 @@ export default function CreateGoalModal({
     <Modal
       visible={visible}
       animationType="slide"
-      transparent
+      transparent={false}
       onRequestClose={onClose}
+      statusBarTranslucent
     >
-      <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.overlay}
-      >
-        <Pressable style={styles.backdrop} onPress={onClose} />
-        
-        <View style={Platform.OS === 'web' ? { alignItems: 'center', width: '100%' } : undefined}>
-        <View style={[getModalContainerStyle(colors), { backgroundColor: colors.card }]}> 
-          <ScrollView 
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.scrollContent}
+      <View style={[styles.fullscreenModal, { backgroundColor: colors.bg, paddingTop: insets.top }]}>
+        {/* Header moderno com botão de fechar */}
+        <View style={[styles.fullscreenHeader, { borderBottomColor: colors.border }]}>
+          <Text style={[styles.fullscreenTitle, { color: colors.text }]}>
+            {existingGoal ? 'Editar Meta' : 'Nova Meta'}
+          </Text>
+          <Pressable 
+            onPress={onClose} 
+            style={({ pressed }) => [
+              styles.closeButton,
+              { backgroundColor: colors.grayLight },
+              pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
+            ]}
           >
-            {/* Header */}
-            <View style={styles.header}>
-              <Text style={[styles.title, { color: colors.text }]}>
-                {existingGoal ? 'Editar meta' : 'Criar meta'}
-              </Text>
-              <Pressable onPress={onClose} hitSlop={8}>
-                <MaterialCommunityIcons name="close" size={24} color={colors.textMuted} />
-              </Pressable>
-            </View>
+            <MaterialCommunityIcons name="close" size={22} color={colors.text} />
+          </Pressable>
+        </View>
+        
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.modalBody}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Nome da meta */}
+          <Text style={[styles.label, { color: colors.text }]}>Qual é sua meta?</Text>
+          <TextInput
+            style={[
+              styles.input, 
+              { 
+                backgroundColor: colors.bg, 
+                color: colors.text, 
+                borderColor: focusedField === 'name' ? colors.primary : colors.border,
+              },
+              Platform.select({ web: { outlineStyle: 'none' as const } }),
+            ]}
+            placeholder="Ex: Comprar um carro, Viagem, Reserva..."
+            placeholderTextColor={colors.textMuted}
+            value={name}
+            onChangeText={setName}
+            onFocus={() => setFocusedField('name')}
+            onBlur={() => setFocusedField(null)}
+            maxLength={50}
+          />
 
-            {/* Nome da meta */}
-            <Text style={[styles.label, { color: colors.text }]}>Qual é sua meta?</Text>
+          {/* Valor da meta */}
+          <Text style={[styles.label, { color: colors.text }]}>Quanto você precisa?</Text>
+          <View style={[
+            styles.inputContainer, 
+            { 
+              backgroundColor: colors.bg, 
+              borderColor: focusedField === 'amount' ? colors.primary : colors.border,
+            }
+          ]}>
+            <Text style={[styles.currencyPrefix, { color: colors.textMuted }]}>R$</Text>
             <TextInput
-              style={[styles.input, { backgroundColor: colors.bg, color: colors.text, borderColor: colors.border }]}
-              placeholder="Ex: Comprar um carro, Viagem, Reserva..."
+              style={[
+                styles.amountInput, 
+                { color: colors.text },
+                Platform.select({ web: { outlineStyle: 'none' as const } }),
+              ]}
+              placeholder="0,00"
               placeholderTextColor={colors.textMuted}
-              value={name}
-              onChangeText={setName}
-              maxLength={50}
+              value={targetAmount}
+              onChangeText={handleAmountChange}
+              onFocus={() => setFocusedField('amount')}
+              onBlur={() => setFocusedField(null)}
+              keyboardType="numeric"
             />
+          </View>
 
-            {/* Valor da meta */}
-            <Text style={[styles.label, { color: colors.text }]}>Quanto você precisa?</Text>
-            <View style={[styles.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-              <Text style={[styles.currencyPrefix, { color: colors.textMuted }]}>R$</Text>
-              <TextInput
-                style={[styles.amountInput, { color: colors.text }]}
-                placeholder="0,00"
-                placeholderTextColor={colors.textMuted}
-                value={targetAmount}
-                onChangeText={handleAmountChange}
-                keyboardType="numeric"
-              />
-            </View>
+          {/* Data de finalização */}
+          <DatePickerCrossPlatform
+            label="Quando você quer atingir?"
+            value={targetDate}
+            onChange={setTargetDate}
+            minimumDate={new Date()}
+          />
 
-            {/* Data de finalização */}
-            <DatePickerCrossPlatform
-              label="Quando você quer atingir?"
-              value={targetDate}
-              onChange={setTargetDate}
-              minimumDate={new Date()}
-            />
+          {/* Ícone */}
+          <Text style={[styles.label, { color: colors.text }]}>Escolha uma categoria</Text>
+          <View style={styles.chipGrid}>
+            {GOAL_ICONS.map((iconName) => {
+              const isSelected = icon === iconName;
+              const label = GOAL_ICON_LABELS[iconName] || iconName;
+              return (
+                <Pressable
+                  key={iconName}
+                  onPress={() => setIcon(iconName)}
+                  style={[
+                    styles.chip,
+                    { 
+                      backgroundColor: isSelected ? colors.primary : colors.bg,
+                      borderColor: isSelected ? colors.primary : colors.border,
+                    }
+                  ]}
+                >
+                  <Text style={[
+                    styles.chipText,
+                    { color: isSelected ? '#fff' : colors.text }
+                  ]}>
+                    {label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
-            {/* Ícone */}
-            <Text style={[styles.label, { color: colors.text }]}>Escolha uma categoria</Text>
-            <View style={styles.chipGrid}>
-              {GOAL_ICONS.map((iconName) => {
-                const isSelected = icon === iconName;
-                const label = GOAL_ICON_LABELS[iconName] || iconName;
-                return (
-                  <Pressable
-                    key={iconName}
-                    onPress={() => setIcon(iconName)}
-                    style={[
-                      styles.chip,
-                      { 
-                        backgroundColor: isSelected ? colors.primary : colors.bg,
-                        borderColor: isSelected ? colors.primary : colors.border,
-                      }
-                    ]}
-                  >
-                    <Text style={[
-                      styles.chipText,
-                      { color: isSelected ? '#fff' : colors.text }
-                    ]}>
-                      {label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
+          {/* Erro */}
+          {error ? (
+            <Text style={[styles.errorText, { color: colors.expense }]}>{error}</Text>
+          ) : null}
 
-            {/* Erro */}
-            {error ? (
-              <Text style={[styles.errorText, { color: colors.expense }]}>{error}</Text>
-            ) : null}
+          {/* Botão de excluir (só aparece ao editar) */}
+          {existingGoal && onDelete && (
+            <Pressable
+              onPress={handleDelete}
+              disabled={deleting}
+              style={[
+                styles.deleteButton,
+                { borderColor: colors.expense },
+                deleting && { opacity: 0.6 }
+              ]}
+            >
+              <MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.expense} />
+              <Text style={[styles.deleteButtonText, { color: colors.expense }]}>
+                {deleting ? 'Excluindo...' : 'Excluir meta'}
+              </Text>
+            </Pressable>
+          )}
 
-            {/* Botão de excluir (só aparece ao editar) */}
-            {existingGoal && onDelete && (
-              <Pressable
-                onPress={handleDelete}
-                disabled={deleting}
-                style={[
-                  styles.deleteButton,
-                  { borderColor: colors.expense },
-                  deleting && { opacity: 0.6 }
-                ]}
-              >
-                <MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.expense} />
-                <Text style={[styles.deleteButtonText, { color: colors.expense }]}>
-                  {deleting ? 'Excluindo...' : 'Excluir meta'}
-                </Text>
-              </Pressable>
-            )}
-
-            {/* Botões */}
-            <View style={styles.buttons}>
-              <Pressable
-                onPress={onClose}
-                style={[styles.cancelButton, { borderColor: colors.border }]}
-              >
-                <Text style={[styles.cancelButtonText, { color: colors.text }]}>Cancelar</Text>
-              </Pressable>
-              
-              <Pressable
-                onPress={handleSave}
-                disabled={saving}
-                style={[
-                  styles.saveButton, 
-                  { backgroundColor: colors.primary },
-                  saving && { opacity: 0.6 }
-                ]}
-              >
-                <Text style={styles.saveButtonText}>
-                  {saving ? 'Salvando...' : existingGoal ? 'Salvar' : 'Criar meta'}
-                </Text>
-              </Pressable>
-            </View>
-          </ScrollView>
-        </View>
-        </View>
-      </KeyboardAvoidingView>
+          {/* Botão Salvar */}
+          <Pressable
+            onPress={handleSave}
+            disabled={saving || (existingGoal && !hasChanges())}
+            style={[
+              styles.saveButton, 
+              { backgroundColor: colors.primary },
+              (saving || (existingGoal && !hasChanges())) && { opacity: 0.6 }
+            ]}
+          >
+            <Text style={styles.saveButtonText}>
+              {saving ? 'Salvando...' : existingGoal ? 'Salvar Alterações' : 'Criar Meta'}
+            </Text>
+          </Pressable>
+        </ScrollView>
+      </View>
 
       {/* Alert de confirmação de exclusão */}
       <CustomAlert
@@ -347,50 +407,33 @@ export default function CreateGoalModal({
 }
 
 const styles = StyleSheet.create({
-  overlay: {
+  // Fullscreen modal styles
+  fullscreenModal: {
     flex: 1,
-    justifyContent: 'flex-end',
+    overflow: 'hidden',
   },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-  },
-  centeredContainer: {
-    width: '100%',
-    alignSelf: 'center',
-    marginTop: 'auto',
-  },
-  container: {
-    borderTopLeftRadius: borderRadius.xl,
-    borderTopRightRadius: borderRadius.xl,
-    padding: spacing.lg,
-    maxHeight: '90%',
-  },
-  scrollContent: {
-    paddingBottom: spacing.xl,
-  },
-  header: {
+  fullscreenHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: spacing.md,
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
   },
-  title: {
+  fullscreenTitle: {
     fontSize: 20,
     fontWeight: '700',
   },
-  motivationalBox: {
-    flexDirection: 'row',
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
-    gap: spacing.sm,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    marginBottom: spacing.lg,
+    justifyContent: 'center',
   },
-  motivationalText: {
-    flex: 1,
-    fontSize: 14,
-    lineHeight: 20,
+  modalBody: {
+    padding: spacing.lg,
+    paddingBottom: spacing.xl * 2,
   },
   label: {
     fontSize: 15,
@@ -421,18 +464,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingVertical: spacing.md,
   },
-  dateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    borderWidth: 1,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-  },
-  dateText: {
-    fontSize: 16,
-    flex: 1,
-  },
   chipGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -447,34 +478,6 @@ const styles = StyleSheet.create({
   chipText: {
     fontSize: 14,
     fontWeight: '500',
-  },
-  timeframeOptions: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  timeframeOption: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    alignItems: 'center',
-  },
-  timeframeLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    marginBottom: 2,
-  },
-  timeframeDesc: {
-    fontSize: 11,
-    textAlign: 'center',
-  },
-  iconOption: {
-    width: 48,
-    height: 48,
-    borderWidth: 1,
-    borderRadius: borderRadius.md,
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   errorText: {
     fontSize: 14,
@@ -495,28 +498,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  buttons: {
-    flexDirection: 'row',
-    gap: spacing.md,
-    marginTop: spacing.md,
-    marginBottom: spacing.md,
-  },
-  cancelButton: {
-    flex: 1,
-    borderWidth: 1,
-    borderRadius: borderRadius.md,
-    paddingVertical: 14,
-    alignItems: 'center',
-  },
-  cancelButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
   saveButton: {
-    flex: 1,
     borderRadius: borderRadius.md,
-    paddingVertical: 14,
+    paddingVertical: 16,
     alignItems: 'center',
+    marginTop: spacing.lg,
   },
   saveButtonText: {
     color: '#fff',

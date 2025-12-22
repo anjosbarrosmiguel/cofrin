@@ -10,6 +10,7 @@ import Snackbar from "../components/Snackbar";
 import LoadingOverlay from "../components/LoadingOverlay";
 import MainLayout from "../components/MainLayout";
 import SimpleHeader from "../components/SimpleHeader";
+import DayPicker from "../components/DayPicker";
 import { useAuth } from "../contexts/authContext";
 import { spacing, borderRadius, getShadow } from "../theme";
 import { useCreditCards } from "../hooks/useCreditCards";
@@ -463,7 +464,7 @@ export default function CreditCards({ navigation }: any) {
                     <View style={styles.cardInfo}>
                       <Text style={[styles.cardName, { color: colors.text }]}>{card.name}</Text>
                       <Text style={[styles.cardDetails, { color: colors.textSecondary }]}>
-                        Limite: {formatCurrencyBRL(card.limit)} • Fecha dia {card.closingDay}
+                        Limite: {formatCurrencyBRL(card.limit)} • Fecha dia {card.closingDay} • Vence dia {card.dueDay}
                       </Text>
                       <View style={styles.usageBar}>
                         <View 
@@ -592,51 +593,25 @@ export default function CreditCards({ navigation }: any) {
 
               {/* Dias lado a lado */}
               <View style={styles.daysRow}>
-                <View style={styles.dayField}>
-                  <Text style={[styles.label, { color: colors.text }]}>Fecha dia</Text>
-                  <View style={[
-                    styles.inputContainer, 
-                    { 
-                      borderColor: focusedField === 'closingDay' ? colors.primary : colors.border, 
-                      backgroundColor: colors.card 
-                    }
-                  ]}>
-                    <TextInput
-                      value={cardClosingDay}
-                      onChangeText={setCardClosingDay}
-                      onFocus={() => setFocusedField('closingDay')}
-                      onBlur={() => setFocusedField(null)}
-                      placeholder="10"
-                      placeholderTextColor={colors.textMuted}
-                      keyboardType="numeric"
-                      maxLength={2}
-                      style={[styles.input, styles.centeredInput, { color: colors.text }]}
-                    />
-                  </View>
-                </View>
+                <DayPicker
+                  label="Fechamento da fatura"
+                  value={cardClosingDay}
+                  onChange={setCardClosingDay}
+                  placeholder="Dia"
+                  focused={focusedField === 'closingDay'}
+                  onFocus={() => setFocusedField('closingDay')}
+                  onBlur={() => setFocusedField(null)}
+                />
 
-                <View style={styles.dayField}>
-                  <Text style={[styles.label, { color: colors.text }]}>Vence dia</Text>
-                  <View style={[
-                    styles.inputContainer, 
-                    { 
-                      borderColor: focusedField === 'dueDay' ? colors.primary : colors.border, 
-                      backgroundColor: colors.card 
-                    }
-                  ]}>
-                    <TextInput
-                      value={cardDueDay}
-                      onChangeText={setCardDueDay}
-                      onFocus={() => setFocusedField('dueDay')}
-                      onBlur={() => setFocusedField(null)}
-                      placeholder="17"
-                      placeholderTextColor={colors.textMuted}
-                      keyboardType="numeric"
-                      maxLength={2}
-                      style={[styles.input, styles.centeredInput, { color: colors.text }]}
-                    />
-                  </View>
-                </View>
+                <DayPicker
+                  label="Vencimento da fatura"
+                  value={cardDueDay}
+                  onChange={setCardDueDay}
+                  placeholder="Dia"
+                  focused={focusedField === 'dueDay'}
+                  onFocus={() => setFocusedField('dueDay')}
+                  onBlur={() => setFocusedField(null)}
+                />
               </View>
 
               {/* Conta de pagamento */}

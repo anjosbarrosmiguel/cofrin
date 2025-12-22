@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Pressable, Alert } from 'react-native';
-import { Text, FAB } from 'react-native-paper';
+import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
@@ -426,22 +426,22 @@ export default function ManageGoals() {
                 </Text>
               </View>
             )}
+
+            {/* Botão para criar nova meta - por último */}
+            <Pressable
+              onPress={handleCreateGoal}
+              style={({ pressed }) => [
+                styles.addGoalButton,
+                { backgroundColor: colors.primary },
+                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+              ]}
+            >
+              <MaterialCommunityIcons name="plus" size={20} color="#fff" />
+              <Text style={styles.addGoalButtonText}>Criar nova meta</Text>
+            </Pressable>
           </View>
         </View>
       </ScrollView>
-
-      {/* FAB para criar nova meta - wrapper para respeitar max-width */}
-      <View style={styles.fabContainer} pointerEvents="box-none">
-        <View style={styles.fabCentered} pointerEvents="box-none">
-          <FAB
-            icon="plus"
-            label="Criar nova meta"
-            style={[styles.fab, { backgroundColor: colors.primary, bottom: insets.bottom + 80 }]}
-            onPress={handleCreateGoal}
-            color="#fff"
-          />
-        </View>
-      </View>
 
       {/* Modais */}
       <CreateGoalModal
@@ -453,6 +453,7 @@ export default function ManageGoals() {
         onSave={(data) => handleSaveGoal(data, false)}
         onDelete={selectedGoal ? () => deleteGoalDirectly(selectedGoal) : undefined}
         existingGoal={selectedGoal}
+        existingGoals={goals}
         progressPercentage={
           selectedGoal 
             ? goalService.calculateGoalProgress(selectedGoal.currentAmount, selectedGoal.targetAmount)
@@ -630,23 +631,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  fab: {
-    position: 'absolute',
-    right: 16,
-  },
-  fabContainer: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    top: 0,
+  addGoalButton: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
   },
-  fabCentered: {
-    maxWidth: 1200,
-    width: '100%',
-    flex: 1,
-    position: 'relative',
+  addGoalButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',

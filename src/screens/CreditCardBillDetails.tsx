@@ -39,7 +39,7 @@ export default function CreditCardBillDetails() {
   const { snackbarState, showSnackbar, hideSnackbar } = useSnackbar();
   const { colors } = useAppTheme();
   const { user } = useAuth();
-  const { triggerRefresh } = useTransactionRefresh();
+  const { triggerRefresh, refreshKey } = useTransactionRefresh();
   const navigation = useNavigation();
   const route = useRoute();
   const params = route.params as RouteParams;
@@ -96,7 +96,7 @@ export default function CreditCardBillDetails() {
 
   useEffect(() => {
     loadBillDetails();
-  }, [user, selectedMonth, selectedYear]);
+  }, [user, selectedMonth, selectedYear, refreshKey]);
 
   const onRefresh = () => {
     setRefreshing(true);

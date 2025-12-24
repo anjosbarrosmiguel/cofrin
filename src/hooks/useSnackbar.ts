@@ -12,13 +12,13 @@ export function useSnackbar() {
     visible: false,
     message: '',
     type: 'success',
-    duration: 3000,
+    duration: 2000,
   });
 
   const showSnackbar = useCallback((
     message: string, 
     type: 'success' | 'error' | 'info' = 'success',
-    duration: number = 3000
+    duration: number = 2000
   ) => {
     setSnackbarState({
       visible: true,

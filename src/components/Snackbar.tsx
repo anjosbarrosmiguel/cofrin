@@ -21,7 +21,7 @@ export default function Snackbar({
   visible, 
   message, 
   type = 'success', 
-  duration = 3000, 
+  duration = 2000, 
   onDismiss,
   action 
 }: SnackbarProps) {
@@ -99,7 +99,7 @@ export default function Snackbar({
   const snackColors = getColors();
 
   return (
-    <View style={[styles.wrapper, { bottom: insets.bottom + 140 }]}>
+    <View style={[styles.wrapper, { bottom: insets.bottom + 80 }]}>
       <Animated.View 
         style={[
           styles.container, 
@@ -113,22 +113,19 @@ export default function Snackbar({
       >
         <MaterialCommunityIcons 
           name={getIcon()} 
-        size={20} 
-        color={snackColors.icon} 
-      />
-      <Text style={[styles.message, { color: snackColors.text }]} numberOfLines={2}>
-        {message}
-      </Text>
-      {action && (
-        <Pressable onPress={action.onPress} hitSlop={8}>
-          <Text style={[styles.actionText, { color: snackColors.text }]}>
-            {action.label}
-          </Text>
-        </Pressable>
-      )}
-      <Pressable onPress={handleDismiss} hitSlop={8}>
-        <MaterialCommunityIcons name="close" size={18} color={snackColors.icon} style={{ opacity: 0.7 }} />
-      </Pressable>
+          size={18} 
+          color={snackColors.icon} 
+        />
+        <Text style={[styles.message, { color: snackColors.text }]} numberOfLines={1}>
+          {message}
+        </Text>
+        {action && (
+          <Pressable onPress={action.onPress} hitSlop={8}>
+            <Text style={[styles.actionText, { color: snackColors.text }]}>
+              {action.label}
+            </Text>
+          </Pressable>
+        )}
       </Animated.View>
     </View>
   );
@@ -146,17 +143,17 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: spacing.sm,
+    paddingVertical: 10,
     paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.md,
+    borderRadius: borderRadius.full,
     gap: spacing.sm,
-    maxWidth: 1200,
-    width: '100%',
+    maxWidth: 400,
+    alignSelf: 'center',
   },
   message: {
     flex: 1,
-    fontSize: 14,
-    fontWeight: '500',
+    fontSize: 13,
+    fontWeight: '600',
   },
   actionText: {
     fontSize: 14,

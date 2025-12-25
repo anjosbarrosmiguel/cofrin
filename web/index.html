@@ -84,6 +84,19 @@
     <div class="spinner"></div>
   </div>
   
+  <!-- Captura beforeinstallprompt ANTES do React carregar -->
+  <script>
+    // Armazena o evento globalmente para o React usar depois
+    window.deferredPWAPrompt = null;
+    window.addEventListener('beforeinstallprompt', function(e) {
+      console.log('[PWA] beforeinstallprompt capturado globalmente!');
+      e.preventDefault();
+      window.deferredPWAPrompt = e;
+      // Dispara evento customizado para o React saber
+      window.dispatchEvent(new Event('pwa-prompt-ready'));
+    });
+  </script>
+  
   <!-- Registro do Service Worker para PWA -->
   <script>
     if ('serviceWorker' in navigator) {

@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import {
-    View,
-    StyleSheet,
-    Modal,
-    Pressable,
-    TextInput,
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
+  View,
+  StyleSheet,
+  Modal,
+  Pressable,
+  TextInput,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Text } from 'react-native-paper';
@@ -142,161 +142,161 @@ export default function AddToGoalModal({ visible, onClose, onSave, goal, progres
           >
             {/* Info da meta */}
             <View style={[styles.goalInfo, { backgroundColor: colors.card }]}>
-            <View style={styles.goalHeader}>
-              <MaterialCommunityIcons 
-                name={(goal.icon as any) || 'flag-checkered'} 
-                size={24} 
-                color={colors.primary} 
-              />
-              <Text style={[styles.goalName, { color: colors.text }]}>{goal.name}</Text>
-            </View>
-            <View style={styles.goalProgress}>
-              <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
-                <View 
-                  style={[
-                    styles.progressFill, 
-                    { width: `${Math.min(progressPercentage, 100)}%`, backgroundColor: colors.primary }
-                  ]} 
+              <View style={styles.goalHeader}>
+                <MaterialCommunityIcons 
+                  name={(goal.icon as any) || 'flag-checkered'} 
+                  size={24} 
+                  color={colors.primary} 
                 />
+                <Text style={[styles.goalName, { color: colors.text }]}>{goal.name}</Text>
               </View>
-              <Text style={[styles.progressText, { color: colors.textMuted }]}>
-                {formatCurrencyBRL(goal.currentAmount)} de {formatCurrencyBRL(goal.targetAmount)}
-              </Text>
-            </View>
-          </View>
-
-          {/* Quanto falta */}
-          <View style={[styles.remainingBox, { backgroundColor: isGoalComplete ? colors.successBg : colors.primaryBg }]}>
-            <MaterialCommunityIcons 
-              name={isGoalComplete ? "check-circle" : "flag-checkered"} 
-              size={18} 
-              color={isGoalComplete ? colors.success : colors.primary} 
-            />
-            <Text style={[styles.remainingText, { color: isGoalComplete ? colors.success : colors.primary }]}>
-              {isGoalComplete 
-                ? 'Parabéns! Você já atingiu sua meta!' 
-                : `Faltam ${formatCurrencyBRL(remaining > 0 ? remaining : 0)} para alcançar sua meta!`
-              }
-            </Text>
-          </View>
-
-          {/* Seleção de conta */}
-          <Text style={[styles.label, { color: colors.text }]}>De qual conta vai sair?</Text>
-          {availableAccounts.length === 0 ? (
-            <View style={[styles.noAccountsBox, { backgroundColor: colors.bg }]}>
-              <MaterialCommunityIcons name="alert-circle-outline" size={20} color={colors.textMuted} />
-              <Text style={[styles.noAccountsText, { color: colors.textMuted }]}>
-                Nenhuma conta com saldo disponível
-              </Text>
-            </View>
-          ) : (
-            <ScrollView 
-              horizontal 
-              showsHorizontalScrollIndicator={false}
-              style={styles.accountsScroll}
-              contentContainerStyle={styles.accountsList}
-            >
-              {availableAccounts.map((account) => {
-                const isSelected = selectedAccountId === account.id;
-                return (
-                  <Pressable
-                    key={account.id}
-                    onPress={() => setSelectedAccountId(account.id)}
+              <View style={styles.goalProgress}>
+                <View style={[styles.progressTrack, { backgroundColor: colors.border }]}>
+                  <View 
                     style={[
-                      styles.accountCard,
-                      { 
-                        backgroundColor: isSelected ? colors.primary : colors.bg,
-                        borderColor: isSelected ? colors.primary : colors.border,
-                      }
-                    ]}
+                      styles.progressFill, 
+                      { width: `${Math.min(progressPercentage, 100)}%`, backgroundColor: colors.primary }
+                    ]} 
+                  />
+                </View>
+                <Text style={[styles.progressText, { color: colors.textMuted }]}>
+                  {formatCurrencyBRL(goal.currentAmount)} de {formatCurrencyBRL(goal.targetAmount)}
+                </Text>
+              </View>
+            </View>
+
+            {/* Quanto falta */}
+            <View style={[styles.remainingBox, { backgroundColor: isGoalComplete ? colors.successBg : colors.primaryBg }]}>
+              <MaterialCommunityIcons 
+                name={isGoalComplete ? "check-circle" : "flag-checkered"} 
+                size={18} 
+                color={isGoalComplete ? colors.success : colors.primary} 
+              />
+              <Text style={[styles.remainingText, { color: isGoalComplete ? colors.success : colors.primary }]}>
+                {isGoalComplete 
+                  ? 'Parabéns! Você já atingiu sua meta!' 
+                  : `Faltam ${formatCurrencyBRL(remaining > 0 ? remaining : 0)} para alcançar sua meta!`
+                }
+              </Text>
+            </View>
+
+            {/* Seleção de conta */}
+            <Text style={[styles.label, { color: colors.text }]}>De qual conta vai sair?</Text>
+            {availableAccounts.length === 0 ? (
+              <View style={[styles.noAccountsBox, { backgroundColor: colors.bg }]}>
+                <MaterialCommunityIcons name="alert-circle-outline" size={20} color={colors.textMuted} />
+                <Text style={[styles.noAccountsText, { color: colors.textMuted }]}>
+                  Nenhuma conta com saldo disponível
+                </Text>
+              </View>
+            ) : (
+              <ScrollView 
+                horizontal 
+                showsHorizontalScrollIndicator={false}
+                style={styles.accountsScroll}
+                contentContainerStyle={styles.accountsList}
+              >
+                {availableAccounts.map((account) => {
+                  const isSelected = selectedAccountId === account.id;
+                  return (
+                    <Pressable
+                      key={account.id}
+                      onPress={() => setSelectedAccountId(account.id)}
+                      style={[
+                        styles.accountCard,
+                        { 
+                          backgroundColor: isSelected ? colors.primary : colors.bg,
+                          borderColor: isSelected ? colors.primary : colors.border,
+                        }
+                      ]}
+                    >
+                      <Text style={[
+                        styles.accountName,
+                        { color: isSelected ? '#fff' : colors.text }
+                      ]} numberOfLines={1}>
+                        {account.name}
+                      </Text>
+                      <Text style={[
+                        styles.accountBalance,
+                        { color: isSelected ? 'rgba(255,255,255,0.8)' : colors.textMuted }
+                      ]}>
+                        {formatCurrencyBRL(account.balance)}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            )}
+
+            {/* Input de valor - esconder se meta completa */}
+            {!isGoalComplete && (
+              <>
+                <Text style={[styles.label, { color: colors.text }]}>Quanto você quer adicionar?</Text>
+                <View style={[styles.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border }]}>
+                  <Text style={[styles.currencyPrefix, { color: colors.textMuted }]}>R$</Text>
+                  <TextInput
+                    style={[styles.amountInput, { color: colors.text }]}
+                    placeholder="0,00"
+                    placeholderTextColor={colors.textMuted}
+                    value={amount}
+                    onChangeText={handleAmountChange}
+                    keyboardType="numeric"
+                    autoFocus
+                  />
+                </View>
+              </>
+            )}
+
+            {/* Sugestões rápidas - esconder se meta completa */}
+            {!isGoalComplete && suggestions.length > 0 && (
+              <View style={styles.suggestions}>
+                {suggestions.map((value) => (
+                  <Pressable
+                    key={value}
+                    onPress={() => setAmount(formatCurrency((value * 100).toString()))}
+                    style={[styles.suggestionChip, { backgroundColor: colors.bg, borderColor: colors.border }]}
                   >
-                    <Text style={[
-                      styles.accountName,
-                      { color: isSelected ? '#fff' : colors.text }
-                    ]} numberOfLines={1}>
-                      {account.name}
-                    </Text>
-                    <Text style={[
-                      styles.accountBalance,
-                      { color: isSelected ? 'rgba(255,255,255,0.8)' : colors.textMuted }
-                    ]}>
-                      {formatCurrencyBRL(account.balance)}
+                    <Text style={[styles.suggestionText, { color: colors.text }]}>
+                      +R$ {value}
                     </Text>
                   </Pressable>
-                );
-              })}
-            </ScrollView>
-          )}
-
-          {/* Input de valor - esconder se meta completa */}
-          {!isGoalComplete && (
-            <>
-              <Text style={[styles.label, { color: colors.text }]}>Quanto você conquistou?</Text>
-              <View style={[styles.inputContainer, { backgroundColor: colors.bg, borderColor: colors.border }]}>
-                <Text style={[styles.currencyPrefix, { color: colors.textMuted }]}>R$</Text>
-                <TextInput
-                  style={[styles.amountInput, { color: colors.text }]}
-                  placeholder="0,00"
-                  placeholderTextColor={colors.textMuted}
-                  value={amount}
-                  onChangeText={handleAmountChange}
-                  keyboardType="numeric"
-                  autoFocus
-                />
+                ))}
               </View>
-            </>
-          )}
+            )}
 
-          {/* Sugestões rápidas - esconder se meta completa */}
-          {!isGoalComplete && suggestions.length > 0 && (
-            <View style={styles.suggestions}>
-              {suggestions.map((value) => (
-                <Pressable
-                  key={value}
-                  onPress={() => setAmount(formatCurrency((value * 100).toString()))}
-                  style={[styles.suggestionChip, { backgroundColor: colors.bg, borderColor: colors.border }]}
-                >
-                  <Text style={[styles.suggestionText, { color: colors.text }]}>
-                    +R$ {value}
-                  </Text>
-                </Pressable>
-              ))}
-            </View>
-          )}
+            {/* Erro */}
+            {error ? (
+              <Text style={[styles.errorText, { color: colors.expense }]}>{error}</Text>
+            ) : null}
 
-          {/* Erro */}
-          {error ? (
-            <Text style={[styles.errorText, { color: colors.expense }]}>{error}</Text>
-          ) : null}
-
-          {/* Botões */}
-          <View style={styles.buttons}>
-            <Pressable
-              onPress={handleClose}
-              style={[styles.cancelButton, { borderColor: colors.border }, isGoalComplete && { flex: 1 }]}
-            >
-              <Text style={[styles.cancelButtonText, { color: colors.text }]}>
-                {isGoalComplete ? 'Fechar' : 'Cancelar'}
-              </Text>
-            </Pressable>
-            
-            {!isGoalComplete && (
+            {/* Botões */}
+            <View style={styles.buttons}>
               <Pressable
-                onPress={handleSave}
-                disabled={saving}
-                style={[
-                  styles.saveButton, 
-                  { backgroundColor: colors.primary },
-                  saving && { opacity: 0.6 }
-                ]}
+                onPress={handleClose}
+                style={[styles.cancelButton, { borderColor: colors.border }, isGoalComplete && { flex: 1 }]}
               >
-                <MaterialCommunityIcons name="plus" size={18} color="#fff" />
-                <Text style={styles.saveButtonText}>
-                  {saving ? 'Salvando...' : 'Adicionar'}
+                <Text style={[styles.cancelButtonText, { color: colors.text }]}>
+                  {isGoalComplete ? 'Fechar' : 'Cancelar'}
                 </Text>
               </Pressable>
-            )}
-          </View>
+              
+              {!isGoalComplete && (
+                <Pressable
+                  onPress={handleSave}
+                  disabled={saving}
+                  style={[
+                    styles.saveButton, 
+                    { backgroundColor: colors.primary },
+                    saving && { opacity: 0.6 }
+                  ]}
+                >
+                  <MaterialCommunityIcons name="plus" size={18} color="#fff" />
+                  <Text style={styles.saveButtonText}>
+                    {saving ? 'Salvando...' : 'Adicionar'}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>

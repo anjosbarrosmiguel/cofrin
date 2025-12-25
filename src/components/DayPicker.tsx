@@ -154,7 +154,7 @@ export default function DayPicker({
     );
   }
 
-  // Para Web - custom dropdown
+  // Para Web - usar Modal para evitar problemas de z-index em ScrollView
   return (
     <View style={styles.container}>
       {label && <Text style={[styles.label, { color: colors.text }]}>{label}</Text>}
@@ -184,59 +184,62 @@ export default function DayPicker({
         />
       </Pressable>
 
-      {showPicker && (
-        <>
-          {/* Overlay para fechar ao clicar fora */}
-          <Pressable style={styles.webOverlay} onPress={handleClose} />
-
-          {/* Dropdown */}
+      {/* Modal para seleção - funciona melhor em web dentro de ScrollView */}
+      <Modal
+        visible={showPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={handleClose}
+      >
+        <Pressable style={styles.webModalOverlay} onPress={handleClose}>
           <View
             style={[
-              styles.dropdown,
-              {
-                backgroundColor: colors.card,
-                borderColor: colors.border,
-              },
+              styles.webModalContent,
+              { backgroundColor: colors.card },
             ]}
           >
-            <ScrollView style={styles.dropdownScroll} nestedScrollEnabled>
-              {DAYS.map((day) => (
-                <Pressable
-                  key={day}
-                  onPress={() => handleSelect(day)}
-                  style={({ pressed }) => [
-                    styles.dropdownItem,
-                    {
-                      backgroundColor:
-                        value === day ? colors.primaryBg : 'transparent',
-                    },
-                    pressed && { opacity: 0.7 },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.dropdownItemText,
+            <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.pickerTitle, { color: colors.text }]}>
+                {label || 'Selecione o dia'}
+              </Text>
+              <Pressable onPress={handleClose}>
+                <MaterialCommunityIcons name="close" size={22} color={colors.textMuted} />
+              </Pressable>
+            </View>
+            <ScrollView style={styles.webModalScroll} showsVerticalScrollIndicator={false}>
+              <View style={styles.webDaysGrid}>
+                {DAYS.map((day) => (
+                  <Pressable
+                    key={day}
+                    onPress={() => handleSelect(day)}
+                    style={({ pressed }) => [
+                      styles.webDayItem,
                       {
-                        color: value === day ? colors.primary : colors.text,
-                        fontWeight: value === day ? '600' : '400',
+                        backgroundColor:
+                          value === day ? colors.primary : colors.grayLight,
+                        borderColor: value === day ? colors.primary : colors.border,
                       },
+                      pressed && { opacity: 0.7 },
                     ]}
                   >
-                    {day}
-                  </Text>
-                  {value === day && (
-                    <MaterialCommunityIcons
-                      name="check"
-                      size={18}
-                      color={colors.primary}
-                    />
-                  )}
-                </Pressable>
-              ))}
+                    <Text
+                      style={[
+                        styles.webDayText,
+                        {
+                          color: value === day ? '#fff' : colors.text,
+                          fontWeight: value === day ? '700' : '500',
+                        },
+                      ]}
+                    >
+                      {day}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
             </ScrollView>
           </View>
-        </>
-      )}
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -306,40 +309,37 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   // Web styles
-  webOverlay: {
-    position: 'fixed' as any,
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 999,
-  },
-  dropdown: {
-    position: 'absolute',
-    top: '100%',
-    left: 0,
-    right: 0,
-    marginTop: 4,
-    borderWidth: 1,
-    borderRadius: borderRadius.md,
-    zIndex: 1000,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  dropdownScroll: {
-    maxHeight: 200,
-  },
-  dropdownItem: {
-    flexDirection: 'row',
+  webModalOverlay: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
+    backgroundColor: 'rgba(0,0,0,0.5)',
   },
-  dropdownItemText: {
+  webModalContent: {
+    width: '90%',
+    maxWidth: 340,
+    maxHeight: '70%',
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+  },
+  webModalScroll: {
+    padding: spacing.md,
+  },
+  webDaysGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    justifyContent: 'center',
+  },
+  webDayItem: {
+    width: 44,
+    height: 44,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  webDayText: {
     fontSize: 15,
   },
 });

@@ -21,7 +21,6 @@ export default function AppHeader(props?: any) {
   const items = [
     { key: 'home', label: 'Visão geral', route: 'Bem-vindo' },
     { key: 'launches', label: 'Lançamentos', route: 'Lançamentos' },
-    { key: 'reports', label: 'Relatórios', route: 'Relatórios' },
   ];
 
   // Determine active route - using navigation state would be better, but this is fine for top-level nav

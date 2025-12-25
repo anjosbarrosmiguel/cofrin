@@ -20,7 +20,6 @@ const CategoryDetails = lazy(() => import("../screens/CategoryDetails"));
 const About = lazy(() => import("../screens/About"));
 const Education = lazy(() => import("../screens/Education"));
 const Launches = lazy(() => import("../screens/Launches"));
-const Reports = lazy(() => import("../screens/Reports"));
 const Goals = lazy(() => import("../screens/Goals"));
 const MyGoals = lazy(() => import("../screens/MyGoals"));
 const ManageGoals = lazy(() => import("../screens/ManageGoals"));
@@ -57,7 +56,6 @@ const CategoryDetailsScreen = withSuspense(CategoryDetails);
 const AboutScreen = withSuspense(About);
 const EducationScreen = withSuspense(Education);
 const LaunchesScreen = withSuspense(Launches);
-const ReportsScreen = withSuspense(Reports);
 const GoalsScreen = withSuspense(Goals);
 const MyGoalsScreen = withSuspense(MyGoals);
 const ManageGoalsScreen = withSuspense(ManageGoals);
@@ -89,7 +87,6 @@ export default function RootNavigation() {
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           <Stack.Screen name="Bem-vindo" component={Home} />
           <Stack.Screen name="Lançamentos" component={LaunchesScreen} />
-          <Stack.Screen name="Relatórios" component={ReportsScreen} />
           <Stack.Screen name="Metas do ano" component={GoalsScreen} />
           <Stack.Screen name="Meus Objetivos" component={MyGoalsScreen} />
           <Stack.Screen name="ManageGoals" component={ManageGoalsScreen} />

@@ -231,12 +231,14 @@ export async function recalculateCreditCardUsage(
 
 // Buscar fatura do cartão por mês/ano
 export async function getCardBill(
+  userId: string,
   creditCardId: string,
   month: number,
   year: number
 ): Promise<CreditCardBill | null> {
   const q = query(
     billsRef,
+    where('userId', '==', userId),
     where('creditCardId', '==', creditCardId),
     where('month', '==', month),
     where('year', '==', year)

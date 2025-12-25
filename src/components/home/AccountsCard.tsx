@@ -5,7 +5,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppTheme } from '../../contexts/themeContext';
 import { getShadow } from '../../theme';
 import { formatCurrencyBRL } from '../../utils/format';
-import { Account, ACCOUNT_TYPE_LABELS } from '../../types/firebase';
+import { Account } from '../../types/firebase';
 
 interface Props {
   accounts?: Account[];
@@ -69,58 +69,52 @@ export default memo(function AccountsCard({
     ? totalBalance 
     : accounts.reduce((sum, account) => sum + (account.balance || 0), 0);
 
-  // Componente de item da conta (compacto e moderno)
-  const AccountItem = ({ account }: { account: Account }) => {
+  // Componente de item da conta (minimal design)
+  const AccountItem = ({ account, index }: { account: Account; index: number }) => {
     const accountColor = getAccountColor(account.type);
     const accountIcon = getAccountIcon(account.type);
     const isNegative = account.balance < 0;
     
     return (
-      <Pressable
-        onPress={() => onAccountPress?.(account)}
-        style={({ pressed }) => [
-          styles.accountItem,
-          { 
-            backgroundColor: lightBg,
-            borderColor: colors.border,
-            opacity: pressed ? 0.7 : 1,
-          }
-        ]}
-      >
-        <View style={styles.accountContent}>
-          {/* Ícone e nome */}
+      <>
+        {index > 0 && (
+          <View style={[styles.divider, { borderColor: colors.border }]} />
+        )}
+        <Pressable
+          onPress={() => onAccountPress?.(account)}
+          style={({ pressed }) => [
+            styles.accountItem,
+            { opacity: pressed ? 0.7 : 1 }
+          ]}
+        >
+          {/* Primeira linha: ícone + nome */}
           <View style={styles.accountHeader}>
-            <View style={[styles.accountIconSmall, { backgroundColor: `${accountColor}20` }]}>
-              <MaterialCommunityIcons
-                name={accountIcon as any}
-                size={18}
-                color={accountColor}
-              />
-            </View>
-            <View style={styles.accountTitleSection}>
-              <Text style={[styles.accountNameCompact, { color: colors.text }]} numberOfLines={1}>
-                {account.name}
-              </Text>
-              <Text style={[styles.accountType, { color: colors.textMuted }]}>
-                {ACCOUNT_TYPE_LABELS[account.type]}
-              </Text>
-            </View>
-          </View>
-
-          {/* Saldo */}
-          <View style={styles.balanceSection}>
-            <Text style={[styles.balanceLabel, { color: colors.textMuted }]}>Saldo</Text>
-            <Text 
-              style={[
-                styles.balanceValue, 
-                { color: isNegative ? colors.expense : colors.text }
-              ]}
-            >
-              {formatCurrencyBRL(account.balance)}
+            <MaterialCommunityIcons
+              name={accountIcon as any}
+              size={20}
+              color={accountColor}
+            />
+            <Text style={[styles.accountName, { color: colors.text }]} numberOfLines={1}>
+              {account.name}
             </Text>
           </View>
-        </View>
-      </Pressable>
+
+          {/* Segunda linha: saldo */}
+          <View style={styles.accountInfo}>
+            <View style={styles.infoItem}>
+              <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Saldo atual:</Text>
+              <Text 
+                style={[
+                  styles.balanceValue, 
+                  { color: isNegative ? colors.expense : colors.text }
+                ]}
+              >
+                {formatCurrencyBRL(account.balance)}
+              </Text>
+            </View>
+          </View>
+        </Pressable>
+      </>
     );
   };
 
@@ -176,8 +170,8 @@ export default memo(function AccountsCard({
             <Text style={[styles.accountsTitle, { color: titleGray }]}>
               Contas
             </Text>
-            {accounts.map((account) => (
-              <AccountItem key={account.id} account={account} />
+            {accounts.map((account, index) => (
+              <AccountItem key={account.id} account={account} index={index} />
             ))}
           </View>
         )}
@@ -249,7 +243,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   accountsList: {
-    gap: 12,
+    gap: 0,
     marginTop: 8,
   },
   accountsTitle: {
@@ -258,51 +252,33 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   accountItem: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
+    paddingVertical: 16,
   },
-  accountContent: {
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+  divider: {
+    borderBottomWidth: 1,
+    borderStyle: 'dashed',
+    marginVertical: 0,
   },
   accountHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
+    marginBottom: 10,
+  },
+  accountName: {
     flex: 1,
-  },
-  accountIconSmall: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  accountTitleSection: {
-    flex: 1,
-  },
-  accountNameCompact: {
     fontSize: 15,
     fontWeight: '600',
-    marginBottom: 2,
   },
-  accountType: {
-    fontSize: 12,
-    color: '#9CA3AF',
+  accountInfo: {
+    flexDirection: 'row',
   },
-  balanceSection: {
-    alignItems: 'flex-end',
+  infoItem: {
+    flex: 1,
+    gap: 4,
   },
-  balanceLabel: {
-    fontSize: 11,
-    marginBottom: 2,
-    color: '#9CA3AF',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  infoLabel: {
+    fontSize: 13,
   },
   balanceValue: {
     fontSize: 16,

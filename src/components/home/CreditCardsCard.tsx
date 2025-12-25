@@ -1,11 +1,13 @@
 import { View, StyleSheet, Pressable, Modal } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useState, useMemo, memo } from 'react';
+import React, { useState, useMemo, memo, useEffect } from 'react';
 import { useAppTheme } from '../../contexts/themeContext';
 import { getShadow } from '../../theme';
 import { formatCurrencyBRL } from '../../utils/format';
 import { CreditCard } from '../../types/firebase';
+import { getCreditCardTransactionsByMonth, calculateBillTotal } from '../../services/creditCardBillService';
+import { useAuth } from '../../contexts/authContext';
 
 interface Props {
   cards?: CreditCard[];
@@ -82,12 +84,66 @@ const getCardUsageStatus = (totalUsed: number, totalIncome: number, colors: any)
 
 export default memo(function CreditCardsCard({ cards = [], totalBills = 0, totalIncome = 0, onCardPress, onAddPress }: Props) {
   const { colors } = useAppTheme();
+  const { user } = useAuth();
   const [showStatusModal, setShowStatusModal] = useState(false);
+  const [currentBills, setCurrentBills] = useState<Record<string, number>>({});
 
-  // Calcular total usado em todos os cartões
+  // Mês atual
+  const currentDate = new Date();
+  const currentMonth = currentDate.getMonth() + 1;
+  const currentYear = currentDate.getFullYear();
+
+  // Buscar faturas do mês atual para cada cartão
+  useEffect(() => {
+    const fetchCurrentBills = async () => {
+      if (!user?.uid || cards.length === 0) return;
+      
+      console.log('🔍 Buscando transações do mês atual:', { 
+        userId: user.uid, 
+        month: currentMonth, 
+        year: currentYear,
+        cardsCount: cards.length 
+      });
+      
+      const billsMap: Record<string, number> = {};
+      
+      for (const card of cards) {
+        try {
+          // Buscar transações do cartão no mês atual
+          const transactions = await getCreditCardTransactionsByMonth(
+            user.uid, 
+            card.id, 
+            currentMonth, 
+            currentYear
+          );
+          
+          // Calcular total da fatura
+          const totalAmount = calculateBillTotal(transactions);
+          
+          console.log(`💳 Fatura do cartão ${card.name}:`, { 
+            cardId: card.id, 
+            transactionsCount: transactions.length,
+            totalAmount 
+          });
+          
+          billsMap[card.id] = totalAmount;
+        } catch (error) {
+          console.error(`Erro ao buscar fatura do cartão ${card.id}:`, error);
+          billsMap[card.id] = 0;
+        }
+      }
+      
+      console.log('📊 Faturas carregadas:', billsMap);
+      setCurrentBills(billsMap);
+    };
+    
+    fetchCurrentBills();
+  }, [cards, user?.uid, currentMonth, currentYear]);
+
+  // Calcular total usado apenas nas faturas do mês atual
   const totalUsed = useMemo(() => {
-    return cards.reduce((sum, card) => sum + (card.currentUsed || 0), 0);
-  }, [cards]);
+    return Object.values(currentBills).reduce((sum, amount) => sum + amount, 0);
+  }, [currentBills]);
 
   // Status do uso dos cartões
   const usageStatus = useMemo(() => {
@@ -100,62 +156,69 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
     return (totalUsed / totalIncome) * 100;
   }, [totalUsed, totalIncome]);
 
-  // Componente de item do cartão (compacto e moderno)
-  const CardItem = ({ card }: { card: CreditCard }) => {
+  // Componente de item do cartão (layout minimalista)
+  const CardItem = ({ card, index }: { card: CreditCard; index: number }) => {
     const cardColor = getCardColor(card.name, card.color);
-    const used = card.currentUsed || 0;
-    const available = card.limit - used;
+    const billAmount = currentBills[card.id] || 0;
+    
+    console.log(`🎴 Renderizando cartão ${card.name}:`, { 
+      cardId: card.id, 
+      billAmount, 
+      currentBills,
+      hasValue: currentBills[card.id] !== undefined 
+    });
     
     // Determinar status da fatura
     const today = new Date().getDate();
-    const isPaid = used === 0;
+    const isPaid = billAmount === 0;
     const isPending = !isPaid && today <= card.dueDay;
     const isOverdue = !isPaid && today > card.dueDay;
     
-    const getStatusBadge = () => {
-      if (isOverdue) return { text: 'Vencida', color: colors.expense };
-      if (isPending) return { text: 'Pendente', color: colors.textMuted };
+    const getStatusText = () => {
+      if (isPaid) return null;
+      if (isOverdue) return 'Vencida';
+      if (isPending) return 'Pendente';
       return null;
     };
     
-    const statusBadge = getStatusBadge();
+    const getStatusColor = () => {
+      if (isOverdue) return colors.expense;
+      return colors.textMuted;
+    };
+    
+    const statusText = getStatusText();
     
     return (
-      <Pressable
-        onPress={() => onCardPress?.(card)}
-        style={({ pressed }) => [
-          styles.cardItem,
-          { 
-            backgroundColor: lightBg,
-            borderColor: colors.border,
-            opacity: pressed ? 0.7 : 1,
-          }
-        ]}
-      >
-        <View style={styles.cardContent}>
-          {/* Ícone + Nome do cartão + Status */}
-          <View style={styles.topRow}>
-            <View style={[styles.cardIconSmall, { backgroundColor: `${cardColor}15` }]}>
-              <MaterialCommunityIcons
-                name={(card.icon as any) || 'credit-card'}
-                size={24}
-                color={cardColor}
-              />
-            </View>
-            <Text style={[styles.cardNameCompact, { color: colors.text }]} numberOfLines={1}>
+      <>
+        {index > 0 && (
+          <View style={[styles.divider, { borderColor: colors.border }]} />
+        )}
+        <Pressable
+          onPress={() => onCardPress?.(card)}
+          style={({ pressed }) => [
+            styles.cardItem,
+            { opacity: pressed ? 0.7 : 1 }
+          ]}
+        >
+          {/* Primeira linha: ícone + nome + status */}
+          <View style={styles.cardHeader}>
+            <MaterialCommunityIcons
+              name={(card.icon as any) || 'credit-card'}
+              size={20}
+              color={cardColor}
+            />
+            <Text style={[styles.cardName, { color: colors.text }]} numberOfLines={1}>
               {card.name}
             </Text>
-            {statusBadge && (
-              <View style={[styles.statusBadgeCompact, { backgroundColor: `${statusBadge.color}15` }]}>
-                <Text style={[styles.statusTextCompact, { color: statusBadge.color }]}>
-                  {statusBadge.text}
-                </Text>
-              </View>
+            {statusText && (
+              <Text style={[styles.statusText, { color: getStatusColor() }]}>
+                {statusText}
+              </Text>
             )}
           </View>
 
-          {/* Vencimento + Valor da fatura */}
-          <View style={styles.infoRow}>
+          {/* Segunda linha: vencimento + valor da fatura */}
+          <View style={styles.cardInfo}>
             <View style={styles.infoItem}>
               <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Vencimento</Text>
               <Text style={[styles.infoValue, { color: colors.text }]}>
@@ -163,14 +226,14 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
               </Text>
             </View>
             <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Fatura</Text>
-              <Text style={[styles.infoValue, { color: colors.text }]}>
-                {formatCurrencyBRL(used)}
+              <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Valor da fatura:</Text>
+              <Text style={[styles.billValue, { color: billAmount > 0 ? colors.expense : colors.text }]}>
+                {formatCurrencyBRL(billAmount)}
               </Text>
             </View>
           </View>
-        </View>
-      </Pressable>
+        </Pressable>
+      </>
     );
   };
 
@@ -209,8 +272,8 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
 
       {/* Lista de cartões */}
       <View style={styles.cardsList}>
-        {cards.map((card) => (
-          <CardItem key={card.id} card={card} />
+        {cards.map((card, index) => (
+          <CardItem key={card.id} card={card} index={index} />
         ))}
       </View>
 
@@ -286,12 +349,12 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
 
             <View style={[styles.modalDivider, { backgroundColor: colors.border }]} />
 
-            {/* Detalhes por cartão */}
+            {/* Detalhes por cartão - apenas mês atual */}
             <View style={styles.modalCardsList}>
               <Text style={[styles.modalSectionTitle, { color: colors.text }]}>
-                Por cartão
+                Por cartão (mês atual)
               </Text>
-              {cards.filter(c => (c.currentUsed || 0) > 0).map((card) => (
+              {cards.filter(c => (currentBills[c.id] || 0) > 0).map((card) => (
                 <View key={card.id} style={styles.modalCardItem}>
                   <View style={styles.modalCardInfo}>
                     <View style={[styles.modalCardIcon, { backgroundColor: `${getCardColor(card.name, card.color)}15` }]}>
@@ -306,13 +369,13 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
                     </Text>
                   </View>
                   <Text style={[styles.modalCardValue, { color: colors.expense }]}>
-                    {formatCurrencyBRL(card.currentUsed || 0)}
+                    {formatCurrencyBRL(currentBills[card.id] || 0)}
                   </Text>
                 </View>
               ))}
-              {cards.filter(c => (c.currentUsed || 0) > 0).length === 0 && (
+              {cards.filter(c => (currentBills[c.id] || 0) > 0).length === 0 && (
                 <Text style={[styles.modalEmptyText, { color: colors.textMuted }]}>
-                  Nenhuma fatura em aberto
+                  Nenhuma fatura em aberto no mês atual
                 </Text>
               )}
             </View>
@@ -376,59 +439,47 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   cardsList: {
-    gap: 12,
+    gap: 0,
   },
   cardItem: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
+    paddingVertical: 16,
   },
-  cardContent: {
-    padding: 16,
-    gap: 12,
+  divider: {
+    borderBottomWidth: 1,
+    borderStyle: 'dashed',
+    marginVertical: 0,
   },
-  topRow: {
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    gap: 8,
+    marginBottom: 10,
   },
-  cardIconSmall: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  cardNameCompact: {
+  cardName: {
     flex: 1,
     fontSize: 15,
     fontWeight: '600',
-    lineHeight: 20,
   },
-  statusBadgeCompact: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+  statusText: {
+    fontSize: 13,
+    fontWeight: '500',
   },
-  statusTextCompact: {
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  infoRow: {
+  cardInfo: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 16,
+    gap: 24,
   },
   infoItem: {
     flex: 1,
     gap: 4,
   },
   infoLabel: {
-    fontSize: 12,
-    fontWeight: '500',
+    fontSize: 13,
   },
   infoValue: {
-    fontSize: 15,
+    fontSize: 14,
+  },
+  billValue: {
+    fontSize: 16,
     fontWeight: '600',
   },
   emptyState: {

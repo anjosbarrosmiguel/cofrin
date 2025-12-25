@@ -6,6 +6,18 @@
   <meta name="theme-color" content="#5B3CC4" />
   <meta name="description" content="Cofrin - Controle financeiro pessoal simples e eficiente" />
   
+  <!-- PWA Manifest -->
+  <link rel="manifest" href="/manifest.json" />
+  
+  <!-- iOS PWA Meta Tags -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Cofrin" />
+  <link rel="apple-touch-icon" href="/icons/ios/180.png" />
+  <link rel="apple-touch-icon" sizes="152x152" href="/icons/ios/152.png" />
+  <link rel="apple-touch-icon" sizes="167x167" href="/icons/ios/167.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/icons/ios/180.png" />
+  
   <!-- Preconnect para recursos externos (melhora LCP) -->
   <link rel="preconnect" href="https://firebaseapp.com" crossorigin />
   <link rel="preconnect" href="https://meu-app-cofrin.firebaseapp.com" crossorigin />
@@ -71,5 +83,20 @@
   <div id="root-loading">
     <div class="spinner"></div>
   </div>
+  
+  <!-- Registro do Service Worker para PWA -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function() {
+        navigator.serviceWorker.register('/sw.js')
+          .then(function(registration) {
+            console.log('SW registrado:', registration.scope);
+          })
+          .catch(function(error) {
+            console.log('SW falhou:', error);
+          });
+      });
+    }
+  </script>
 </body>
 </html>

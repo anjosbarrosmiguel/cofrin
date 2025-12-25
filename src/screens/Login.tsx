@@ -5,6 +5,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { login, sendPasswordReset } from "../services/auth";
 import { useGoogleAuth } from "../services/googleAuth";
 import { checkNetworkConnection, reconnectFirestore } from "../utils/networkUtils";
+import { InstallAppButton } from "../components/InstallAppButton";
 
 // Design System Roxo Premium
 const LOGIN_COLORS = {
@@ -293,6 +294,9 @@ export default function Login({ navigation }: any) {
               Não tem conta? <Text style={styles.registerTextBold}>Criar agora</Text>
             </Text>
           </Pressable>
+
+          {/* Botão de instalação PWA - apenas web mobile */}
+          <InstallAppButton />
         </View>
       </ScrollView>
 

@@ -47,10 +47,102 @@ export default function CategoryDetails() {
   const [expenseData, setExpenseData] = useState<any>(null);
   const [incomeData, setIncomeData] = useState<any>(null);
   const [showYearPicker, setShowYearPicker] = useState(false);
+  
+  // Estado para carregamento progressivo
+  const [historicalLoaded, setHistoricalLoaded] = useState(false);
+  const [loadingHistorical, setLoadingHistorical] = useState(false);
 
+  // Carregar dados do mês/ano selecionado (rápido)
+  const loadCurrentPeriodData = useCallback(async () => {
+    if (!user) return;
+
+    try {
+      // Buscar apenas o mês atual - muito mais rápido!
+      const [expenseCategories, incomeCategories] = await Promise.all([
+        transactionService.getExpensesByCategory(user.uid, selectedMonth, selectedYear),
+        transactionService.getIncomesByCategory(user.uid, selectedMonth, selectedYear),
+      ]);
+
+      // Estrutura compatível com o formato anterior
+      const expenseMonthData = {
+        month: selectedMonth,
+        year: selectedYear,
+        categories: expenseCategories,
+      };
+      
+      const incomeMonthData = {
+        month: selectedMonth,
+        year: selectedYear,
+        categories: incomeCategories,
+      };
+
+      // Merge com dados existentes ou criar novo
+      setExpenseData((prev: any) => {
+        if (!prev) {
+          return { monthlyData: [expenseMonthData], yearlyData: [] };
+        }
+        // Atualizar/adicionar mês atual
+        const existing = prev.monthlyData.filter(
+          (m: any) => !(m.month === selectedMonth && m.year === selectedYear)
+        );
+        return { ...prev, monthlyData: [...existing, expenseMonthData] };
+      });
+
+      setIncomeData((prev: any) => {
+        if (!prev) {
+          return { monthlyData: [incomeMonthData], yearlyData: [] };
+        }
+        const existing = prev.monthlyData.filter(
+          (m: any) => !(m.month === selectedMonth && m.year === selectedYear)
+        );
+        return { ...prev, monthlyData: [...existing, incomeMonthData] };
+      });
+    } catch (error) {
+      console.error('Erro ao carregar dados do período:', error);
+    }
+  }, [user, selectedMonth, selectedYear]);
+
+  // Carregar dados históricos para insights (background)
+  const loadHistoricalData = useCallback(async () => {
+    if (!user || historicalLoaded || loadingHistorical) return;
+
+    setLoadingHistorical(true);
+    try {
+      const currentYear = new Date().getFullYear();
+      
+      const [expenses, incomes] = await Promise.all([
+        transactionService.getCategoryDataOverTime(user.uid, currentYear - 3, currentYear, 'expense'),
+        transactionService.getCategoryDataOverTime(user.uid, currentYear - 3, currentYear, 'income'),
+      ]);
+
+      setExpenseData(expenses);
+      setIncomeData(incomes);
+      setHistoricalLoaded(true);
+    } catch (error) {
+      console.error('Erro ao carregar dados históricos:', error);
+    } finally {
+      setLoadingHistorical(false);
+    }
+  }, [user, historicalLoaded, loadingHistorical]);
+
+  // Carregamento inicial - período atual primeiro (rápido)
   useEffect(() => {
-    loadData();
+    const init = async () => {
+      setLoading(true);
+      await loadCurrentPeriodData();
+      setLoading(false);
+      // Carregar histórico em background após mostrar dados atuais
+      loadHistoricalData();
+    };
+    init();
   }, [user]);
+
+  // Recarregar quando mudar mês/ano
+  useEffect(() => {
+    if (!loading) {
+      loadCurrentPeriodData();
+    }
+  }, [selectedMonth, selectedYear]);
 
   const loadData = async (isRefreshing = false) => {
     if (!user) return;
@@ -60,16 +152,18 @@ export default function CategoryDetails() {
     }
     
     try {
+      // Reset histórico para forçar recarga
+      setHistoricalLoaded(false);
+      await loadCurrentPeriodData();
+      // Carregar histórico em background
       const currentYear = new Date().getFullYear();
-      
-      // Carregar dados de despesas e receitas em paralelo
       const [expenses, incomes] = await Promise.all([
         transactionService.getCategoryDataOverTime(user.uid, currentYear - 3, currentYear, 'expense'),
         transactionService.getCategoryDataOverTime(user.uid, currentYear - 3, currentYear, 'income'),
       ]);
-
       setExpenseData(expenses);
       setIncomeData(incomes);
+      setHistoricalLoaded(true);
     } catch (error) {
       console.error('Erro ao carregar dados de categorias:', error);
     } finally {
@@ -84,18 +178,19 @@ export default function CategoryDetails() {
   // Refresh quando refreshKey mudar (após salvar transação)
   useEffect(() => {
     if (refreshKey > 0) {
-      loadData(true);
+      // Apenas recarregar período atual - não precisa de todo o histórico
+      loadCurrentPeriodData();
     }
-  }, [refreshKey]);
+  }, [refreshKey, loadCurrentPeriodData]);
 
-  // Refresh quando a tela ganhar foco
+  // Refresh quando a tela ganhar foco - apenas período atual
   useFocusEffect(
     useCallback(() => {
-      loadData(true);
-    }, [user])
+      loadCurrentPeriodData();
+    }, [loadCurrentPeriodData])
   );
 
-  // Pull to refresh
+  // Pull to refresh - recarrega tudo incluindo histórico
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     loadData(true);

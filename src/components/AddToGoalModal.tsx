@@ -124,10 +124,10 @@ export default function AddToGoalModal({ visible, onClose, onSave, goal, progres
       onRequestClose={handleClose}
     >
       <KeyboardAvoidingView 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={{ flex: 1 }}
       >
-        <View style={[styles.fullscreenModal, { backgroundColor: colors.bg, paddingTop: insets.top }]}>
+        <View style={[styles.fullscreenModal, { backgroundColor: colors.bg, paddingTop: insets.top, paddingHorizontal: Platform.OS === 'web' ? 12 : 0 }]}>
           {/* Header */}
           <View style={[styles.fullscreenHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.fullscreenTitle, { color: colors.text }]}>Adicionar à meta</Text>
@@ -147,7 +147,8 @@ export default function AddToGoalModal({ visible, onClose, onSave, goal, progres
                 <MaterialCommunityIcons 
                   name={(goal.icon as any) || 'flag-checkered'} 
                   size={24} 
-                  color={colors.primary} 
+                  color={colors.primary}
+                  style={{ marginRight: spacing.sm }}
                 />
                 <Text style={[styles.goalName, { color: colors.text }]}>{goal.name}</Text>
               </View>
@@ -171,7 +172,8 @@ export default function AddToGoalModal({ visible, onClose, onSave, goal, progres
               <MaterialCommunityIcons 
                 name={isGoalComplete ? "check-circle" : "flag-checkered"} 
                 size={18} 
-                color={isGoalComplete ? colors.success : colors.primary} 
+                color={isGoalComplete ? colors.success : colors.primary}
+                style={{ marginRight: spacing.sm }}
               />
               <Text style={[styles.remainingText, { color: isGoalComplete ? colors.success : colors.primary }]}>
                 {isGoalComplete 
@@ -242,28 +244,13 @@ export default function AddToGoalModal({ visible, onClose, onSave, goal, progres
                     value={amount}
                     onChangeText={handleAmountChange}
                     keyboardType="numeric"
-                    autoFocus
+                      autoFocus={Platform.OS !== 'web'}
                   />
                 </View>
               </>
             )}
 
-            {/* Sugestões rápidas - esconder se meta completa */}
-            {!isGoalComplete && suggestions.length > 0 && (
-              <View style={styles.suggestions}>
-                {suggestions.map((value) => (
-                  <Pressable
-                    key={value}
-                    onPress={() => setAmount(formatCurrency((value * 100).toString()))}
-                    style={[styles.suggestionChip, { backgroundColor: colors.bg, borderColor: colors.border }]}
-                  >
-                    <Text style={[styles.suggestionText, { color: colors.text }]}>
-                      +R$ {value}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            )}
+            {/* Sugestões rápidas removidas por solicitação */}
 
             {/* Erro */}
             {error ? (
@@ -331,6 +318,9 @@ const styles = StyleSheet.create({
   modalBody: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
+    width: '100%',
+    maxWidth: 720,
+    alignSelf: 'center',
   },
   goalInfo: {
     padding: spacing.md,
@@ -340,7 +330,6 @@ const styles = StyleSheet.create({
   goalHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
     marginBottom: spacing.sm,
   },
   goalName: {
@@ -348,9 +337,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     flex: 1,
   },
-  goalProgress: {
-    gap: spacing.xs,
-  },
+  goalProgress: {},
   progressTrack: {
     height: 8,
     borderRadius: 4,
@@ -366,7 +353,6 @@ const styles = StyleSheet.create({
   remainingBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
     padding: spacing.md,
     borderRadius: borderRadius.md,
     marginBottom: spacing.lg,
@@ -379,7 +365,6 @@ const styles = StyleSheet.create({
   noAccountsBox: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: spacing.sm,
     padding: spacing.md,
     borderRadius: borderRadius.md,
     marginBottom: spacing.md,
@@ -392,7 +377,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 0,
   },
   accountsList: {
-    gap: spacing.sm,
     paddingHorizontal: 0,
   },
   accountCard: {
@@ -401,6 +385,7 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     borderWidth: 1,
     minWidth: 120,
+    marginRight: spacing.sm,
   },
   accountName: {
     fontSize: 14,
@@ -437,7 +422,6 @@ const styles = StyleSheet.create({
   suggestions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: spacing.sm,
     marginBottom: spacing.md,
   },
   suggestionChip: {
@@ -445,6 +429,8 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
     borderWidth: 1,
+    marginRight: spacing.sm,
+    marginBottom: spacing.sm,
   },
   suggestionText: {
     fontSize: 14,
@@ -457,7 +443,6 @@ const styles = StyleSheet.create({
   },
   buttons: {
     flexDirection: 'row',
-    gap: spacing.md,
     marginTop: spacing.sm,
   },
   cancelButton: {
@@ -465,6 +450,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: borderRadius.md,
     paddingVertical: 14,
+    marginRight: spacing.md,
     alignItems: 'center',
   },
   cancelButtonText: {
@@ -474,7 +460,6 @@ const styles = StyleSheet.create({
   saveButton: {
     flex: 1,
     flexDirection: 'row',
-    gap: spacing.xs,
     borderRadius: borderRadius.md,
     paddingVertical: 14,
     alignItems: 'center',

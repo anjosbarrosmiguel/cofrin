@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator, StyleSheet, Platform, ScrollView } from "react-native";
-import useResponsiveFont from '../hooks/useResponsiveFont';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { login, sendPasswordReset } from "../services/auth";
@@ -31,12 +30,6 @@ export default function Login({ navigation }: any) {
   const { request, promptAsync, isAuthenticating: googleLoading } = useGoogleAuth();
 
   const loading = emailLoading || googleLoading;
-
-  const { getStyle } = useResponsiveFont();
-
-  const appNameStyle = getStyle('h1');
-  const taglineStyle = getStyle('body');
-  const cardTitleStyle = getStyle('h3');
 
   // Verificar conexão ao montar e quando houver erro de rede
   useEffect(() => {
@@ -129,15 +122,15 @@ export default function Login({ navigation }: any) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header com ícone e título */}
+        {/* Header compacto - design moderno */}
         <View style={styles.header}>
-          <View style={styles.iconContainer}>
-            <MaterialCommunityIcons name="piggy-bank" size={64} color="#fff" />
+          <View style={styles.brandRow}>
+            <View style={styles.iconContainer}>
+              <MaterialCommunityIcons name="piggy-bank" size={32} color="#fff" />
+            </View>
+            <Text style={styles.appName}>Cofrin</Text>
           </View>
-          <Text style={[styles.appName, appNameStyle]}>Cofrin</Text>
-          <Text style={[styles.tagline, taglineStyle]}>
-            Controle financeiro pessoal
-          </Text>
+          <Text style={styles.tagline}>Seu controle financeiro simplificado</Text>
         </View>
 
         {/* Card de Login */}
@@ -150,16 +143,15 @@ export default function Login({ navigation }: any) {
             </View>
           )}
           
-          <Text style={[styles.cardTitle, cardTitleStyle]}>Bem-vindo de volta!</Text>
+          <Text style={styles.cardTitle}>Bem-vindo de volta!</Text>
 
           <View style={[
             styles.inputContainer,
-            { borderColor: focusedField === 'email' ? LOGIN_COLORS.primary : '#E0E0E0' }
+            focusedField === 'email' && styles.inputFocused
           ]}>
-            <MaterialCommunityIcons name="email-outline" size={20} color="#6B6B6B" style={styles.inputIcon} />
             <TextInput
               placeholder="Email"
-              placeholderTextColor="#6B6B6B"
+              placeholderTextColor="#9CA3AF"
               value={email}
               onChangeText={setEmail}
               autoCapitalize="none"
@@ -173,12 +165,11 @@ export default function Login({ navigation }: any) {
 
           <View style={[
             styles.inputContainer,
-            { borderColor: focusedField === 'password' ? LOGIN_COLORS.primary : '#E0E0E0' }
+            focusedField === 'password' && styles.inputFocused
           ]}>
-            <MaterialCommunityIcons name="lock-outline" size={20} color="#6B6B6B" style={styles.inputIcon} />
             <TextInput
               placeholder="Senha"
-              placeholderTextColor="#6B6B6B"
+              placeholderTextColor="#9CA3AF"
               value={password}
               onChangeText={setPassword}
               secureTextEntry={!showPassword}
@@ -190,12 +181,13 @@ export default function Login({ navigation }: any) {
             <Pressable
               onPress={() => setShowPassword((s) => !s)}
               style={styles.eyeButton}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
               accessibilityLabel={showPassword ? "Ocultar senha" : "Mostrar senha"}
             >
               <MaterialCommunityIcons 
-                name={showPassword ? "eye-off" : "eye"} 
+                name={showPassword ? "eye-off-outline" : "eye-outline"} 
                 size={20} 
-                color="#6B6B6B" 
+                color="#9CA3AF" 
               />
             </Pressable>
           </View>
@@ -211,12 +203,11 @@ export default function Login({ navigation }: any) {
             <View style={styles.resetContainer}>
               <View style={[
                 styles.inputContainer,
-                { borderColor: focusedField === 'resetEmail' ? LOGIN_COLORS.primary : '#E0E0E0' }
+                focusedField === 'resetEmail' && styles.inputFocused
               ]}>
-                <MaterialCommunityIcons name="email-outline" size={20} color="#6B6B6B" style={styles.inputIcon} />
                 <TextInput
                   placeholder="Digite seu e-mail"
-                  placeholderTextColor="#6B6B6B"
+                  placeholderTextColor="#9CA3AF"
                   value={resetEmail}
                   onChangeText={setResetEmail}
                   autoCapitalize="none"
@@ -329,34 +320,39 @@ const styles = StyleSheet.create({
     backgroundColor: '#5B3CC4',
   },
   scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: 24,
     paddingBottom: 32,
   },
   header: {
     alignItems: 'center',
-    paddingTop: 24,
-    paddingBottom: 24,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginRight: 12,
   },
   appName: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     color: '#fff',
-    marginBottom: 8,
   },
   tagline: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.95)',
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.85)',
     textAlign: 'center',
-    lineHeight: 22,
   },
   card: {
     backgroundColor: '#F7F6F2',
@@ -388,23 +384,23 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
     borderRadius: 12,
     marginBottom: 12,
     paddingHorizontal: 16,
     paddingVertical: Platform.select({ ios: 2, default: 0 }),
   },
-  inputIcon: {
-    marginRight: 12,
+  inputFocused: {
+    borderColor: '#5B3CC4',
+    backgroundColor: '#FAFAFA',
   },
   input: {
     flex: 1,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#2E2E2E',
+    color: '#1F2937',
     ...Platform.select({
       web: {
         // web-specific outline removal removed to satisfy TypeScript TextStyle

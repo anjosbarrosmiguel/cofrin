@@ -9,7 +9,6 @@ import {
     Platform,
     ScrollView,
 } from "react-native";
-import useResponsiveFont from '../hooks/useResponsiveFont';
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { register } from "../services/auth";
@@ -29,11 +28,6 @@ export default function Register({ navigation }: any) {
   const [error, setError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  const { getStyle } = useResponsiveFont();
-  const appNameStyle = getStyle('h1');
-  const taglineStyle = getStyle('body');
-  const cardTitleStyle = getStyle('h3');
 
   function validateEmail(email: string) {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -95,26 +89,25 @@ export default function Register({ navigation }: any) {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* Header com ícone */}
+        {/* Header compacto */}
         <View style={styles.header}>
-          <View style={styles.iconContainer}>
-            <MaterialCommunityIcons name="piggy-bank" size={64} color="#fff" />
+          <View style={styles.brandRow}>
+            <View style={styles.iconContainer}>
+              <MaterialCommunityIcons name="piggy-bank" size={32} color="#fff" />
+            </View>
+            <Text style={styles.appName}>Criar Conta</Text>
           </View>
-            <Text style={[styles.appName, appNameStyle]}>Criar Conta</Text>
-            <Text style={[styles.tagline, taglineStyle]}>
-              Controle financeiro pessoal
-            </Text>
+          <Text style={styles.tagline}>Junte-se ao Cofrin e organize suas finanças</Text>
         </View>
 
       {/* Card de Registro */}
       <View style={styles.card}>
-        <Text style={[styles.cardTitle, cardTitleStyle]}>Preencha seus dados</Text>
+        <Text style={styles.cardTitle}>Preencha seus dados</Text>
 
         <View style={styles.inputContainer}>
-          <MaterialCommunityIcons name="email-outline" size={20} color="#6B6B6B" style={styles.inputIcon} />
           <TextInput
             placeholder="Email"
-            placeholderTextColor="#6B6B6B"
+            placeholderTextColor="#9CA3AF"
             value={email}
             onChangeText={setEmail}
             autoCapitalize="none"
@@ -126,10 +119,9 @@ export default function Register({ navigation }: any) {
 
         <Text style={styles.fieldLabel}>SENHA ( mínimo 6 caracteres )</Text>
         <View style={styles.inputContainer}>
-          <MaterialCommunityIcons name="lock-outline" size={20} color="#6B6B6B" style={styles.inputIcon} />
           <TextInput
             placeholder="Senha"
-            placeholderTextColor="#6B6B6B"
+            placeholderTextColor="#9CA3AF"
             value={password}
             onChangeText={setPassword}
             secureTextEntry={!showPassword}
@@ -139,21 +131,21 @@ export default function Register({ navigation }: any) {
           <Pressable
             onPress={() => setShowPassword((s) => !s)}
             style={styles.eyeButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityLabel={showPassword ? "Ocultar senha" : "Mostrar senha"}
           >
             <MaterialCommunityIcons 
-              name={showPassword ? "eye-off" : "eye"} 
+              name={showPassword ? "eye-off-outline" : "eye-outline"} 
               size={20} 
-              color="#6B6B6B" 
+              color="#9CA3AF" 
             />
           </Pressable>
         </View>
 
         <View style={styles.inputContainer}>
-          <MaterialCommunityIcons name="lock-check-outline" size={20} color="#6B6B6B" style={styles.inputIcon} />
           <TextInput
             placeholder="Confirme sua senha"
-            placeholderTextColor="#6B6B6B"
+            placeholderTextColor="#9CA3AF"
             value={confirmPassword}
             onChangeText={setConfirmPassword}
             secureTextEntry={!showConfirmPassword}
@@ -163,12 +155,13 @@ export default function Register({ navigation }: any) {
           <Pressable
             onPress={() => setShowConfirmPassword((s) => !s)}
             style={styles.eyeButton}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityLabel={showConfirmPassword ? "Ocultar senha" : "Mostrar senha"}
           >
             <MaterialCommunityIcons 
-              name={showConfirmPassword ? "eye-off" : "eye"} 
+              name={showConfirmPassword ? "eye-off-outline" : "eye-outline"} 
               size={20} 
-              color="#6B6B6B" 
+              color="#9CA3AF" 
             />
           </Pressable>
         </View>
@@ -223,34 +216,39 @@ const styles = StyleSheet.create({
     backgroundColor: '#5B3CC4',
   },
   scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     paddingHorizontal: 24,
     paddingBottom: 32,
   },
   header: {
     alignItems: 'center',
-    paddingTop: 24,
-    paddingBottom: 24,
+    paddingTop: 16,
+    paddingBottom: 12,
+  },
+  brandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   iconContainer: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 16,
+    marginRight: 12,
   },
   appName: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: '700',
     color: '#fff',
-    marginBottom: 8,
   },
   tagline: {
-    fontSize: 15,
-    color: 'rgba(255,255,255,0.95)',
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.85)',
     textAlign: 'center',
-    lineHeight: 22,
   },
   card: {
     backgroundColor: '#F7F6F2',
@@ -282,24 +280,22 @@ const styles = StyleSheet.create({
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EEF1F4',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
     borderRadius: 12,
     marginBottom: 12,
     paddingHorizontal: 16,
     paddingVertical: Platform.select({ ios: 2, default: 0 }),
   },
-  inputIcon: {
-    marginRight: 12,
-  },
   input: {
     flex: 1,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#2E2E2E',
+    color: '#1F2937',
     ...Platform.select({
       web: {
-        outlineStyle: 'none',
+        // Removed outlineStyle to fix TypeScript issue
       },
     }),
   },

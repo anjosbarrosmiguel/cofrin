@@ -13,7 +13,13 @@ import { useAllGoals } from "../hooks/useAllGoals";
 import { useTransactionRefresh } from "../contexts/transactionRefreshContext";
 import React, { useEffect, useMemo, useCallback, useState, lazy, Suspense, useDeferredValue } from "react";
 import MainLayout from "../components/MainLayout";
-import HomeShimmer from "../components/home/HomeShimmer";
+import {
+  UpcomingFlowsCardShimmer,
+  AccountsCardShimmer,
+  CreditCardsCardShimmer,
+  GoalCardShimmer,
+  CategoryCardShimmer
+} from "../components/home/HomeShimmer";
 import AccountsCard from "../components/home/AccountsCard";
 import { UpcomingFlowsCard } from "../components/home";
 import TopCategoriesCard from "../components/TopCategoriesCard";
@@ -81,13 +87,13 @@ export default function Home() {
   const { activeCards, refresh: refreshCreditCards, loading: loadingCards } = useCreditCards();
 
   // Hook de gastos por categoria
-  const { expenses: categoryExpenses } = useExpensesByCategory(currentMonth, currentYear);
+  const { expenses: categoryExpenses, loading: loadingCategoryExpenses } = useExpensesByCategory(currentMonth, currentYear);
 
   // Hook de receitas por categoria
-  const { incomes: categoryIncomes } = useIncomesByCategory(currentMonth, currentYear);
+  const { incomes: categoryIncomes, loading: loadingCategoryIncomes } = useIncomesByCategory(currentMonth, currentYear);
 
   // Hook de meta financeira
-  const { goal, progressPercentage, refresh: refreshGoal } = useGoal();
+  const { goal, progressPercentage, refresh: refreshGoal, loading: loadingGoal } = useGoal();
   
   // Hook de todas as metas (para validar duplicatas)
   const { goals: allGoals, refresh: refreshAllGoals } = useAllGoals();
@@ -97,8 +103,8 @@ export default function Home() {
   const deferredCategoryIncomes = useDeferredValue(categoryIncomes);
   const deferredGoal = useDeferredValue(goal);
 
-  // Determinar se ainda está carregando dados iniciais
-  const isLoading = loadingTransactions || loadingAccounts || loadingCards;
+  // Loading por seção para carregamento progressivo
+  const loadingCategories = loadingCategoryExpenses || loadingCategoryIncomes;
 
   // Retry automático para novos usuários (dados iniciais podem estar sendo criados)
   const [retryCount, setRetryCount] = useState(0);
@@ -277,78 +283,94 @@ export default function Home() {
       >
         <View style={styles.centeredContainer}>
           <View style={styles.content}>
-            {isLoading ? (
-              <HomeShimmer />
+            {/* Saudação - sempre visível imediatamente */}
+            <View style={styles.greetingSection}>
+              <View style={styles.greetingRow}>
+                <Text style={[styles.greeting, { color: colors.text }]}>
+                  {getGreeting().text}, {userName}
+                </Text>
+                <MaterialCommunityIcons 
+                  name={getGreeting().icon} 
+                  size={28} 
+                  color={colors.text} 
+                  style={styles.greetingIcon}
+                />
+              </View>
+            </View>
+
+            <View style={{ height: 16 }} />
+
+            {/* Card de contas a receber/pagar - carrega independente */}
+            {loadingPending && (pendingIncomes.length === 0 && pendingExpenses.length === 0) ? (
+              <UpcomingFlowsCardShimmer />
             ) : (
-              <>
-                {/* Saudação */}
-                <View style={styles.greetingSection}>
-                  <View style={styles.greetingRow}>
-                    <Text style={[styles.greeting, { color: colors.text }]}>
-                      {getGreeting().text}, {userName}
-                    </Text>
-                    <MaterialCommunityIcons 
-                      name={getGreeting().icon} 
-                      size={28} 
-                      color={colors.text} 
-                      style={styles.greetingIcon}
-                    />
-                  </View>
-                </View>
-
-                <View style={{ height: 16 }} />
-
-                {/* Card de contas a receber/pagar */}
-                <UpcomingFlowsCard
-                  incomeTransactions={pendingIncomes}
-                  expenseTransactions={pendingExpenses}
-                  loading={loadingPending}
-                />
-
-                <View style={{ height: 24 }} />
-
-                {/* 1. Onde está meu dinheiro */}
-                <AccountsCard 
-                  accounts={accounts}
-                  totalBalance={totalAccountsBalance}
-                  totalIncome={totalIncome}
-                  totalExpense={totalExpense}
-                  username={userName}
-                  onAccountPress={handleAccountPress}
-                  onAddPress={navigateToConfigureAccounts}
-                  showGreeting={false}
-                />
+              <UpcomingFlowsCard
+                incomeTransactions={pendingIncomes}
+                expenseTransactions={pendingExpenses}
+                loading={loadingPending}
+              />
+            )}
 
             <View style={{ height: 24 }} />
 
-            {/* 3. Meus cartões de crédito */}
-            <CreditCardsCard 
-              cards={activeCards}
-              totalIncome={totalIncome}
-              onCardPress={handleCreditCardPress}
-              onAddPress={handleAddCreditCard}
-            />
+            {/* 1. Onde está meu dinheiro - carrega independente */}
+            {loadingAccounts ? (
+              <AccountsCardShimmer />
+            ) : (
+              <AccountsCard 
+                accounts={accounts}
+                totalBalance={totalAccountsBalance}
+                totalIncome={totalIncome}
+                totalExpense={totalExpense}
+                username={userName}
+                onAccountPress={handleAccountPress}
+                onAddPress={navigateToConfigureAccounts}
+                showGreeting={false}
+              />
+            )}
 
             <View style={{ height: 24 }} />
 
-            {/* 4. Meta Financeira */}
-            <GoalCard 
-              goal={deferredGoal}
-              progressPercentage={progressPercentage}
-              onCreatePress={openGoalModal}
-              onManagePress={navigateToManageGoals}
-              onAddPress={openAddToGoalModal}
-            />
+            {/* 2. Meus cartões de crédito - carrega independente */}
+            {loadingCards ? (
+              <CreditCardsCardShimmer />
+            ) : (
+              <CreditCardsCard 
+                cards={activeCards}
+                totalIncome={totalIncome}
+                onCardPress={handleCreditCardPress}
+                onAddPress={handleAddCreditCard}
+              />
+            )}
 
             <View style={{ height: 24 }} />
 
-            {/* 5. Resumo por Categoria */}
-            <TopCategoriesCard
-              expenses={deferredCategoryExpenses}
-              incomes={deferredCategoryIncomes}
-              totalExpenses={report?.expense || totalExpense}
-              totalIncomes={report?.income || totalIncome}
-            />
+            {/* 3. Meta Financeira - carrega independente */}
+            {loadingGoal ? (
+              <GoalCardShimmer />
+            ) : (
+              <GoalCard 
+                goal={deferredGoal}
+                progressPercentage={progressPercentage}
+                onCreatePress={openGoalModal}
+                onManagePress={navigateToManageGoals}
+                onAddPress={openAddToGoalModal}
+              />
+            )}
+
+            <View style={{ height: 24 }} />
+
+            {/* 4. Resumo por Categoria - carrega independente */}
+            {loadingCategories ? (
+              <CategoryCardShimmer />
+            ) : (
+              <TopCategoriesCard
+                expenses={deferredCategoryExpenses}
+                incomes={deferredCategoryIncomes}
+                totalExpenses={report?.expense || totalExpense}
+                totalIncomes={report?.income || totalIncome}
+              />
+            )}
 
             {/* Modais - Lazy loaded com Suspense */}
             <Suspense fallback={null}>
@@ -377,8 +399,6 @@ export default function Home() {
                 />
               )}
             </Suspense>
-            </>
-            )}
           </View>
         </View>
       </ScrollView>

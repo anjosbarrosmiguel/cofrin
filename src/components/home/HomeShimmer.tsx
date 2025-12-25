@@ -68,8 +68,20 @@ function ShimmerCard({ children, style }: { children: React.ReactNode; style?: a
   );
 }
 
+// Shimmer do UpcomingFlowsCard
+export function UpcomingFlowsCardShimmer() {
+  return (
+    <ShimmerCard>
+      <View style={styles.listItem}>
+        <ShimmerBlock width={280} height={16} />
+        <ShimmerBlock width={24} height={24} borderRadiusValue={12} />
+      </View>
+    </ShimmerCard>
+  );
+}
+
 // Shimmer do AccountsCard
-function AccountsCardShimmer() {
+export function AccountsCardShimmer() {
   return (
     <ShimmerCard>
       {/* Header */}
@@ -101,7 +113,7 @@ function AccountsCardShimmer() {
 }
 
 // Shimmer do CreditCardsCard
-function CreditCardsCardShimmer() {
+export function CreditCardsCardShimmer() {
   return (
     <ShimmerCard>
       {/* Header */}
@@ -127,7 +139,7 @@ function CreditCardsCardShimmer() {
 }
 
 // Shimmer do GoalCard
-function GoalCardShimmer() {
+export function GoalCardShimmer() {
   return (
     <ShimmerCard>
       {/* Header */}
@@ -153,7 +165,7 @@ function GoalCardShimmer() {
 }
 
 // Shimmer do TransactionsByCategoryCard
-function CategoryCardShimmer() {
+export function CategoryCardShimmer() {
   return (
     <ShimmerCard>
       {/* Header */}

@@ -11,7 +11,7 @@ import { useCreditCards } from "../hooks/useCreditCards";
 import { useGoal } from "../hooks/useGoal";
 import { useAllGoals } from "../hooks/useAllGoals";
 import { useTransactionRefresh } from "../contexts/transactionRefreshContext";
-import { useEffect, useMemo, useCallback, useState } from "react";
+import React, { useEffect, useMemo, useCallback, useState, lazy, Suspense } from "react";
 import MainLayout from "../components/MainLayout";
 import HomeShimmer from "../components/home/HomeShimmer";
 import AccountsCard from "../components/home/AccountsCard";
@@ -19,13 +19,15 @@ import UpcomingFlowsCard from "../components/home/UpcomingFlowsCard";
 import TopCategoriesCard from "../components/TopCategoriesCard";
 import CreditCardsCard from "../components/home/CreditCardsCard";
 import GoalCard from "../components/home/GoalCard";
-import CreateGoalModal from "../components/CreateGoalModal";
-import AddToGoalModal from "../components/AddToGoalModal";
 import { ACCOUNT_TYPE_LABELS } from "../types/firebase";
 import { Timestamp } from "firebase/firestore";
 import * as goalService from "../services/goalService";
 import * as transactionService from "../services/transactionService";
 import * as categoryService from "../services/categoryService";
+
+// Lazy load modais pesados - carregam apenas quando necessário
+const CreateGoalModal = lazy(() => import("../components/CreateGoalModal"));
+const AddToGoalModal = lazy(() => import("../components/AddToGoalModal"));
 
 export default function Home() {
   const { user } = useAuth();
@@ -209,28 +211,36 @@ export default function Home() {
   }, [accounts]);
 
   // Navegar para lançamentos com filtro de conta
-  const handleAccountPress = (account: { id?: string; name: string }) => {
+  const handleAccountPress = useCallback((account: { id?: string; name: string }) => {
     if (account.id) {
       navigation.navigate('Lançamentos', { 
         accountId: account.id, 
         accountName: account.name 
       });
     }
-  };
+  }, [navigation]);
 
   // Navegar para fatura do cartão de crédito
-  const handleCreditCardPress = (card: any) => {
+  const handleCreditCardPress = useCallback((card: any) => {
     navigation.navigate('CreditCardBillDetails', {
       creditCardId: card.id,
       creditCardName: card.name,
       month: currentMonth,
       year: currentYear,
     });
-  };
+  }, [navigation, currentMonth, currentYear]);
 
-  const handleAddCreditCard = () => {
+  const handleAddCreditCard = useCallback(() => {
     navigation.navigate('CreditCards', { openCreate: true });
-  };
+  }, [navigation]);
+
+  // Callbacks memoizados para evitar re-renders dos componentes filhos
+  const openGoalModal = useCallback(() => setShowGoalModal(true), []);
+  const closeGoalModal = useCallback(() => setShowGoalModal(false), []);
+  const openAddToGoalModal = useCallback(() => setShowAddToGoalModal(true), []);
+  const closeAddToGoalModal = useCallback(() => setShowAddToGoalModal(false), []);
+  const navigateToManageGoals = useCallback(() => navigation.navigate('ManageGoals'), [navigation]);
+  const navigateToConfigureAccounts = useCallback(() => navigation.navigate('ConfigureAccounts'), [navigation]);
 
   // Refresh quando refreshKey mudar
   useEffect(() => {
@@ -300,7 +310,7 @@ export default function Home() {
                   totalExpense={totalExpense}
                   username={userName}
                   onAccountPress={handleAccountPress}
-                  onAddPress={() => navigation.navigate('ConfigureAccounts')}
+                  onAddPress={navigateToConfigureAccounts}
                   showGreeting={false}
                 />
 
@@ -320,9 +330,9 @@ export default function Home() {
             <GoalCard 
               goal={goal}
               progressPercentage={progressPercentage}
-              onCreatePress={() => setShowGoalModal(true)}
-              onManagePress={() => navigation.navigate('ManageGoals')}
-              onAddPress={() => setShowAddToGoalModal(true)}
+              onCreatePress={openGoalModal}
+              onManagePress={navigateToManageGoals}
+              onAddPress={openAddToGoalModal}
             />
 
             <View style={{ height: 24 }} />
@@ -335,27 +345,33 @@ export default function Home() {
               totalIncomes={report?.income || totalIncome}
             />
 
-            {/* Modais */}
-            <CreateGoalModal
-              visible={showGoalModal}
-              onClose={() => setShowGoalModal(false)}
-              onSave={handleSaveGoal}
-              onDelete={handleDeleteGoal}
-              existingGoal={goal}
-              existingGoals={allGoals}
-              progressPercentage={progressPercentage}
-            />
+            {/* Modais - Lazy loaded com Suspense */}
+            <Suspense fallback={null}>
+              {showGoalModal && (
+                <CreateGoalModal
+                  visible={showGoalModal}
+                  onClose={closeGoalModal}
+                  onSave={handleSaveGoal}
+                  onDelete={handleDeleteGoal}
+                  existingGoal={goal}
+                  existingGoals={allGoals}
+                  progressPercentage={progressPercentage}
+                />
+              )}
+            </Suspense>
 
-            {goal && (
-              <AddToGoalModal
-                visible={showAddToGoalModal}
-                onClose={() => setShowAddToGoalModal(false)}
-                onSave={handleAddToGoal}
-                goal={goal}
-                progressPercentage={progressPercentage}
-                accounts={accounts}
-              />
-            )}
+            <Suspense fallback={null}>
+              {goal && showAddToGoalModal && (
+                <AddToGoalModal
+                  visible={showAddToGoalModal}
+                  onClose={closeAddToGoalModal}
+                  onSave={handleAddToGoal}
+                  goal={goal}
+                  progressPercentage={progressPercentage}
+                  accounts={accounts}
+                />
+              )}
+            </Suspense>
             </>
             )}
           </View>

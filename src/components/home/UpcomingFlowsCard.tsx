@@ -1,8 +1,8 @@
+import React, { memo, useMemo, useState } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useMemo, useState } from 'react';
 import { useAppTheme } from '../../contexts/themeContext';
 import { spacing, borderRadius, getShadow } from '../../theme';
 import { formatCurrencyBRL } from '../../utils/format';
@@ -14,7 +14,7 @@ interface Props {
   loading?: boolean;
 }
 
-export default function UpcomingFlowsCard({
+export default memo(function UpcomingFlowsCard({
   incomeTransactions,
   expenseTransactions,
   loading = false,
@@ -142,7 +142,7 @@ export default function UpcomingFlowsCard({
       </View>
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

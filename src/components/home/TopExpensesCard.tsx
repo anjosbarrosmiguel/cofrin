@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -29,7 +29,7 @@ const primaryDark = '#4A2FA8';
 
 type TopCount = 3 | 5 | 10;
 
-export default function TopExpensesCard({ onDetailsPress }: Props) {
+export default memo(function TopExpensesCard({ onDetailsPress }: Props) {
   const { colors } = useAppTheme();
   const [topCount, setTopCount] = useState<TopCount>(5);
   
@@ -204,7 +204,7 @@ export default function TopExpensesCard({ onDetailsPress }: Props) {
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

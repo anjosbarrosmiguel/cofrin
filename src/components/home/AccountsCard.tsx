@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -43,7 +44,7 @@ const titleGray = '#6B7280';
 // Fundo mais claro para visual moderno
 const lightBg = '#FAFAFA';
 
-export default function AccountsCard({ 
+export default memo(function AccountsCard({ 
   accounts = [], 
   username = 'Usuário',
   totalBalance,
@@ -193,7 +194,7 @@ export default function AccountsCard({
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

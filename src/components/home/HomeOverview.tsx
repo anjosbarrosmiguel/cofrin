@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { View, StyleSheet } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -12,7 +13,7 @@ interface Props {
   onSaveTransaction?: () => void;
 }
 
-export default function HomeOverview({ 
+export default memo(function HomeOverview({ 
   username = 'Usuário', 
   revenue = 0, 
   expenses = 0, 
@@ -110,7 +111,7 @@ export default function HomeOverview({
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

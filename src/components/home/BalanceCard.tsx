@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -27,7 +28,7 @@ const getAvatarColor = (name: string): string => {
   return colors[index];
 };
 
-export default function BalanceCard({ balance = 0, accounts = [], onAccountPress, onAddPress }: Props) {
+export default memo(function BalanceCard({ balance = 0, accounts = [], onAccountPress, onAddPress }: Props) {
   const { colors } = useAppTheme();
 
   // Account item component
@@ -125,7 +126,7 @@ export default function BalanceCard({ balance = 0, accounts = [], onAccountPress
       )}
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

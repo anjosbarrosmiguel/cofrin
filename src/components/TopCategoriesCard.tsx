@@ -1,10 +1,10 @@
+import React, { memo, useMemo } from 'react';
 import { View, StyleSheet, Pressable, Platform } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../contexts/themeContext';
 import { formatCurrencyBRL } from '../utils/format';
-import { useMemo } from 'react';
 
 // ====================================================
 // DESIGN TOKENS - Premium Financial App Style
@@ -74,7 +74,7 @@ interface Props {
   totalIncomes?: number;
 }
 
-export default function TopCategoriesCard({
+export default memo(function TopCategoriesCard({
   expenses = [],
   incomes = [],
   totalExpenses = 0,
@@ -217,7 +217,7 @@ export default function TopCategoriesCard({
       </Pressable>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   // ====================================================

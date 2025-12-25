@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { View, Text, StyleSheet, Pressable } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppTheme } from '../../contexts/themeContext';
@@ -24,7 +25,7 @@ interface TopCategoryCardProps {
   onPress?: () => void;
 }
 
-export default function TopCategoryCard({ expenses, totalExpenses, onPress }: TopCategoryCardProps) {
+export default memo(function TopCategoryCard({ expenses, totalExpenses, onPress }: TopCategoryCardProps) {
   const { colors } = useAppTheme();
 
   if (!expenses || expenses.length === 0) {
@@ -99,7 +100,7 @@ export default function TopCategoryCard({ expenses, totalExpenses, onPress }: To
       </Text>
     </Pressable>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

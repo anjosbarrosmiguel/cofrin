@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { View, Text, StyleSheet, Pressable, Alert } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppTheme } from '../../contexts/themeContext';
@@ -12,7 +13,7 @@ interface FinancialHealthCardProps {
   balance: number;
 }
 
-export default function FinancialHealthCard({ income, expense, balance }: FinancialHealthCardProps) {
+export default memo(function FinancialHealthCard({ income, expense, balance }: FinancialHealthCardProps) {
   const { colors } = useAppTheme();
 
   // Calcular status da saúde financeira
@@ -121,7 +122,7 @@ export default function FinancialHealthCard({ income, expense, balance }: Financ
       </Pressable>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

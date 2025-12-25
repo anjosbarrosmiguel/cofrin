@@ -1,3 +1,4 @@
+import React, { memo } from 'react';
 import { View, StyleSheet, Pressable } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -19,7 +20,7 @@ interface Props {
   onAddPress?: () => void;
 }
 
-export default function GoalCard({ goal, progressPercentage, onCreatePress, onManagePress, onAddPress }: Props) {
+export default memo(function GoalCard({ goal, progressPercentage, onCreatePress, onManagePress, onAddPress }: Props) {
   const { colors } = useAppTheme();
   
   // Verificar se meta está completa
@@ -131,7 +132,7 @@ export default function GoalCard({ goal, progressPercentage, onCreatePress, onMa
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

@@ -1,7 +1,7 @@
 import { View, StyleSheet, Pressable, Modal } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { useAppTheme } from '../../contexts/themeContext';
 import { getShadow } from '../../theme';
 import { formatCurrencyBRL } from '../../utils/format';
@@ -80,7 +80,7 @@ const getCardUsageStatus = (totalUsed: number, totalIncome: number, colors: any)
   }
 };
 
-export default function CreditCardsCard({ cards = [], totalBills = 0, totalIncome = 0, onCardPress, onAddPress }: Props) {
+export default memo(function CreditCardsCard({ cards = [], totalBills = 0, totalIncome = 0, onCardPress, onAddPress }: Props) {
   const { colors } = useAppTheme();
   const [showStatusModal, setShowStatusModal] = useState(false);
 
@@ -350,7 +350,7 @@ export default function CreditCardsCard({ cards = [], totalBills = 0, totalIncom
       </Modal>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   card: {

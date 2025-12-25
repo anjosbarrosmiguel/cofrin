@@ -1,5 +1,5 @@
+import React, { memo, useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated } from 'react-native';
-import { useEffect, useRef } from 'react';
 import { useAppTheme } from '../../contexts/themeContext';
 import { getShadow, spacing, borderRadius } from '../../theme';
 
@@ -185,7 +185,7 @@ function CategoryCardShimmer() {
 }
 
 // Componente principal de shimmer da Home
-export default function HomeShimmer() {
+export default memo(function HomeShimmer() {
   return (
     <View style={styles.container}>
       <AccountsCardShimmer />
@@ -197,7 +197,7 @@ export default function HomeShimmer() {
       <CategoryCardShimmer />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {

@@ -744,11 +744,15 @@ export default function AddTransactionModal({
             : parsed
         );
 
+        // Criar data com horário meio-dia para evitar problemas de timezone
+        const dateWithNoon = new Date(transactionDate);
+        dateWithNoon.setHours(12, 0, 0, 0);
+
         const data: CreateTransactionInput = {
           type: firebaseType,
           amount: transactionAmount,
           description: description.trim() || categoryName,
-          date: Timestamp.fromDate(transactionDate),
+          date: Timestamp.fromDate(dateWithNoon),
           recurrence,
           status: transactionStatus,
         };

@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { StyleSheet, View, Text, Pressable } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Timestamp } from 'firebase/firestore';
 import { formatCurrencyBRL } from '../../utils/format';
 import { useAppTheme } from '../../contexts/themeContext';
 import { spacing, borderRadius, getShadow } from '../../theme';
@@ -13,6 +14,7 @@ interface Props {
   billYear: number;
   totalAmount: number;
   isPaid: boolean;
+  dueDate?: Timestamp;
   isLastInGroup?: boolean;
   onPress: () => void;
 }
@@ -31,20 +33,20 @@ function CreditCardBillItemComponent({
   billYear,
   totalAmount,
   isPaid,
+  dueDate,
   isLastInGroup = false,
   onPress,
 }: Props) {
   const { colors } = useAppTheme();
   
   const monthName = MONTHS_SHORT[billMonth - 1] || '';
-  const title = `Fatura ${creditCardName}`;
-  const subtitle = `${monthName}/${billYear}`;
+  const title = `Fatura ${monthName} ${billYear}`;
   
   // Cor do valor - laranja para despesa (sem vermelho)
   const amountColor = colors.expense;
   
-  // Badge de status - verde se pago, cinza se pendente
-  const badgeColor = isPaid ? colors.success : colors.textMuted;
+  // Badge de status - usar cor warning (#f59e0b) para pendente, igual ao card meus cartões
+  const badgeColor = isPaid ? colors.success : '#f59e0b';
   const badgeIcon = isPaid ? 'check' : 'clock-outline';
   const badgeText = isPaid ? 'Paga' : 'Pendente';
 
@@ -68,21 +70,27 @@ function CreditCardBillItemComponent({
         />
       </View>
       
-      {/* Conteúdo central - Título e Subtítulo */}
+      {/* Conteúdo - Layout de duas linhas */}
       <View style={styles.content}>
+        {/* Linha 1: Fatura Dez 2025 */}
         <Text style={[styles.title, { color: colors.text }]} numberOfLines={1}>
           {title}
         </Text>
+        
+        {/* Linha 2: Nome do cartão */}
         <Text style={[styles.subtitle, { color: colors.textMuted }]} numberOfLines={1}>
-          {subtitle}
+          {creditCardName}
         </Text>
       </View>
       
       {/* Coluna direita - Valor e Badge */}
       <View style={styles.rightColumn}>
+        {/* Valor */}
         <Text style={[styles.amount, { color: amountColor }]}>
           {formatCurrencyBRL(-totalAmount)}
         </Text>
+        
+        {/* Badge de status */}
         <View style={[styles.badge, { backgroundColor: badgeColor + '15' }]}>
           <MaterialCommunityIcons name={badgeIcon} size={12} color={badgeColor} />
           <Text style={[styles.badgeText, { color: badgeColor }]}>{badgeText}</Text>
@@ -116,25 +124,24 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     marginLeft: spacing.md,
+    gap: 4,
+    justifyContent: 'center',
+  },
+  rightColumn: {
+    gap: 4,
+    alignItems: 'flex-end',
     justifyContent: 'center',
   },
   title: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '600',
-    marginBottom: 2,
   },
   subtitle: {
     fontSize: 12,
   },
-  rightColumn: {
-    alignItems: 'flex-end',
-    justifyContent: 'center',
-    marginLeft: spacing.sm,
-  },
   amount: { 
     fontWeight: '700', 
-    fontSize: 16,
-    marginBottom: 4,
+    fontSize: 15,
   },
   badge: {
     flexDirection: 'row',

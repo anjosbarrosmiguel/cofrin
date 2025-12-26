@@ -111,30 +111,34 @@ function TransactionItemComponent({
         {renderIcon()}
       </View>
       
-      {/* Conteúdo central - Título e Subtítulo */}
+      {/* Conteúdo - Layout de duas linhas */}
       <View style={styles.content}>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-          <Text 
-            style={[
-              styles.title, 
-              { color: status === 'pending' ? colors.textMuted : colors.text, flex: 1 }
-            ]} 
-            numberOfLines={2}
-          >
-            {title}
-            {isLocked && (
-              <>
-                <Text> </Text>
-                <MaterialCommunityIcons name="lock" size={11} color={colors.textMuted} />
-              </>
-            )}
-          </Text>
-        </View>
-        {subtitle && (
-          <Text style={[styles.subtitle, { color: colors.textMuted }]} numberOfLines={1}>
-            {subtitle}
-          </Text>
-        )}
+        {/* Linha 1: Título */}
+        <Text 
+          style={[
+            styles.title, 
+            { color: status === 'pending' ? colors.textMuted : colors.text }
+          ]} 
+          numberOfLines={1}
+        >
+          {title}
+          {isLocked && (
+            <>
+              <Text> </Text>
+              <MaterialCommunityIcons name="lock" size={11} color={colors.textMuted} />
+            </>
+          )}
+        </Text>
+        
+        {/* Linha 2: Conta */}
+        <Text style={[styles.subtitle, { color: colors.textMuted }]} numberOfLines={1}>
+          {subtitle}
+        </Text>
+        
+        {/* Linha 3: Valor */}
+        <Text style={[styles.amount, { color: status === 'pending' ? colors.textMuted : color }]}>
+          {formatCurrencyBRL(amount)}
+        </Text>
         {installmentCurrent && installmentTotal && (
           <View style={[styles.installmentBadge, { backgroundColor: colors.primaryBg }]}>
             <Text style={[styles.installmentText, { color: colors.primary }]}>
@@ -168,28 +172,23 @@ function TransactionItemComponent({
         )}
       </View>
       
-      {/* Coluna direita - Valor e ícone de feedback */}
-      <View style={styles.rightColumn}>
-        <Text style={[styles.amount, { color: status === 'pending' ? colors.textMuted : color }]}>
-          {formatCurrencyBRL(amount)}
-        </Text>
-        {!isLocked && onStatusPress && (
-          <Pressable
-            onPress={onStatusPress}
-            hitSlop={10}
-            style={({ pressed }) => [
-              styles.feedbackButton,
-              { opacity: pressed ? 0.5 : 1 }
-            ]}
-          >
-            <MaterialCommunityIcons 
-              name={statusIcon} 
-              size={24} 
-              color={statusColor}
-            />
-          </Pressable>
-        )}
-      </View>
+      {/* Ícone de status à direita */}
+      {!isLocked && onStatusPress && (
+        <Pressable
+          onPress={onStatusPress}
+          hitSlop={10}
+          style={({ pressed }) => [
+            styles.statusButton,
+            { opacity: pressed ? 0.5 : 1 }
+          ]}
+        >
+          <MaterialCommunityIcons 
+            name={status === 'completed' ? 'check-circle' : 'clock-outline'} 
+            size={24} 
+            color={statusColor}
+          />
+        </Pressable>
+      )}
     </Pressable>
   );
 }
@@ -222,30 +221,25 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     marginRight: spacing.sm,
+    gap: 4,
   },
   title: {
-    fontSize: 15,
+    fontSize: 12,
     fontWeight: '600',
-    lineHeight: 20,
+    lineHeight: 16,
   },
   subtitle: {
     fontSize: 12,
     lineHeight: 16,
-    marginTop: 4,
-  },
-  rightColumn: {
-    alignItems: 'flex-end',
-    justifyContent: 'flex-start',
-    flexShrink: 0,
   },
   amount: { 
     fontWeight: '700', 
-    fontSize: 16,
-    lineHeight: 20,
+    fontSize: 12,
+    lineHeight: 16,
   },
-  feedbackButton: {
-    marginTop: 2,
-    padding: 2,
+  statusButton: {
+    padding: spacing.xs,
+    flexShrink: 0,
   },
   lockedLabel: {
     fontSize: 10,

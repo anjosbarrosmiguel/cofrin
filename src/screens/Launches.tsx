@@ -566,6 +566,7 @@ export default function Launches() {
                         billYear={bill.year}
                         totalAmount={bill.totalAmount}
                         isPaid={bill.isPaid}
+                        dueDate={bill.dueDate}
                         onPress={() => handleBillPress(bill)}
                       />
                     ))

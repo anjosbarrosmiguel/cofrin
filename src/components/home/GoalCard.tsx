@@ -18,36 +18,29 @@ export default memo(function GoalCard({ onPress }: Props) {
   const { colors } = useAppTheme();
 
   return (
-    <View style={[styles.card, { backgroundColor: '#fff' }, getShadow(colors)]}>
-      <View style={styles.header}>
-        <View style={[styles.iconCircle, { backgroundColor: primaryBg }]}>
-          <MaterialCommunityIcons name="target" size={20} color={primary} />
-        </View>
-        <Text style={[styles.title, { color: primaryDark }]}>Meta financeira</Text>
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.card,
+        { backgroundColor: '#fff' },
+        getShadow(colors),
+        pressed && { opacity: 0.95 }
+      ]}
+    >
+      <View style={[styles.iconCircle, { backgroundColor: primaryBg }]}>
+        <MaterialCommunityIcons name="target" size={20} color={primary} />
       </View>
-
-      <Text style={[styles.description, { color: colors.textMuted }]}>
-        Ter um objetivo claro torna suas escolhas financeiras mais fáceis.
-      </Text>
-
-      <Pressable
-        onPress={onPress}
-        style={({ pressed }) => [
-          styles.button,
-          { backgroundColor: primary },
-          pressed && { opacity: 0.85 }
-        ]}
-      >
-        <Text style={styles.buttonText}>Acompanhar metas</Text>
-        <MaterialCommunityIcons name="arrow-right" size={16} color="#fff" />
-      </Pressable>
-    </View>
+      <Text style={[styles.title, { color: primaryDark }]}>Acompanhar metas financeiras</Text>
+      <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
+    </Pressable>
   );
 });
 
 const styles = StyleSheet.create({
   card: {
-    padding: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
     borderRadius: 24,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -55,39 +48,17 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 3,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    gap: 12,
-  },
   iconCircle: {
     width: 40,
     height: 40,
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 12,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  description: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  button: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingVertical: 12,
-    borderRadius: 12,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 14,
+    flex: 1,
+    fontSize: 16,
     fontWeight: '600',
   },
 });

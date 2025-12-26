@@ -46,4 +46,5 @@ export const COLLECTIONS = {
   CREDIT_CARD_BILLS: 'creditCardBills',
   GOALS: 'goals',
   USER_PREFERENCES: 'userPreferences',
+  OPERACOES_ATIVOS: 'operacoes_ativos',
 } as const;

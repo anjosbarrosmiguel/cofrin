@@ -23,6 +23,8 @@ const Launches = lazy(() => import("../screens/Launches"));
 const Goals = lazy(() => import("../screens/Goals"));
 const MyGoals = lazy(() => import("../screens/MyGoals"));
 const ManageGoals = lazy(() => import("../screens/ManageGoals"));
+const MinhasAcoes = lazy(() => import("../screens/MinhasAcoes"));
+const ImportarMovimentacoesAtivos = lazy(() => import("../screens/ImportarMovimentacoesAtivos"));
 
 import { useAuth } from "../contexts/authContext";
 
@@ -59,6 +61,8 @@ const LaunchesScreen = withSuspense(Launches);
 const GoalsScreen = withSuspense(Goals);
 const MyGoalsScreen = withSuspense(MyGoals);
 const ManageGoalsScreen = withSuspense(ManageGoals);
+const MinhasAcoesScreen = withSuspense(MinhasAcoes);
+const ImportarMovimentacoesAtivosScreen = withSuspense(ImportarMovimentacoesAtivos);
 
 // Configuração de Deep Linking
 const linking = {
@@ -74,6 +78,7 @@ const linking = {
 
 export default function RootNavigation() {
   const { user, loading } = useAuth();
+  const canAccessAtivosBeta = (user?.email ?? '').toLowerCase() === 'thiago.w3c@gmail.com';
 
   if (loading) {
     // Tela de loading durante verificação
@@ -97,6 +102,12 @@ export default function RootNavigation() {
           <Stack.Screen name="CreditCardBillDetails" component={CreditCardBillDetailsScreen} />
           <Stack.Screen name="Categories" component={CategoriesScreen} />
           <Stack.Screen name="CategoryDetails" component={CategoryDetailsScreen} />
+          {canAccessAtivosBeta ? (
+            <>
+              <Stack.Screen name="Minhas ações" component={MinhasAcoesScreen} />
+              <Stack.Screen name="Importar movimentações" component={ImportarMovimentacoesAtivosScreen} />
+            </>
+          ) : null}
           <Stack.Screen name="About" component={AboutScreen} />
           <Stack.Screen name="Education" component={EducationScreen} />
         </Stack.Navigator>

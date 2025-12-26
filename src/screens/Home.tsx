@@ -1,4 +1,4 @@
-import { View, StyleSheet, ScrollView, useWindowDimensions } from "react-native";
+import { View, StyleSheet, ScrollView, useWindowDimensions, Pressable } from "react-native";
 import { Text } from "react-native-paper";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -8,6 +8,7 @@ import { useAppTheme } from "../contexts/themeContext";
 import { useHomeData } from "../hooks/useHomeData";
 import React, { useCallback, useState, useEffect, lazy, Suspense, useDeferredValue } from "react";
 import MainLayout from "../components/MainLayout";
+import { getShadow } from "../theme";
 import {
   UpcomingFlowsCardShimmer,
   AccountsCardShimmer,
@@ -37,6 +38,7 @@ export default function Home() {
   const insets = useSafeAreaInsets();
   const isNarrow = width < 700;
   const userName = user?.displayName || user?.email?.split("@")?.[0] || "Usuário";
+  const canAccessAtivosBeta = (user?.email ?? '').toLowerCase() === 'thiago.w3c@gmail.com';
 
   // Determinar saudação baseada na hora
   const getGreeting = () => {
@@ -330,6 +332,33 @@ export default function Home() {
               />
             )}
 
+            <View style={{ height: 24 }} />
+
+            {/* Beta - último atalho na Home (restrito por e-mail) */}
+            {canAccessAtivosBeta ? (
+              <Pressable
+                onPress={() => navigation.navigate('Minhas ações')}
+                style={({ pressed }) => [
+                  styles.betaCard,
+                  { backgroundColor: colors.card },
+                  getShadow(colors),
+                  pressed && styles.betaCardPressed,
+                ]}
+                accessibilityLabel="Minhas ações (beta)"
+              >
+                <View style={styles.betaRow}>
+                  <View style={[styles.betaIconCircle, { backgroundColor: colors.primaryBg }]}>
+                    <MaterialCommunityIcons name="chart-line" size={18} color={colors.primary} />
+                  </View>
+                  <View style={styles.betaTextCol}>
+                    <Text style={[styles.betaTitle, { color: colors.text }]}>Minhas ações</Text>
+                    <Text style={[styles.betaSubtitle, { color: colors.textMuted }]}>Beta • Importar Excel e ver posições</Text>
+                  </View>
+                  <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
+                </View>
+              </Pressable>
+            ) : null}
+
             {/* Modais - Lazy loaded com Suspense */}
             <Suspense fallback={null}>
               {showGoalModal && (
@@ -388,5 +417,37 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     lineHeight: 36,
     letterSpacing: -0.5,
+  },
+  betaCard: {
+    borderRadius: 16,
+    padding: 16,
+  },
+  betaCardPressed: {
+    opacity: 0.92,
+    transform: [{ scale: 0.995 }],
+  },
+  betaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  betaIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  betaTextCol: {
+    flex: 1,
+  },
+  betaTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  betaSubtitle: {
+    marginTop: 2,
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

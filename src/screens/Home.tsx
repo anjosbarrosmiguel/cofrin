@@ -6,29 +6,20 @@ import { useNavigation, useFocusEffect } from "@react-navigation/native";
 import { useAuth } from "../contexts/authContext";
 import { useAppTheme } from "../contexts/themeContext";
 import { useHomeData } from "../hooks/useHomeData";
-import React, { useCallback, useState, useEffect, lazy, Suspense, useDeferredValue } from "react";
+import { useMonthlyGoals } from "../hooks/useMonthlyGoals";
+import React, { useCallback, useState, useEffect, useDeferredValue } from "react";
 import MainLayout from "../components/MainLayout";
 import { getShadow } from "../theme";
 import {
-  UpcomingFlowsCardShimmer,
-  AccountsCardShimmer,
-  CreditCardsCardShimmer,
-  GoalCardShimmer,
-  CategoryCardShimmer
+    UpcomingFlowsCardShimmer,
+    AccountsCardShimmer,
+    CreditCardsCardShimmer, CategoryCardShimmer
 } from "../components/home/HomeShimmer";
 import AccountsCard from "../components/home/AccountsCard";
 import { UpcomingFlowsCard } from "../components/home";
 import TopCategoriesCard from "../components/TopCategoriesCard";
 import CreditCardsCard from "../components/home/CreditCardsCard";
 import GoalCard from "../components/home/GoalCard";
-import { Timestamp } from "firebase/firestore";
-import * as goalService from "../services/goalService";
-import * as transactionService from "../services/transactionService";
-import * as categoryService from "../services/categoryService";
-
-// Lazy load modais pesados - carregam apenas quando necessário
-const CreateGoalModal = lazy(() => import("../components/CreateGoalModal"));
-const AddToGoalModal = lazy(() => import("../components/AddToGoalModal"));
 
 export default function Home() {
   const { user } = useAuth();
@@ -36,6 +27,7 @@ export default function Home() {
   const { width } = useWindowDimensions();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const { hasAlert } = useMonthlyGoals();
   const isNarrow = width < 700;
   const userName = user?.displayName || user?.email?.split("@")?.[0] || "Usuário";
   const canAccessAtivosBeta = (user?.email ?? '').toLowerCase() === 'thiago.w3c@gmail.com';
@@ -72,29 +64,21 @@ export default function Home() {
     // Cartões
     activeCards,
     
-    // Metas
-    primaryGoal: goal,
-    allGoals,
-    progressPercentage,
-    
     // Loading states
     loadingPending,
     loadingAccounts,
     loadingCards,
-    loadingGoal,
     loadingCategories,
     
     // Refresh functions
     refresh,
     refreshAccounts,
     refreshCards: refreshCreditCards,
-    refreshGoals,
   } = useHomeData(currentMonth, currentYear);
 
   // Usar useDeferredValue para dados não críticos (evita bloquear UI)
   const deferredCategoryExpenses = useDeferredValue(categoryExpenses);
   const deferredCategoryIncomes = useDeferredValue(categoryIncomes);
-  const deferredGoal = useDeferredValue(goal);
 
   // Retry automático para novos usuários (dados iniciais podem estar sendo criados)
   const [retryCount, setRetryCount] = useState(0);
@@ -111,86 +95,6 @@ export default function Home() {
       return () => clearTimeout(timer);
     }
   }, [loadingAccounts, accounts.length, retryCount]);
-
-  // Estado do modal de criação de meta
-  const [showGoalModal, setShowGoalModal] = useState(false);
-  const [showAddToGoalModal, setShowAddToGoalModal] = useState(false);
-
-  // Criar ou atualizar meta
-  const handleSaveGoal = async (data: {
-    name: string;
-    targetAmount: number;
-    targetDate: Date;
-    icon: string;
-  }) => {
-    if (!user) return;
-
-    if (goal) {
-      // Atualizar meta existente
-      await goalService.updateGoal(goal.id, {
-        name: data.name,
-        targetAmount: data.targetAmount,
-        targetDate: Timestamp.fromDate(data.targetDate),
-        icon: data.icon,
-      });
-    } else {
-      // Criar nova meta - calcular timeframe com base na data
-      const monthsDiff = Math.ceil((data.targetDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24 * 30));
-      const timeframe: 'short' | 'medium' | 'long' = 
-        monthsDiff <= 12 ? 'short' : monthsDiff <= 60 ? 'medium' : 'long';
-      
-      await goalService.createGoal(user.uid, {
-        name: data.name,
-        targetAmount: data.targetAmount,
-        targetDate: Timestamp.fromDate(data.targetDate),
-        timeframe,
-        icon: data.icon,
-        isActive: true,
-      }, true); // Definir como principal (primeira meta)
-    }
-    refreshGoals();
-  };
-
-  // Adicionar valor à meta (debita da conta selecionada e cria transação)
-  const handleAddToGoal = async (amount: number, accountId: string) => {
-    if (!goal || !user) return;
-    
-    const account = accounts.find(acc => acc.id === accountId);
-    if (!account) return;
-
-    // Buscar ou criar categoria de meta
-    const metaCategoryId = await categoryService.getOrCreateMetaCategory(user.uid);
-
-    // Criar transação de aporte em meta (expense da conta)
-    await transactionService.createTransaction(user.uid, {
-      type: 'expense',
-      amount: amount,
-      description: `Meta: ${goal.name}`,
-      date: Timestamp.now(),
-      accountId: accountId,
-      categoryId: metaCategoryId,
-      recurrence: 'none',
-      status: 'completed',
-      goalId: goal.id,
-      goalName: goal.name,
-    });
-    
-    // Adicionar à meta
-    await goalService.addToGoalProgress(goal.id, amount);
-    
-    // Atualizar dados
-    refresh(); // Atualiza transações
-    refreshGoals();
-    refreshAccounts();
-  };
-
-  // Excluir meta
-  const handleDeleteGoal = async () => {
-    if (!goal || !user) return;
-    await goalService.deleteGoal(goal.id, user.uid);
-    refreshGoals();
-    refresh(); // Atualiza transações pois podem ter sido modificadas
-  };
 
   // Navegar para lançamentos com filtro de conta
   const handleAccountPress = useCallback((account: { id?: string; name: string }) => {
@@ -217,11 +121,7 @@ export default function Home() {
   }, [navigation]);
 
   // Callbacks memoizados para evitar re-renders dos componentes filhos
-  const openGoalModal = useCallback(() => setShowGoalModal(true), []);
-  const closeGoalModal = useCallback(() => setShowGoalModal(false), []);
-  const openAddToGoalModal = useCallback(() => setShowAddToGoalModal(true), []);
-  const closeAddToGoalModal = useCallback(() => setShowAddToGoalModal(false), []);
-  const navigateToManageGoals = useCallback(() => navigation.navigate('ManageGoals'), [navigation]);
+  const navigateToGoals = useCallback(() => navigation.navigate('Metas do ano'), [navigation]);
   const navigateToConfigureAccounts = useCallback(() => navigation.navigate('ConfigureAccounts'), [navigation]);
 
   // Refresh quando a tela ganhar foco (ex: voltar de Lançamentos)
@@ -249,12 +149,26 @@ export default function Home() {
                 <Text style={[styles.greeting, { color: colors.text }]}>
                   {getGreeting().text}, {userName}
                 </Text>
-                <MaterialCommunityIcons 
-                  name={getGreeting().icon} 
-                  size={28} 
-                  color={colors.text} 
-                  style={styles.greetingIcon}
-                />
+                <View style={styles.greetingIcons}>
+                  <MaterialCommunityIcons 
+                    name={getGreeting().icon} 
+                    size={28} 
+                    color={colors.text} 
+                    style={styles.greetingIcon}
+                  />
+                  {hasAlert && (
+                    <Pressable 
+                      onPress={() => navigation.navigate('Metas do ano', { activeTab: 'monthly' })}
+                      style={styles.alertButton}
+                    >
+                      <MaterialCommunityIcons 
+                        name="bell-alert" 
+                        size={24} 
+                        color="#f59e0b" 
+                      />
+                    </Pressable>
+                  )}
+                </View>
               </View>
             </View>
 
@@ -305,18 +219,8 @@ export default function Home() {
 
             <View style={{ height: 24 }} />
 
-            {/* 3. Meta Financeira - carrega independente */}
-            {loadingGoal ? (
-              <GoalCardShimmer />
-            ) : (
-              <GoalCard 
-                goal={deferredGoal}
-                progressPercentage={progressPercentage}
-                onCreatePress={openGoalModal}
-                onManagePress={navigateToManageGoals}
-                onAddPress={openAddToGoalModal}
-              />
-            )}
+            {/* 3. Meta Financeira - card fixo de navegação */}
+            <GoalCard onPress={navigateToGoals} />
 
             <View style={{ height: 24 }} />
 
@@ -358,34 +262,6 @@ export default function Home() {
                 </View>
               </Pressable>
             ) : null}
-
-            {/* Modais - Lazy loaded com Suspense */}
-            <Suspense fallback={null}>
-              {showGoalModal && (
-                <CreateGoalModal
-                  visible={showGoalModal}
-                  onClose={closeGoalModal}
-                  onSave={handleSaveGoal}
-                  onDelete={handleDeleteGoal}
-                  existingGoal={goal}
-                  existingGoals={allGoals}
-                  progressPercentage={progressPercentage}
-                />
-              )}
-            </Suspense>
-
-            <Suspense fallback={null}>
-              {goal && showAddToGoalModal && (
-                <AddToGoalModal
-                  visible={showAddToGoalModal}
-                  onClose={closeAddToGoalModal}
-                  onSave={handleAddToGoal}
-                  goal={goal}
-                  progressPercentage={progressPercentage}
-                  accounts={accounts}
-                />
-              )}
-            </Suspense>
           </View>
         </View>
       </ScrollView>
@@ -408,9 +284,18 @@ const styles = StyleSheet.create({
   greetingRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  greetingIcons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   greetingIcon: {
     marginLeft: 8,
+  },
+  alertButton: {
+    padding: 4,
   },
   greeting: {
     fontSize: 28,

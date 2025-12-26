@@ -216,6 +216,12 @@ export interface Goal extends BaseDocument {
   completedAt?: Timestamp;
   icon?: string;
   color?: string;
+  // Meta mensal
+  isMonthlyGoal?: boolean; // Identifica se é meta mensal
+  goalType?: 'expense' | 'income'; // Tipo da meta mensal
+  categoryId?: string; // ID da categoria associada
+  month?: number; // Mês da meta (1-12)
+  year?: number; // Ano da meta
 }
 
 export type CreateGoalInput = Omit<Goal, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'currentAmount'> & {

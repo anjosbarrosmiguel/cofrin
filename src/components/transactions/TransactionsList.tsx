@@ -2,6 +2,7 @@ import { View, Text, StyleSheet } from 'react-native';
 import TransactionItem from './TransactionItem';
 import { useAppTheme } from '../../contexts/themeContext';
 import { spacing } from '../../theme';
+import { Timestamp } from 'firebase/firestore';
 
 export interface TransactionListItem {
   id: string;
@@ -15,6 +16,10 @@ export interface TransactionListItem {
   categoryIcon?: string;
   status?: 'pending' | 'completed' | 'cancelled';
   goalName?: string; // Se for aporte em meta
+  installmentCurrent?: number;
+  installmentTotal?: number;
+  anticipatedFrom?: { month: number; year: number; date: Timestamp };
+  anticipationDiscount?: number;
 }
 
 interface Props { 
@@ -53,6 +58,10 @@ export default function TransactionsList({ items = [], onEditItem, onStatusPress
               categoryIcon={tx.categoryIcon}
               status={tx.status}
               goalName={tx.goalName}
+              installmentCurrent={tx.installmentCurrent}
+              installmentTotal={tx.installmentTotal}
+              anticipatedFrom={tx.anticipatedFrom}
+              anticipationDiscount={tx.anticipationDiscount}
               isLastInGroup={index === groups[d].length - 1}
               onEdit={() => onEditItem?.(tx)}
               onStatusPress={() => onStatusPress?.(tx)}

@@ -31,6 +31,7 @@ import { TransactionType, RecurrenceType, CreateTransactionInput, CATEGORY_ICONS
 import { useTransactionRefresh } from '../../contexts/transactionRefreshContext';
 import { validateBillForTransaction } from '../../services/creditCardBillService';
 import { useAuth } from '../../contexts/authContext';
+import { moveSeriesMonth, anticipateInstallment, deleteSeriesFromInstallment } from '../../services/transactionService';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -57,6 +58,13 @@ export interface EditableTransaction {
   goalId?: string;
   goalName?: string;
   seriesId?: string; // ID da série para transações recorrentes
+  installmentCurrent?: number; // Número da parcela atual (ex: 1)
+  installmentTotal?: number; // Total de parcelas (ex: 12)
+  month?: number; // Mês da fatura (1-12)
+  year?: number; // Ano da fatura
+  anticipatedFrom?: { month: number; year: number; date: Timestamp }; // Se foi antecipada
+  anticipationDiscount?: number; // Valor do desconto obtido na antecipação
+  relatedTransactionId?: string; // ID da transação relacionada (para descontos de antecipação)
 }
 
 interface Props {
@@ -64,7 +72,7 @@ interface Props {
   onClose: () => void;
   onSave?: () => void;
   onDelete?: (id: string) => void;
-  onDeleteSeries?: (seriesId: string) => void;
+  onDeleteSeries?: (seriesId: string, fromInstallment?: number) => void;
   initialType?: LocalTransactionType;
   editTransaction?: EditableTransaction | null;
 }
@@ -181,6 +189,11 @@ export default function AddTransactionModal({
   const [repetitions, setRepetitions] = useState(1); // Número de repetições (1-72)
   const [saving, setSaving] = useState(false);
   const [savingProgress, setSavingProgress] = useState<{ current: number; total: number } | null>(null);
+  
+  // Estados para antecipação de parcela
+  const [showAnticipateModal, setShowAnticipateModal] = useState(false);
+  const [hasDiscount, setHasDiscount] = useState(false);
+  const [discountAmount, setDiscountAmount] = useState('');
 
   // Single picker state - evita modais aninhados
   const [activePicker, setActivePicker] = useState<PickerType>('none');
@@ -259,6 +272,35 @@ export default function AddTransactionModal({
     }
     return true;
   }, [type, accountId, toAccountId, hasAmount, description]);
+
+  // Verificar se a transação é de uma fatura futura (para mostrar botão de antecipar)
+  const isFutureInstallment = React.useMemo(() => {
+    if (!editTransaction || !editTransaction.creditCardId || editTransaction.anticipatedFrom) {
+      return false; // Não é cartão, não tem transação ou já foi antecipada
+    }
+    
+    const now = new Date();
+    const currentMonth = now.getMonth() + 1;
+    const currentYear = now.getFullYear();
+    
+    const txMonth = editTransaction.month || currentMonth;
+    const txYear = editTransaction.year || currentYear;
+    
+    // Verifica se a fatura da transação é futura
+    if (txYear > currentYear) {
+      return true;
+    } else if (txYear === currentYear && txMonth > currentMonth) {
+      return true;
+    }
+    
+    return false;
+  }, [editTransaction]);
+
+  // Verificar se é uma transação de desconto de antecipação (gerada automaticamente)
+  const isAnticipationDiscount = React.useMemo(() => {
+    if (!editTransaction) return false;
+    return Boolean(editTransaction.relatedTransactionId || editTransaction.description?.startsWith('Desconto antecipação - '));
+  }, [editTransaction]);
 
   // Filtrar categorias por tipo e organizar hierarquicamente
   const filteredCategories: Array<{ category: Category; isSubcategory: boolean }> = React.useMemo(() => {
@@ -474,6 +516,110 @@ export default function AddTransactionModal({
     },
     []
   );
+  
+  // Handler para mover série de transações
+  const handleMoveSeries = useCallback(async (monthsToMove: number) => {
+    if (!user?.uid || !editTransaction?.seriesId) return;
+    
+    const direction = monthsToMove > 0 ? 'próximo mês' : 'mês anterior';
+    const totalParcelas = editTransaction.installmentTotal || 0;
+    
+    showAlert(
+      'Mover Série Completa',
+      `Deseja mover todas as ${totalParcelas} parcelas desta série para o ${direction}?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Mover',
+          style: 'default',
+          onPress: async () => {
+            setSaving(true);
+            try {
+              const success = await moveSeriesMonth(user.uid, editTransaction.seriesId!, monthsToMove);
+              
+              if (success) {
+                showSnackbar(`Série movida para ${direction}!`);
+                // Recarregar dados e fechar modal
+                onSave?.();
+                onClose();
+              } else {
+                showAlert('Erro', 'Não foi possível mover a série de transações.', [
+                  { text: 'OK', style: 'default' }
+                ]);
+              }
+            } catch (error) {
+              console.error('Erro ao mover série:', error);
+              showAlert('Erro', 'Ocorreu um erro ao mover a série.', [
+                { text: 'OK', style: 'default' }
+              ]);
+            } finally {
+              setSaving(false);
+            }
+          }
+        }
+      ]
+    );
+  }, [user?.uid, editTransaction, showAlert, showSnackbar, onSave, onClose]);
+
+  const handleAnticipate = useCallback(async () => {
+    if (!user?.uid || !editTransaction?.id || !editTransaction?.creditCardId) return;
+    
+    const parcelaNum = editTransaction.installmentCurrent || 1;
+    const totalParcelas = editTransaction.installmentTotal || 1;
+    
+    setShowAnticipateModal(true);
+  }, [user?.uid, editTransaction]);
+
+  const confirmAnticipate = useCallback(async () => {
+    if (!user?.uid || !editTransaction?.id || !editTransaction?.creditCardId) return;
+    
+    setSaving(true);
+    setShowAnticipateModal(false);
+    
+    try {
+      const discount = hasDiscount && discountAmount ? parseCurrency(discountAmount) : 0;
+      
+      // Obter mês e ano atual
+      const now = new Date();
+      const currentMonth = now.getMonth() + 1; // 1-12
+      const currentYear = now.getFullYear();
+      
+      const result = await anticipateInstallment(
+        user.uid,
+        editTransaction.id,
+        currentMonth,
+        currentYear,
+        discount > 0 ? discount : undefined
+      );
+      
+      if (result.success) {
+        const parcelaNum = editTransaction.installmentCurrent || 1;
+        const totalParcelas = editTransaction.installmentTotal || 1;
+        const mensagem = discount > 0 
+          ? `Parcela ${parcelaNum}/${totalParcelas} antecipada com desconto de ${formatCurrency(Math.round(discount * 100).toString())}!`
+          : `Parcela ${parcelaNum}/${totalParcelas} antecipada!`;
+        
+        showSnackbar(mensagem);
+        // Resetar estados
+        setHasDiscount(false);
+        setDiscountAmount('');
+        // Recarregar dados e fechar modal
+        onSave?.();
+        onClose();
+      } else {
+        showAlert('Erro', 'Não foi possível antecipar a parcela.', [
+          { text: 'OK', style: 'default' }
+        ]);
+      }
+    } catch (error) {
+      console.error('Erro ao antecipar parcela:', error);
+      showAlert('Erro', 'Ocorreu um erro ao antecipar a parcela.', [
+        { text: 'OK', style: 'default' }
+      ]);
+    } finally {
+      setSaving(false);
+    }
+  }, [user?.uid, editTransaction, hasDiscount, discountAmount, showAlert, showSnackbar, onSave, onClose]);
 
   const handleSave = useCallback(async () => {
     const parsed = parseCurrency(amount);
@@ -583,7 +729,7 @@ export default function AddTransactionModal({
         : undefined;
 
       // Build base transaction data without undefined fields
-      const buildTransactionData = (transactionDate: Date, amountPerTransaction?: number): CreateTransactionInput => {
+      const buildTransactionData = (transactionDate: Date, amountPerTransaction?: number, installmentIndex?: number): CreateTransactionInput => {
         // Status baseado na data: futuro = pendente, passado/hoje = concluído
         const today = new Date();
         today.setHours(0, 0, 0, 0);
@@ -637,6 +783,12 @@ export default function AddTransactionModal({
         if (seriesId) {
           data.seriesId = seriesId;
         }
+        
+        // Adicionar informações de parcela se for transação parcelada
+        if (recurrence !== 'none' && repetitions > 1 && recurrenceType === 'installment' && installmentIndex !== undefined) {
+          data.installmentCurrent = installmentIndex + 1;
+          data.installmentTotal = repetitions;
+        }
 
         return data;
       };
@@ -656,7 +808,7 @@ export default function AddTransactionModal({
           for (let i = 0; i < totalToCreate; i++) {
             setSavingProgress({ current: i + 1, total: totalToCreate });
             const transactionDate = getNextDate(date, i);
-            const transactionData = buildTransactionData(transactionDate, amountPerInstallment);
+            const transactionData = buildTransactionData(transactionDate, amountPerInstallment, i);
             const result = await createTransaction(transactionData);
             if (result) {
               createdCount++;
@@ -696,7 +848,7 @@ export default function AddTransactionModal({
             setSavingProgress({ current: i + 1, total: totalToCreate });
           }
           const transactionDate = getNextDate(date, i);
-          const transactionData = buildTransactionData(transactionDate, amountPerInstallment);
+          const transactionData = buildTransactionData(transactionDate, amountPerInstallment, i);
           const result = await createTransaction(transactionData);
           if (result) {
             createdCount++;
@@ -1601,8 +1753,8 @@ export default function AddTransactionModal({
 
             {/* Header colorido com valor */}
             <View style={[styles.header, { backgroundColor: headerColor }]}> 
-              {/* Type selector com título integrado - ocultar para transações de meta */}
-              {!isGoalTransaction && !isMetaCategoryTransaction && (
+              {/* Type selector com título integrado - ocultar para transações de meta e descontos de antecipação */}
+              {!isGoalTransaction && !isMetaCategoryTransaction && !isAnticipationDiscount && (
                 <View style={styles.typeSelector}> 
                   {(['despesa', 'receita', 'transfer'] as LocalTransactionType[]).map((t) => (
                     <Pressable
@@ -1699,36 +1851,39 @@ export default function AddTransactionModal({
                   {/* Linha tracejada */}
                   <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
 
-                  {/* Campos sem wrapper - direto na lista */}
-                  {/* Campos sem wrapper - direto na lista */}
-                  {/* Categoria - não mostrar para transferências ou transações de meta */}
-                  {type !== 'transfer' && !isGoalTransaction && !isMetaCategoryTransaction && (
+                  {/* Campos adicionais - ocultos para descontos de antecipação */}
+                  {!isAnticipationDiscount && (
                     <>
-                      <SelectField
-                        label="Categoria"
-                        value={categoryName}
-                        icon="tag-outline"
-                        onPress={() => setActivePicker('category')}
-                      />
-                      <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
-                    </>
-                  )}
-                  {/* Conta - desabilitado para transações de meta */}
-                  {type === 'transfer' ? (
-                    <>
-                      <SelectField
-                        label="De (conta origem)"
-                        value={accountName || 'Selecione'}
-                        icon="bank-transfer-out"
-                        onPress={() => setActivePicker('account')}
-                        subtitle={sourceAccount ? `Saldo atual: ${formatCurrency(Math.round(sourceAccount.balance * 100).toString())}` : undefined}
-                        subtitleColor={sourceAccount && sourceAccount.balance < 0 ? colors.danger : colors.textMuted}
-                      />
-                      <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
-                      <SelectField
-                        label="Para (conta destino)"
-                        value={toAccountName || 'Selecione'}
-                        icon="bank-transfer-in"
+                      {/* Campos sem wrapper - direto na lista */}
+                      {/* Campos sem wrapper - direto na lista */}
+                      {/* Categoria - não mostrar para transferências ou transações de meta */}
+                      {type !== 'transfer' && !isGoalTransaction && !isMetaCategoryTransaction && (
+                        <>
+                          <SelectField
+                            label="Categoria"
+                            value={categoryName}
+                            icon="tag-outline"
+                            onPress={() => setActivePicker('category')}
+                          />
+                          <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
+                        </>
+                      )}
+                      {/* Conta - desabilitado para transações de meta */}
+                      {type === 'transfer' ? (
+                        <>
+                          <SelectField
+                            label="De (conta origem)"
+                            value={accountName || 'Selecione'}
+                            icon="bank-transfer-out"
+                            onPress={() => setActivePicker('account')}
+                            subtitle={sourceAccount ? `Saldo atual: ${formatCurrency(Math.round(sourceAccount.balance * 100).toString())}` : undefined}
+                            subtitleColor={sourceAccount && sourceAccount.balance < 0 ? colors.danger : colors.textMuted}
+                          />
+                          <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
+                          <SelectField
+                            label="Para (conta destino)"
+                            value={toAccountName || 'Selecione'}
+                            icon="bank-transfer-in"
                           onPress={() => {
                             if (activeAccounts.length <= 1) {
                               showAlert(
@@ -1769,40 +1924,113 @@ export default function AddTransactionModal({
                       icon="calendar"
                       onPress={() => setActivePicker('date')}
                     />
-                    <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
-                    {/* Recorrência - desabilitado para transações de meta */}
-                    <SelectField
-                      label="Repetir"
-                      value={RECURRENCE_OPTIONS.find((r) => r.value === recurrence)?.label || 'Não repetir'}
-                      icon="repeat"
-                      onPress={(!isGoalTransaction && !isMetaCategoryTransaction) ? () => setActivePicker('recurrence') : () => {}}
-                    />
-                    {/* Tipo de recorrência - só aparece se recorrência != none */}
-                    {recurrence !== 'none' && (
-                      <>
-                        <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
-                        <SelectField
-                          label="Tipo"
-                          value={RECURRENCE_TYPE_OPTIONS.find((r) => r.value === recurrenceType)?.label || 'Parcelada'}
-                          icon="cash-multiple"
-                          onPress={() => setActivePicker('recurrenceType')}
-                        />
-                      </>
+                    
+                    {/* Botão de antecipar parcela - só aparece se for parcela futura */}
+                    {isFutureInstallment && (
+                      <View style={[styles.anticipateContainer, { backgroundColor: colors.successLight || colors.grayLight }]}>
+                        <MaterialCommunityIcons name="clock-fast" size={20} color={colors.success} />
+                        <View style={{ flex: 1, marginLeft: spacing.sm }}>
+                          <Text style={[styles.anticipateLabel, { color: colors.text }]}>
+                            Esta parcela é de uma fatura futura
+                          </Text>
+                          <Text style={[styles.anticipateSubLabel, { color: colors.textMuted }]}>
+                            Você pode antecipá-la para a fatura atual
+                          </Text>
+                        </View>
+                        <Pressable
+                          onPress={handleAnticipate}
+                          style={({ pressed }) => [
+                            styles.anticipateButton,
+                            { 
+                              backgroundColor: pressed ? colors.success + '30' : colors.success,
+                            },
+                          ]}
+                        >
+                          <Text style={[styles.anticipateButtonText, { color: '#FFFFFF' }]}>
+                            Antecipar
+                          </Text>
+                        </Pressable>
+                      </View>
                     )}
-                    {/* Número de repetições - só aparece se recorrência != none */}
-                    {recurrence !== 'none' && (
+                    
+                    {/* Botões de mover série - só aparece se for primeira parcela de uma série */}
+                    {isEditMode && editTransaction?.seriesId && editTransaction?.installmentCurrent === 1 && editTransaction?.installmentTotal && editTransaction.installmentTotal > 1 && (
+                      <View style={[styles.moveSeriesContainer, { backgroundColor: colors.grayLight }]}>
+                        <Text style={[styles.moveSeriesLabel, { color: colors.textMuted }]}>
+                          Mover série completa ({editTransaction.installmentTotal} parcelas)
+                        </Text>
+                        <View style={styles.moveSeriesButtons}>
+                          <Pressable
+                            onPress={() => handleMoveSeries(-1)}
+                            style={({ pressed }) => [
+                              styles.moveSeriesButton,
+                              { 
+                                backgroundColor: pressed ? colors.primary + '20' : colors.card,
+                                borderColor: colors.border,
+                              },
+                            ]}
+                          >
+                            <MaterialCommunityIcons name="arrow-left" size={18} color={colors.text} />
+                            <Text style={[styles.moveSeriesButtonText, { color: colors.text }]}>
+                              Mês anterior
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => handleMoveSeries(1)}
+                            style={({ pressed }) => [
+                              styles.moveSeriesButton,
+                              { 
+                                backgroundColor: pressed ? colors.primary + '20' : colors.card,
+                                borderColor: colors.border,
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.moveSeriesButtonText, { color: colors.text }]}>
+                              Próximo mês
+                            </Text>
+                            <MaterialCommunityIcons name="arrow-right" size={18} color={colors.text} />
+                          </Pressable>
+                        </View>
+                      </View>
+                    )}
+                    
+                    <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
+                    
+                    {/* Recorrência - desabilitado para transações de meta ou transações que já fazem parte de uma série */}
+                    {!editTransaction?.seriesId && (
                       <>
-                        <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
                         <SelectField
-                          label="Quantas vezes?"
-                          value={`${repetitions}x`}
-                          icon="counter"
-                          onPress={() => setActivePicker('repetitions')}
+                          label="Repetir"
+                          value={RECURRENCE_OPTIONS.find((r) => r.value === recurrence)?.label || 'Não repetir'}
+                          icon="repeat"
+                          onPress={(!isGoalTransaction && !isMetaCategoryTransaction) ? () => setActivePicker('recurrence') : () => {}}
                         />
-                        {/* Informação do valor por parcela */}
-                        {repetitions > 1 && installmentValue > 0 && (
-                          <View style={[styles.installmentInfo, { backgroundColor: colors.primaryBg }]}>
-                            <MaterialCommunityIcons name="information" size={16} color={colors.primary} />
+                        {/* Tipo de recorrência - só aparece se recorrência != none */}
+                        {recurrence !== 'none' && (
+                          <>
+                            <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
+                            <SelectField
+                              label="Tipo"
+                              value={RECURRENCE_TYPE_OPTIONS.find((r) => r.value === recurrenceType)?.label || 'Parcelada'}
+                              icon="cash-multiple"
+                              onPress={() => setActivePicker('recurrenceType')}
+                            />
+                          </>
+                        )}
+                        {/* Número de repetições - só aparece se recorrência != none */}
+                        {recurrence !== 'none' && (
+                          <>
+                            <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
+                            <SelectField
+                              label="Quantas vezes?"
+                              value={`${repetitions}x`}
+                              icon="counter"
+                              onPress={() => setActivePicker('repetitions')}
+                            />
+                            {/* Informação do valor por parcela */}
+                            {repetitions > 1 && installmentValue > 0 && (
+                              <View style={[styles.installmentInfo, { backgroundColor: colors.primaryBg }]}>
+                                <MaterialCommunityIcons name="information" size={16} color={colors.primary} />
                             <Text style={[styles.installmentText, { color: colors.primary }]}>
                               {recurrenceType === 'installment' 
                                 ? `${repetitions}x de ${formatCurrency(Math.round(installmentValue * 100).toString())}`
@@ -1813,6 +2041,10 @@ export default function AddTransactionModal({
                         )}
                       </>
                     )}
+                    </>
+                    )}
+                    </>
+                  )}
 
                 {/* Aviso: mesma conta */}
                 {type === 'transfer' && accountId && toAccountId && accountId === toAccountId && (
@@ -1835,28 +2067,78 @@ export default function AddTransactionModal({
                       onPress={() => {
                         // Verificar se faz parte de uma série
                         if (editTransaction.seriesId && onDeleteSeries) {
-                          showAlert(
-                            'Excluir lançamento',
-                            'Este lançamento faz parte de uma série. O que deseja fazer?',
-                            [
-                              { text: 'Cancelar', style: 'cancel' },
-                              { 
-                                text: 'Excluir apenas este', 
-                                onPress: () => {
-                                  onDelete(editTransaction.id);
-                                  onClose();
-                                }
-                              },
-                              { 
-                                text: 'Excluir toda a série', 
-                                style: 'destructive',
-                                onPress: () => {
-                                  onDeleteSeries(editTransaction.seriesId!);
-                                  onClose();
-                                }
-                              },
-                            ]
-                          );
+                          const isLastInstallment = editTransaction.installmentCurrent === editTransaction.installmentTotal;
+                          
+                          if (isLastInstallment) {
+                            // É a última parcela, não há série futura para excluir
+                            showAlert(
+                              'Excluir lançamento',
+                              'Tem certeza que deseja excluir este lançamento?',
+                              [
+                                { text: 'Cancelar', style: 'cancel' },
+                                { 
+                                  text: 'Excluir', 
+                                  style: 'destructive',
+                                  onPress: () => {
+                                    onDelete(editTransaction.id);
+                                    onClose();
+                                  }
+                                },
+                              ]
+                            );
+                          } else {
+                            // Não é a última parcela, mostrar opções
+                            const currentInstallment = editTransaction.installmentCurrent || 1;
+                            const totalInstallments = editTransaction.installmentTotal || 1;
+                            const remainingInstallments = totalInstallments - currentInstallment + 1;
+                            
+                            showAlert(
+                              'Excluir lançamento',
+                              'Este lançamento faz parte de uma série. O que deseja fazer?',
+                              [
+                                { text: 'Cancelar', style: 'cancel' },
+                                { 
+                                  text: 'Excluir apenas este', 
+                                  onPress: () => {
+                                    onDelete(editTransaction.id);
+                                    onClose();
+                                  }
+                                },
+                                { 
+                                  text: `Excluir desta em diante (${remainingInstallments}x)`, 
+                                  style: 'destructive',
+                                  onPress: async () => {
+                                    try {
+                                      // Usar callback se disponível (para Launches) ou função direta (para CreditCardBillDetails)
+                                      if (onDeleteSeries) {
+                                        onDeleteSeries(editTransaction.seriesId!, currentInstallment);
+                                        onClose();
+                                      } else if (user?.uid) {
+                                        const deletedCount = await deleteSeriesFromInstallment(
+                                          user.uid,
+                                          editTransaction.seriesId!,
+                                          currentInstallment
+                                        );
+                                        
+                                        if (deletedCount > 0) {
+                                          showSnackbar(`${deletedCount} parcela(s) excluída(s)!`);
+                                          onSave?.();
+                                        } else {
+                                          showSnackbar('Nenhuma parcela foi excluída');
+                                        }
+                                        onClose();
+                                      } else {
+                                        console.error('User não disponível para exclusão de série');
+                                      }
+                                    } catch (error) {
+                                      console.error('Erro ao excluir série:', error);
+                                      showAlert('Erro', 'Não foi possível excluir as parcelas', [{ text: 'OK' }]);
+                                    }
+                                  }
+                                },
+                              ]
+                            );
+                          }
                         } else {
                           // Transação única - confirmar normalmente
                           showAlert(
@@ -1916,6 +2198,123 @@ export default function AddTransactionModal({
               )}
           </View>
         )}
+      </Modal>
+      
+      {/* Modal de Antecipação */}
+      <Modal
+        visible={showAnticipateModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowAnticipateModal(false)}
+      >
+        <Pressable 
+          style={styles.modalOverlay} 
+          onPress={() => setShowAnticipateModal(false)}
+        >
+          <Pressable style={[styles.anticipateModal, { backgroundColor: colors.card }]} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.anticipateModalHeader}>
+              <MaterialCommunityIcons name="clock-fast" size={28} color={colors.success} />
+              <Text style={[styles.anticipateModalTitle, { color: colors.text }]}>
+                Antecipar Parcela
+              </Text>
+            </View>
+            
+            <Text style={[styles.anticipateModalDescription, { color: colors.textMuted }]}>
+              Você está antecipando a parcela {editTransaction?.installmentCurrent}/{editTransaction?.installmentTotal} para a fatura atual.
+            </Text>
+            
+            <View style={[styles.discountSection, { backgroundColor: colors.grayLight }]}>
+              <Text style={[styles.discountQuestion, { color: colors.text }]}>
+                Você conseguiu desconto na antecipação?
+              </Text>
+              
+              <View style={styles.discountToggle}>
+                <Pressable
+                  onPress={() => setHasDiscount(false)}
+                  style={[
+                    styles.discountOption,
+                    { 
+                      backgroundColor: !hasDiscount ? colors.primary : 'transparent',
+                      borderColor: !hasDiscount ? colors.primary : colors.border,
+                    }
+                  ]}
+                >
+                  <Text style={[
+                    styles.discountOptionText,
+                    { color: !hasDiscount ? '#FFFFFF' : colors.text }
+                  ]}>
+                    Não
+                  </Text>
+                </Pressable>
+                
+                <Pressable
+                  onPress={() => setHasDiscount(true)}
+                  style={[
+                    styles.discountOption,
+                    { 
+                      backgroundColor: hasDiscount ? colors.primary : 'transparent',
+                      borderColor: hasDiscount ? colors.primary : colors.border,
+                    }
+                  ]}
+                >
+                  <Text style={[
+                    styles.discountOptionText,
+                    { color: hasDiscount ? '#FFFFFF' : colors.text }
+                  ]}>
+                    Sim
+                  </Text>
+                </Pressable>
+              </View>
+              
+              {hasDiscount && (
+                <View style={styles.discountInputSection}>
+                  <Text style={[styles.discountInputLabel, { color: colors.text }]}>
+                    Qual o valor do desconto?
+                  </Text>
+                  <TextInput
+                    value={discountAmount}
+                    onChangeText={(text) => setDiscountAmount(formatCurrency(text))}
+                    placeholder="R$ 0,00"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="numeric"
+                    style={[
+                      styles.discountInput,
+                      { 
+                        backgroundColor: colors.card,
+                        color: colors.text,
+                        borderColor: colors.border,
+                      }
+                    ]}
+                  />
+                </View>
+              )}
+            </View>
+            
+            <View style={styles.anticipateModalButtons}>
+              <Pressable
+                onPress={() => {
+                  setShowAnticipateModal(false);
+                  setHasDiscount(false);
+                  setDiscountAmount('');
+                }}
+                style={[styles.anticipateModalButton, { backgroundColor: colors.grayLight }]}
+              >
+                <Text style={[styles.anticipateModalButtonText, { color: colors.text }]}>
+                  Cancelar
+                </Text>
+              </Pressable>
+              
+              <Pressable
+                onPress={confirmAnticipate}
+                style={[styles.anticipateModalButton, { backgroundColor: colors.success }]}
+              >
+                <Text style={[styles.anticipateModalButtonText, { color: '#FFFFFF' }]}>
+                  Confirmar
+                </Text>
+              </Pressable>
+            </View>
+          </Pressable>
+        </Pressable>
       </Modal>
       
       {/* Custom Alert */}
@@ -2066,6 +2465,145 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderStyle: 'dashed',
     marginHorizontal: spacing.lg,
+  },
+  moveSeriesContainer: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: spacing.sm,
+  },
+  moveSeriesLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  moveSeriesButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  moveSeriesButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.sm,
+    borderWidth: 1,
+    gap: spacing.xs,
+  },
+  moveSeriesButtonText: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  anticipateContainer: {
+    marginHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  anticipateLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  anticipateSubLabel: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  anticipateButton: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+  },
+  anticipateButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.lg,
+  },
+  anticipateModal: {
+    width: '100%',
+    maxWidth: 400,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    gap: spacing.md,
+  },
+  anticipateModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  anticipateModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  anticipateModalDescription: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  discountSection: {
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: spacing.sm,
+  },
+  discountQuestion: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
+  discountToggle: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+  },
+  discountOption: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+    alignItems: 'center',
+  },
+  discountOptionText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  discountInputSection: {
+    marginTop: spacing.sm,
+    gap: spacing.xs,
+  },
+  discountInputLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  discountInput: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    fontSize: 15,
+  },
+  anticipateModalButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  anticipateModalButton: {
+    flex: 1,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.md,
+    alignItems: 'center',
+  },
+  anticipateModalButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
   },
   fixedButtonContainer: {
     flexDirection: 'row',

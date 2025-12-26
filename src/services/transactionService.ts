@@ -133,6 +133,8 @@ export async function createTransaction(
   if (data.recurrenceEndDate) transactionData.recurrenceEndDate = data.recurrenceEndDate;
   if (data.parentTransactionId) transactionData.parentTransactionId = data.parentTransactionId;
   if (data.seriesId) transactionData.seriesId = data.seriesId;
+  if (data.installmentCurrent) transactionData.installmentCurrent = data.installmentCurrent;
+  if (data.installmentTotal) transactionData.installmentTotal = data.installmentTotal;
   if (data.goalId) transactionData.goalId = data.goalId;
   if (data.goalName) transactionData.goalName = data.goalName;
 
@@ -714,9 +716,26 @@ export async function updateTransaction(
 // ==========================================
 
 export async function deleteTransaction(transaction: Transaction): Promise<void> {
+  // Verificar se é uma transação de desconto de antecipação
+  const isDiscountTransaction = transaction.description.startsWith('Desconto antecipação - ');
+  const relatedTransactionId = (transaction as any).relatedTransactionId;
+  
   // IMPORTANTE: Deletar primeiro para evitar estado inconsistente se falhar por permissão
   const docRef = doc(db, COLLECTIONS.TRANSACTIONS, transaction.id);
   await deleteDoc(docRef);
+
+  // Se era um desconto de antecipação e tem ID da transação relacionada, atualizar
+  if (isDiscountTransaction && relatedTransactionId) {
+    try {
+      const relatedDocRef = doc(db, COLLECTIONS.TRANSACTIONS, relatedTransactionId);
+      await updateDoc(relatedDocRef, {
+        anticipationDiscount: null,
+        updatedAt: Timestamp.now(),
+      });
+    } catch (error) {
+      console.error('Erro ao atualizar transação antecipada após remover desconto:', error);
+    }
+  }
 
   // Reverter saldos apenas se status era 'completed', não era cartão de crédito E tem accountId
   if (!transaction.creditCardId && transaction.status === 'completed' && transaction.accountId) {
@@ -790,6 +809,56 @@ export async function deleteTransactionSeries(
     onProgress?.(Math.min(i + CHUNK_SIZE, total), total);
   }
 
+  return deletedCount;
+}
+
+// Deletar apenas as parcelas futuras de uma série (a partir da parcela atual, inclusive)
+export async function deleteSeriesFromInstallment(
+  userId: string,
+  seriesId: string,
+  fromInstallment: number,
+  onProgress?: (current: number, total: number) => void
+): Promise<number> {
+  console.log(`📋 Excluindo série ${seriesId} a partir da parcela ${fromInstallment}`);
+  
+  const transactions = await getTransactionsBySeries(userId, seriesId);
+  console.log(`📦 Total de transações na série: ${transactions.length}`);
+  
+  // Filtrar apenas parcelas >= fromInstallment
+  const transactionsToDelete = transactions.filter(
+    t => (t.installmentCurrent || 0) >= fromInstallment
+  );
+  
+  console.log(`🗑️ Transações a deletar: ${transactionsToDelete.length}`, transactionsToDelete.map(t => `${t.installmentCurrent}/${t.installmentTotal}`));
+  
+  if (transactionsToDelete.length === 0) {
+    console.warn('⚠️ Nenhuma transação para deletar');
+    return 0;
+  }
+
+  const total = transactionsToDelete.length;
+  let deletedCount = 0;
+  
+  // Processar em chunks de 5 para paralelização controlada
+  const CHUNK_SIZE = 5;
+  
+  for (let i = 0; i < total; i += CHUNK_SIZE) {
+    const chunk = transactionsToDelete.slice(i, i + CHUNK_SIZE);
+    
+    const results = await Promise.allSettled(
+      chunk.map(transaction => deleteTransaction(transaction))
+    );
+    
+    const successCount = results.filter(r => r.status === 'fulfilled').length;
+    deletedCount += successCount;
+    
+    console.log(`✅ Chunk ${Math.floor(i / CHUNK_SIZE) + 1}: ${successCount}/${chunk.length} deletadas`);
+    
+    // Reportar progresso
+    onProgress?.(Math.min(i + CHUNK_SIZE, total), total);
+  }
+
+  console.log(`✨ Total excluído: ${deletedCount}/${total}`);
   return deletedCount;
 }
 
@@ -878,6 +947,150 @@ export async function moveTransactionSeriesToNextBill(
   await recalculateCreditCardUsage(userId, creditCardId);
 
   return { movedCount, newMonth, newYear };
+}
+
+/**
+ * Move toda a série de transações parceladas para meses anteriores ou posteriores
+ * @param userId ID do usuário
+ * @param seriesId ID da série de transações
+ * @param monthsToMove Número de meses para mover (negativo para anterior, positivo para posterior)
+ * @returns Sucesso da operação
+ */
+export async function moveSeriesMonth(
+  userId: string,
+  seriesId: string,
+  monthsToMove: number
+): Promise<boolean> {
+  try {
+    const transactions = await getTransactionsBySeries(userId, seriesId);
+    
+    if (transactions.length === 0) {
+      console.error('Nenhuma transação encontrada na série');
+      return false;
+    }
+
+    // Atualizar todas as transações da série
+    for (const transaction of transactions) {
+      const docRef = doc(db, COLLECTIONS.TRANSACTIONS, transaction.id);
+      
+      // Calcular nova data
+      const currentDate = transaction.date.toDate();
+      const newDate = new Date(currentDate);
+      newDate.setMonth(newDate.getMonth() + monthsToMove);
+      
+      // Calcular novo month e year
+      const newMonth = newDate.getMonth() + 1; // getMonth() retorna 0-11
+      const newYear = newDate.getFullYear();
+      
+      // Atualizar transação
+      await updateDoc(docRef, {
+        date: Timestamp.fromDate(newDate),
+        month: newMonth,
+        year: newYear,
+        updatedAt: Timestamp.now(),
+      });
+    }
+    
+    // Se alguma transação for de cartão de crédito, recalcular uso
+    const creditCardId = transactions[0].creditCardId;
+    if (creditCardId) {
+      await recalculateCreditCardUsage(userId, creditCardId);
+    }
+    
+    // Se alguma transação tiver conta, o saldo será recalculado automaticamente
+    // quando as transações forem recarregadas na tela
+    
+    return true;
+  } catch (error) {
+    console.error('Erro ao mover série de transações:', error);
+    return false;
+  }
+}
+
+/**
+ * Antecipa uma parcela de uma fatura futura para a fatura atual
+ * @param userId ID do usuário
+ * @param transactionId ID da transação a ser antecipada
+ * @param currentMonth Mês da fatura atual
+ * @param currentYear Ano da fatura atual
+ * @param discountAmount Valor do desconto obtido (opcional)
+ * @returns ID da transação de desconto criada (se houver) e sucesso da operação
+ */
+export async function anticipateInstallment(
+  userId: string,
+  transactionId: string,
+  currentMonth: number,
+  currentYear: number,
+  discountAmount?: number
+): Promise<{ success: boolean; discountTransactionId?: string }> {
+  try {
+    const docRef = doc(db, COLLECTIONS.TRANSACTIONS, transactionId);
+    const transactionDoc = await getDoc(docRef);
+    
+    if (!transactionDoc.exists()) {
+      console.error('Transação não encontrada');
+      return { success: false };
+    }
+    
+    const transaction = { id: transactionDoc.id, ...transactionDoc.data() } as Transaction;
+    
+    // Guardar informações originais
+    const originalMonth = transaction.month;
+    const originalYear = transaction.year;
+    const originalDate = transaction.date;
+    
+    // Calcular nova data (usar o mesmo dia do mês na fatura atual)
+    const originalDateObj = originalDate.toDate();
+    const newDate = new Date(currentYear, currentMonth - 1, originalDateObj.getDate());
+    
+    // Atualizar transação
+    await updateDoc(docRef, {
+      date: Timestamp.fromDate(newDate),
+      month: currentMonth,
+      year: currentYear,
+      anticipatedFrom: {
+        month: originalMonth,
+        year: originalYear,
+        date: originalDate,
+      },
+      anticipationDiscount: discountAmount || null,
+      updatedAt: Timestamp.now(),
+    });
+    
+    // Se houver desconto, criar transação de crédito na fatura atual
+    let discountTransactionId: string | undefined;
+    if (discountAmount && discountAmount > 0 && transaction.creditCardId) {
+      const discountTransaction: Record<string, any> = {
+        type: 'income',
+        amount: discountAmount,
+        description: `Desconto antecipação - ${transaction.description}`,
+        date: Timestamp.fromDate(newDate),
+        month: currentMonth,
+        year: currentYear,
+        creditCardId: transaction.creditCardId,
+        creditCardName: transaction.creditCardName,
+        relatedTransactionId: transactionId, // ID da transação antecipada
+        recurrence: 'none',
+        status: 'completed',
+        userId,
+        createdAt: Timestamp.now(),
+        updatedAt: Timestamp.now(),
+      };
+      
+      const discountRef = await addDoc(collection(db, COLLECTIONS.TRANSACTIONS), discountTransaction);
+      discountTransactionId = discountRef.id;
+    }
+    
+    // Recalcular uso do cartão
+    if (transaction.creditCardId) {
+      await recalculateCreditCardUsage(userId, transaction.creditCardId);
+    }
+    
+    return { success: true, discountTransactionId };
+  } catch (error) {
+    console.error('Erro ao antecipar parcela:', error);
+    return { success: false };
+  }
 }
 
 // ==========================================

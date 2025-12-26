@@ -271,6 +271,13 @@ export default function CreditCardBillDetails() {
       creditCardName: transaction.creditCardName,
       recurrence: transaction.recurrence,
       seriesId: transaction.seriesId,
+      installmentCurrent: transaction.installmentCurrent,
+      installmentTotal: transaction.installmentTotal,
+      month: transaction.month,
+      year: transaction.year,
+      anticipatedFrom: transaction.anticipatedFrom,
+      anticipationDiscount: transaction.anticipationDiscount,
+      relatedTransactionId: (transaction as any).relatedTransactionId,
     };
 
     setEditingTransaction(editData);
@@ -485,6 +492,10 @@ export default function CreditCardBillDetails() {
                 category={t.categoryName}
                 categoryIcon={t.categoryIcon}
                 status="completed"
+                installmentCurrent={t.installmentCurrent}
+                installmentTotal={t.installmentTotal}
+                anticipatedFrom={t.anticipatedFrom}
+                anticipationDiscount={t.anticipationDiscount}
                 isLocked={bill?.isPaid}
                 isLastInGroup={index === transactions.length - 1}
                 onEdit={!bill?.isPaid ? () => handleEditTransaction(t) : undefined}

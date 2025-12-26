@@ -94,9 +94,9 @@ export default function Launches() {
   };
     
   const { 
-    transactions, 
+    transactions,
     totalIncome, 
-    totalExpense, 
+    totalExpense,
     monthBalance,
     carryOverBalance,
     balance,
@@ -106,6 +106,9 @@ export default function Launches() {
     deleteTransactionSeries,
     updateTransaction 
   } = useTransactions(transactionsOptions);
+  
+  // Import function for deleting series from installment
+  const { deleteSeriesFromInstallment } = require('../services/transactionService');
   
   // Carregar faturas de cartão de crédito
   const loadCreditCardBills = async () => {
@@ -205,6 +208,10 @@ export default function Launches() {
           categoryIcon: t.categoryIcon,
           status: t.status,
           goalName: t.goalName, // Aporte em meta
+          installmentCurrent: t.installmentCurrent,
+          installmentTotal: t.installmentTotal,
+          anticipatedFrom: t.anticipatedFrom,
+          anticipationDiscount: t.anticipationDiscount,
         };
       });
   }, [transactions]) as Array<{
@@ -357,6 +364,9 @@ export default function Launches() {
       creditCardName: originalTransaction.creditCardName,
       recurrence: originalTransaction.recurrence,
       seriesId: originalTransaction.seriesId,
+      installmentCurrent: originalTransaction.installmentCurrent,
+      installmentTotal: originalTransaction.installmentTotal,
+      relatedTransactionId: (originalTransaction as any).relatedTransactionId,
     };
 
     setEditingTransaction(editData);
@@ -389,8 +399,19 @@ export default function Launches() {
   };
 
   // Handler para deletar série de transações recorrentes
-  const handleDeleteSeries = async (seriesId: string) => {
-    const count = await deleteTransactionSeries(seriesId);
+  const handleDeleteSeries = async (seriesId: string, fromInstallment?: number) => {
+    if (!user?.uid) return;
+    
+    let count = 0;
+    
+    if (fromInstallment) {
+      // Excluir apenas da parcela atual em diante
+      count = await deleteSeriesFromInstallment(user.uid, seriesId, fromInstallment);
+    } else {
+      // Excluir série completa (manter retrocompatibilidade)
+      count = await deleteTransactionSeries(seriesId);
+    }
+    
     if (count > 0) {
       setEditModalVisible(false);
       setEditingTransaction(null);

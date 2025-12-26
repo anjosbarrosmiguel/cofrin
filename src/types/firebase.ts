@@ -130,6 +130,14 @@ export interface Transaction extends BaseDocument {
   recurrenceEndDate?: Timestamp;
   parentTransactionId?: string; // Se é uma transação gerada por recorrência
   seriesId?: string; // Identificador único da série de transações recorrentes
+  installmentCurrent?: number; // Número da parcela atual (ex: 1 de 12)
+  installmentTotal?: number; // Total de parcelas (ex: 12)
+  anticipatedFrom?: { // Se foi antecipada de uma fatura futura
+    month: number;
+    year: number;
+    date: Timestamp;
+  };
+  anticipationDiscount?: number; // Valor do desconto obtido na antecipação
   
   // Status
   status: TransactionStatus;

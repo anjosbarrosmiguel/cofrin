@@ -4,6 +4,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { formatCurrencyBRL } from '../../utils/format';
 import { useAppTheme } from '../../contexts/themeContext';
 import { spacing, borderRadius, getShadow } from '../../theme';
+import { Timestamp } from 'firebase/firestore';
 
 interface Props {
   icon?: string; // letter or emoji
@@ -18,6 +19,10 @@ interface Props {
   goalName?: string; // Se for aporte em meta
   isLocked?: boolean; // Se for pagamento de fatura (não pode ser editado)
   isLastInGroup?: boolean; // Se é o último item do grupo de data
+  installmentCurrent?: number; // Número da parcela atual (ex: 1)
+  installmentTotal?: number; // Total de parcelas (ex: 12)
+  anticipatedFrom?: { month: number; year: number; date: Timestamp }; // Se foi antecipada
+  anticipationDiscount?: number; // Valor do desconto obtido na antecipação
   onPress?: () => void;
   onEdit?: () => void;
   onStatusPress?: () => void;
@@ -36,6 +41,10 @@ function TransactionItemComponent({
   goalName,
   isLocked = false,
   isLastInGroup = false,
+  installmentCurrent,
+  installmentTotal,
+  anticipatedFrom,
+  anticipationDiscount,
   onPress,
   onEdit,
   onStatusPress,
@@ -104,25 +113,53 @@ function TransactionItemComponent({
       
       {/* Conteúdo central - Título e Subtítulo */}
       <View style={styles.content}>
-        <Text 
-          style={[
-            styles.title, 
-            { color: status === 'pending' ? colors.textMuted : colors.text }
-          ]} 
-          numberOfLines={2}
-        >
-          {title}
-          {isLocked && (
-            <>
-              <Text> </Text>
-              <MaterialCommunityIcons name="lock" size={11} color={colors.textMuted} />
-            </>
-          )}
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+          <Text 
+            style={[
+              styles.title, 
+              { color: status === 'pending' ? colors.textMuted : colors.text, flex: 1 }
+            ]} 
+            numberOfLines={2}
+          >
+            {title}
+            {isLocked && (
+              <>
+                <Text> </Text>
+                <MaterialCommunityIcons name="lock" size={11} color={colors.textMuted} />
+              </>
+            )}
+          </Text>
+        </View>
         {subtitle && (
           <Text style={[styles.subtitle, { color: colors.textMuted }]} numberOfLines={1}>
             {subtitle}
           </Text>
+        )}
+        {installmentCurrent && installmentTotal && (
+          <View style={[styles.installmentBadge, { backgroundColor: colors.primaryBg }]}>
+            <Text style={[styles.installmentText, { color: colors.primary }]}>
+              {installmentCurrent}/{installmentTotal}
+              {anticipatedFrom && (
+                <Text style={{ fontSize: 9, fontWeight: '400' }}>
+                  {' '}(antecipada em {anticipatedFrom.date.toDate().toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })})
+                </Text>
+              )}
+            </Text>
+          </View>
+        )}
+        {anticipatedFrom && (
+          <>
+            <Text style={[styles.anticipatedLabel, { color: colors.success }]} numberOfLines={1}>
+              <MaterialCommunityIcons name="clock-fast" size={10} color={colors.success} />
+              {' '}Antecipada em {anticipatedFrom.date.toDate().toLocaleDateString('pt-BR')}
+            </Text>
+            {anticipationDiscount && anticipationDiscount > 0 && (
+              <Text style={[styles.anticipatedLabel, { color: colors.success }]} numberOfLines={1}>
+                <MaterialCommunityIcons name="tag" size={10} color={colors.success} />
+                {' '}Desconto de {formatCurrencyBRL(anticipationDiscount)}
+              </Text>
+            )}
+          </>
         )}
         {isLocked && (
           <Text style={[styles.lockedLabel, { color: colors.textMuted }]}>
@@ -190,12 +227,11 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '600',
     lineHeight: 20,
-    marginBottom: 2,
   },
   subtitle: {
     fontSize: 12,
     lineHeight: 16,
-    marginTop: 2,
+    marginTop: 4,
   },
   rightColumn: {
     alignItems: 'flex-end',
@@ -215,5 +251,22 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontStyle: 'italic',
     marginTop: 4,
+  },
+  anticipatedLabel: {
+    fontSize: 10,
+    fontWeight: '600',
+    marginTop: 4,
+  },
+  installmentBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginTop: 4,
+  },
+  installmentText: {
+    fontSize: 10,
+    fontWeight: '600',
+    letterSpacing: 0.3,
   },
 });

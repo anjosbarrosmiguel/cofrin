@@ -1,7 +1,7 @@
 import { View, StyleSheet, Pressable, Modal } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import React, { useState, useMemo, memo, useEffect } from 'react';
+import { useState, useMemo, memo, useEffect } from 'react';
 import { useAppTheme } from '../../contexts/themeContext';
 import { getShadow } from '../../theme';
 import { formatCurrencyBRL } from '../../utils/format';
@@ -180,10 +180,13 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
       if (isPending) return 'Pendente';
       return null;
     };
-    
-    const getStatusColor = () => {
-      if (isOverdue) return colors.expense;
-      return colors.textMuted;
+
+    const getStatusBadgeColors = () => {
+      if (isOverdue) {
+        return { bg: colors.danger, border: colors.danger };
+      }
+      // Pendente
+      return { bg: colors.warning, border: colors.warning };
     };
     
     const statusText = getStatusText();
@@ -211,9 +214,11 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
               {card.name}
             </Text>
             {statusText && (
-              <Text style={[styles.statusText, { color: getStatusColor() }]}>
-                {statusText}
-              </Text>
+              <View style={[styles.statusBadge, { backgroundColor: getStatusBadgeColors().bg, borderColor: getStatusBadgeColors().border }]}>
+                <Text style={[styles.statusBadgeText, { color: colors.textInverse }]}>
+                  {statusText}
+                </Text>
+              </View>
             )}
           </View>
 
@@ -262,11 +267,6 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
               </Pressable>
             )}
           </View>
-          {cards.length > 0 && (
-            <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-              {cards.length} cartão{cards.length > 1 ? 'es' : ''} cadastrado{cards.length > 1 ? 's' : ''}
-            </Text>
-          )}
         </View>
       </View>
 
@@ -463,6 +463,16 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 13,
     fontWeight: '500',
+  },
+  statusBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+  },
+  statusBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
   },
   cardInfo: {
     flexDirection: 'row',

@@ -165,8 +165,8 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
       if (isOverdue) {
         return { bg: colors.danger, border: colors.danger };
       }
-      // Pendente
-      return { bg: colors.warning, border: colors.warning };
+      // Pendente - cor laranja mais clara
+      return { bg: '#FFA726', border: '#FFA726' };
     };
     
     const statusText = getStatusText();
@@ -183,7 +183,7 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
             { opacity: pressed ? 0.7 : 1 }
           ]}
         >
-          {/* Primeira linha: ícone + nome + status */}
+          {/* Primeira linha: ícone + nome + badge */}
           <View style={styles.cardHeader}>
             <MaterialCommunityIcons
               name={(card.icon as any) || 'credit-card'}
@@ -202,16 +202,15 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
             )}
           </View>
 
-          {/* Segunda linha: vencimento + valor da fatura */}
+          {/* Segunda linha: vencimento (esquerda) + valor (direita) */}
           <View style={styles.cardInfo}>
-            <View style={styles.infoItem}>
+            <View style={styles.infoItemLeft}>
               <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Vencimento</Text>
               <Text style={[styles.infoValue, { color: colors.text }]}>
                 Dia {card.dueDay}
               </Text>
             </View>
-            <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Valor da fatura:</Text>
+            <View style={styles.infoItemRight}>
               <Text style={[styles.billValue, { color: billAmount > 0 ? colors.expense : colors.text }]}>
                 {formatCurrencyBRL(billAmount)}
               </Text>
@@ -445,21 +444,25 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
     borderRadius: 999,
-    borderWidth: 1,
+    borderWidth: 0,
   },
   statusBadgeText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 10,
+    fontWeight: '600',
   },
   cardInfo: {
     flexDirection: 'row',
-    gap: 24,
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
-  infoItem: {
-    flex: 1,
+  infoItemLeft: {
+    gap: 2,
+  },
+  infoItemRight: {
+    alignItems: 'flex-end',
     gap: 4,
   },
   infoLabel: {

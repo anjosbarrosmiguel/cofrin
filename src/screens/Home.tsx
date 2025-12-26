@@ -9,11 +9,10 @@ import { useHomeData } from "../hooks/useHomeData";
 import { useMonthlyGoals } from "../hooks/useMonthlyGoals";
 import React, { useCallback, useState, useEffect, useDeferredValue } from "react";
 import MainLayout from "../components/MainLayout";
-import { getShadow } from "../theme";
 import {
-    UpcomingFlowsCardShimmer,
-    AccountsCardShimmer,
-    CreditCardsCardShimmer, CategoryCardShimmer
+  UpcomingFlowsCardShimmer,
+  AccountsCardShimmer,
+  CreditCardsCardShimmer, CategoryCardShimmer
 } from "../components/home/HomeShimmer";
 import AccountsCard from "../components/home/AccountsCard";
 import { UpcomingFlowsCard } from "../components/home";
@@ -238,9 +237,9 @@ export default function Home() {
               />
             )}
 
-            <View style={{ height: 24 }} />
+            {/* <View style={{ height: 24 }} /> */}
 
-            {/* Beta - último atalho na Home (restrito por e-mail) */}
+            {/* Beta - último atalho na Home (restrito por e-mail) 
             {canAccessAtivosBeta ? (
               <Pressable
                 onPress={() => navigation.navigate('Minhas ações')}
@@ -264,6 +263,7 @@ export default function Home() {
                 </View>
               </Pressable>
             ) : null}
+            */}
           </View>
         </View>
       </ScrollView>

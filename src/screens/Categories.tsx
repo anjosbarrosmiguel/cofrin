@@ -34,6 +34,18 @@ export default function Categories({ navigation }: any) {
   
   // Estado para controle de foco dos inputs
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  
+  // Estado para subcategorias no modal
+  const [subcategories, setSubcategories] = useState<Category[]>([]);
+  const [loadingSubcategories, setLoadingSubcategories] = useState(false);
+  const [newSubcategoryName, setNewSubcategoryName] = useState('');
+  const [newSubcategoryIcon, setNewSubcategoryIcon] = useState<string>('food');
+  
+  // Estado para edição de subcategorias
+  const [editingSubcategoryId, setEditingSubcategoryId] = useState<string | null>(null);
+  const [editingSubcategoryName, setEditingSubcategoryName] = useState('');
+  const [editingSubcategoryIcon, setEditingSubcategoryIcon] = useState<string>('food');
+  const [editingSubcategoryParentId, setEditingSubcategoryParentId] = useState<string>('');
 
   // Hook de categorias do Firebase
   const { 
@@ -43,6 +55,10 @@ export default function Categories({ navigation }: any) {
     createCategory,
     updateCategory,
     deleteCategory,
+    createSubcategory,
+    getSubcategories,
+    deleteCategoryWithSubs,
+    updateSubcategory,
   } = useCategories();
 
   // Resetar estados do modal
@@ -51,22 +67,43 @@ export default function Categories({ navigation }: any) {
     setCategoryIcon(categoryType === 'expense' ? 'food' : 'briefcase');
     setEditingCategory(null);
     setFocusedField(null);
+    setSubcategories([]);
+    setNewSubcategoryName('');
+    setNewSubcategoryIcon('food');
+    setEditingSubcategoryId(null);
+    setEditingSubcategoryName('');
+    setEditingSubcategoryIcon('food');
+    setEditingSubcategoryParentId('');
   }
 
-  // Abrir modal para criar categoria
+  // Abrir modal para criar categoria raiz
   function openCreateModal() {
     resetModalState();
     setIsCreateMode(true);
     setModalVisible(true);
   }
 
+
   // Abrir modal para editar categoria
-  function openEditModal(category: Category) {
+  async function openEditModal(category: Category) {
     setEditingCategory(category);
     setCategoryName(category.name);
     setCategoryIcon(category.icon);
     setIsCreateMode(false);
     setModalVisible(true);
+    
+    // Carregar subcategorias desta categoria
+    if (user?.uid && !category.parentId) {
+      setLoadingSubcategories(true);
+      try {
+        const subs = await getSubcategories(category.id);
+        setSubcategories(subs);
+      } catch (error) {
+        console.error('Erro ao carregar subcategorias:', error);
+      } finally {
+        setLoadingSubcategories(false);
+      }
+    }
   }
 
   // Verificar se houve alterações nos dados da categoria
@@ -83,7 +120,7 @@ export default function Categories({ navigation }: any) {
     
     // Verificar se já existe uma categoria com o mesmo nome
     const nameExists = currentCategories.some(
-      cat => cat.name.toLowerCase() === categoryName.trim().toLowerCase()
+      cat => !cat.parentId && cat.name.toLowerCase() === categoryName.trim().toLowerCase()
     );
     if (nameExists) {
       showAlert('Nome duplicado', `Já existe uma categoria de ${categoryType === 'expense' ? 'despesa' : 'receita'} com esse nome.`);
@@ -110,6 +147,141 @@ export default function Categories({ navigation }: any) {
     } finally {
       setSaving(false);
     }
+  }
+
+  // Criar subcategoria dentro do modal de edição
+  async function handleCreateSubcategory() {
+    if (!editingCategory || !newSubcategoryName.trim()) return;
+    
+    // Verificar se já existe subcategoria com esse nome
+    const nameExists = subcategories.some(
+      sub => sub.name.toLowerCase() === newSubcategoryName.trim().toLowerCase()
+    );
+    if (nameExists) {
+      showAlert('Nome duplicado', 'Já existe uma subcategoria com esse nome.');
+      return;
+    }
+    
+    setLoadingSubcategories(true);
+    try {
+      const result = await createSubcategory(editingCategory.id, {
+        name: newSubcategoryName.trim(),
+        icon: newSubcategoryIcon,
+        type: categoryType,
+      });
+
+      if (result) {
+        setSubcategories(prev => [...prev, result].sort((a, b) => a.name.localeCompare(b.name)));
+        setNewSubcategoryName('');
+        setNewSubcategoryIcon(categoryType === 'expense' ? 'food' : 'briefcase');
+        showSnackbar('Subcategoria criada!');
+      } else {
+        showAlert('Erro', 'Não foi possível criar a subcategoria');
+      }
+    } catch (error) {
+      showAlert('Erro', 'Ocorreu um erro ao criar a subcategoria');
+    } finally {
+      setLoadingSubcategories(false);
+    }
+  }
+
+  // Iniciar edição de subcategoria
+  function startEditSubcategory(subcategory: Category) {
+    setEditingSubcategoryId(subcategory.id);
+    setEditingSubcategoryName(subcategory.name);
+    setEditingSubcategoryIcon(subcategory.icon);
+    setEditingSubcategoryParentId(subcategory.parentId || '');
+  }
+
+  // Cancelar edição de subcategoria
+  function cancelEditSubcategory() {
+    setEditingSubcategoryId(null);
+    setEditingSubcategoryName('');
+    setEditingSubcategoryIcon('food');
+    setEditingSubcategoryParentId('');
+  }
+
+  // Salvar edição de subcategoria
+  async function handleUpdateSubcategory() {
+    if (!editingSubcategoryId || !editingSubcategoryName.trim()) return;
+    
+    // Verificar se já existe subcategoria com esse nome (exceto a própria)
+    const nameExists = subcategories.some(
+      sub => sub.id !== editingSubcategoryId && 
+             sub.name.toLowerCase() === editingSubcategoryName.trim().toLowerCase()
+    );
+    if (nameExists) {
+      showAlert('Nome duplicado', 'Já existe uma subcategoria com esse nome.');
+      return;
+    }
+    
+    setLoadingSubcategories(true);
+    try {
+      const updateData: { name: string; icon: string; parentId?: string } = {
+        name: editingSubcategoryName.trim(),
+        icon: editingSubcategoryIcon,
+      };
+      
+      // Se mudou a categoria pai, incluir no update
+      if (editingSubcategoryParentId && editingSubcategoryParentId !== editingCategory?.id) {
+        updateData.parentId = editingSubcategoryParentId;
+      }
+      
+      const result = await updateSubcategory(editingSubcategoryId, updateData);
+      
+      if (result) {
+        // Se mudou de pai, remover da lista atual
+        if (editingSubcategoryParentId && editingSubcategoryParentId !== editingCategory?.id) {
+          setSubcategories(prev => prev.filter(s => s.id !== editingSubcategoryId));
+          showSnackbar('Subcategoria movida para outra categoria!');
+        } else {
+          // Atualizar na lista local
+          setSubcategories(prev => 
+            prev.map(s => 
+              s.id === editingSubcategoryId 
+                ? { ...s, name: editingSubcategoryName.trim(), icon: editingSubcategoryIcon }
+                : s
+            ).sort((a, b) => a.name.localeCompare(b.name))
+          );
+          showSnackbar('Subcategoria atualizada!');
+        }
+        cancelEditSubcategory();
+      } else {
+        showAlert('Erro', 'Não foi possível atualizar a subcategoria');
+      }
+    } catch (error) {
+      showAlert('Erro', 'Ocorreu um erro ao atualizar a subcategoria');
+    } finally {
+      setLoadingSubcategories(false);
+    }
+  }
+
+  // Deletar subcategoria
+  async function handleDeleteSubcategory(subcategoryId: string, subcategoryName: string) {
+    showAlert(
+      'Excluir subcategoria',
+      `Deseja realmente excluir a subcategoria "${subcategoryName}"?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { 
+          text: 'Excluir', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const result = await deleteCategory(subcategoryId);
+              if (result) {
+                setSubcategories(prev => prev.filter(s => s.id !== subcategoryId));
+                showSnackbar('Subcategoria excluída!');
+              } else {
+                showAlert('Erro', 'Não foi possível excluir a subcategoria');
+              }
+            } catch (error: any) {
+              showAlert('Erro', error.message || 'Erro ao excluir subcategoria');
+            }
+          }
+        },
+      ]
+    );
   }
 
   async function handleSaveEdit() {
@@ -261,7 +433,8 @@ export default function Categories({ navigation }: any) {
   }
 
   const icons = CATEGORY_ICONS[categoryType];
-  const currentCategories = categoryType === 'expense' ? expenseCategories : incomeCategories;
+  // Mostrar apenas categorias raiz (sem parentId) na lista principal
+  const currentCategories = (categoryType === 'expense' ? expenseCategories : incomeCategories).filter(cat => !cat.parentId);
 
   return (
     <MainLayout>
@@ -482,6 +655,243 @@ export default function Categories({ navigation }: any) {
                 ))}
               </View>
             </View>
+
+            {/* Subcategorias - apenas no modo de edição e para categorias raiz */}
+            {!isCreateMode && editingCategory && !editingCategory.parentId && (
+              <View style={styles.formGroup}>
+                <Text style={[styles.label, { color: colors.text }]}>Subcategorias</Text>
+                
+                {loadingSubcategories ? (
+                  <View style={{ paddingVertical: spacing.md }}>
+                    <Text style={[styles.emptyText, { color: colors.textMuted }]}>Carregando...</Text>
+                  </View>
+                ) : (
+                  <>
+                    {/* Lista de subcategorias existentes */}
+                    {subcategories.length > 0 && (
+                      <View style={[styles.subcategoryList, { borderColor: colors.border }]}>
+                        {subcategories.map((sub) => (
+                          <View key={sub.id} style={[styles.subcategoryItem, { borderBottomColor: colors.border }]}>
+                            {editingSubcategoryId === sub.id ? (
+                              // Modo edição
+                              <View style={{ flex: 1 }}>
+                                <View style={[styles.inputContainer, { borderColor: colors.border, marginBottom: spacing.sm }]}>
+                                  <TextInput
+                                    value={editingSubcategoryName}
+                                    onChangeText={setEditingSubcategoryName}
+                                    placeholder="Nome da subcategoria"
+                                    placeholderTextColor={colors.textMuted}
+                                    style={[styles.input, { color: colors.text }]}
+                                  />
+                                </View>
+                                
+                                {/* Mini grid de ícones */}
+                                <View style={[styles.miniIconGrid, { marginBottom: spacing.sm }]}>
+                                  {icons.slice(0, 8).map((icon) => (
+                                    <Pressable
+                                      key={icon}
+                                      onPress={() => setEditingSubcategoryIcon(icon)}
+                                      style={[
+                                        styles.miniIconOption,
+                                        { 
+                                          borderColor: editingSubcategoryIcon === icon 
+                                            ? (categoryType === 'expense' ? colors.expense : colors.income) 
+                                            : colors.border,
+                                        },
+                                        editingSubcategoryIcon === icon && { 
+                                          backgroundColor: (categoryType === 'expense' ? colors.expense : colors.income) + '15' 
+                                        },
+                                      ]}
+                                    >
+                                      <MaterialCommunityIcons 
+                                        name={icon as any} 
+                                        size={16} 
+                                        color={editingSubcategoryIcon === icon 
+                                          ? (categoryType === 'expense' ? colors.expense : colors.income) 
+                                          : colors.textMuted
+                                        } 
+                                      />
+                                    </Pressable>
+                                  ))}
+                                </View>
+                                
+                                {/* Seletor de categoria pai */}
+                                <View style={[styles.parentCategorySelector, { borderColor: colors.border, backgroundColor: colors.card, marginBottom: spacing.sm }]}>
+                                  <Text style={[styles.parentCategorySelectorLabel, { color: colors.textSecondary }]}>Categoria pai:</Text>
+                                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ flexDirection: 'row' }}>
+                                    {currentCategories.map((cat) => (
+                                      <Pressable
+                                        key={cat.id}
+                                        onPress={() => setEditingSubcategoryParentId(cat.id)}
+                                        style={[
+                                          styles.parentCategoryOption,
+                                          { 
+                                            borderColor: editingSubcategoryParentId === cat.id
+                                              ? (categoryType === 'expense' ? colors.expense : colors.income)
+                                              : colors.border,
+                                            backgroundColor: editingSubcategoryParentId === cat.id
+                                              ? (categoryType === 'expense' ? colors.expense : colors.income) + '15'
+                                              : 'transparent',
+                                          },
+                                        ]}
+                                      >
+                                        <MaterialCommunityIcons 
+                                          name={cat.icon as any} 
+                                          size={14} 
+                                          color={editingSubcategoryParentId === cat.id
+                                            ? (categoryType === 'expense' ? colors.expense : colors.income)
+                                            : colors.textMuted
+                                          } 
+                                        />
+                                        <Text style={[
+                                          styles.parentCategoryOptionText,
+                                          { color: editingSubcategoryParentId === cat.id ? colors.text : colors.textMuted }
+                                        ]}>
+                                          {cat.name}
+                                        </Text>
+                                      </Pressable>
+                                    ))}
+                                  </ScrollView>
+                                </View>
+                                
+                                <View style={styles.editSubcategoryActions}>
+                                  <Pressable
+                                    onPress={cancelEditSubcategory}
+                                    style={[styles.editSubcategoryButton, { backgroundColor: colors.bg }]}
+                                  >
+                                    <Text style={[styles.editSubcategoryButtonText, { color: colors.textMuted }]}>Cancelar</Text>
+                                  </Pressable>
+                                  <Pressable
+                                    onPress={handleUpdateSubcategory}
+                                    disabled={!editingSubcategoryName.trim() || loadingSubcategories}
+                                    style={[
+                                      styles.editSubcategoryButton,
+                                      { backgroundColor: categoryType === 'expense' ? colors.expense : colors.income },
+                                      (!editingSubcategoryName.trim() || loadingSubcategories) && { opacity: 0.5 },
+                                    ]}
+                                  >
+                                    <Text style={[styles.editSubcategoryButtonText, { color: '#fff' }]}>Salvar</Text>
+                                  </Pressable>
+                                </View>
+                              </View>
+                            ) : (
+                              // Modo visualização
+                              <>
+                                <View style={styles.subcategoryContent}>
+                                  <View style={[
+                                    styles.categoryIcon, 
+                                    { backgroundColor: (categoryType === 'expense' ? colors.expense : colors.income) + '20' }
+                                  ]}>
+                                    <MaterialCommunityIcons 
+                                      name={sub.icon as any} 
+                                      size={14} 
+                                      color={categoryType === 'expense' ? colors.expense : colors.income} 
+                                    />
+                                  </View>
+                                  <Text style={[styles.subcategoryName, { color: colors.text }]}>{sub.name}</Text>
+                                </View>
+                                <View style={{ flexDirection: 'row', gap: spacing.xs }}>
+                                  <Pressable
+                                    onPress={() => startEditSubcategory(sub)}
+                                    style={styles.subcategoryActionButton}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  >
+                                    <MaterialCommunityIcons name="pencil" size={18} color={colors.textMuted} />
+                                  </Pressable>
+                                  <Pressable
+                                    onPress={() => handleDeleteSubcategory(sub.id, sub.name)}
+                                    style={styles.subcategoryActionButton}
+                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                  >
+                                    <MaterialCommunityIcons name="close" size={18} color={colors.textMuted} />
+                                  </Pressable>
+                                </View>
+                              </>
+                            )}
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
+                    {/* Formulário para adicionar nova subcategoria */}
+                    <View style={styles.addSubcategoryForm}>
+                      <View style={[
+                        styles.inputContainer, 
+                        { 
+                          borderColor: focusedField === 'subcategory' ? (categoryType === 'expense' ? colors.expense : colors.income) : colors.border,
+                          borderWidth: focusedField === 'subcategory' ? 2 : 1,
+                        }
+                      ]}>
+                        <TextInput
+                          value={newSubcategoryName}
+                          onChangeText={setNewSubcategoryName}
+                          onFocus={() => setFocusedField('subcategory')}
+                          onBlur={() => setFocusedField(null)}
+                          placeholder="Nome da subcategoria"
+                          placeholderTextColor={colors.textMuted}
+                          style={[styles.input, { color: colors.text }]}
+                        />
+                      </View>
+
+                      {/* Seleção de ícone da subcategoria (mini grid) */}
+                      <View style={styles.miniIconGrid}>
+                        {icons.slice(0, 8).map((icon) => (
+                          <Pressable
+                            key={icon}
+                            onPress={() => setNewSubcategoryIcon(icon)}
+                            style={[
+                              styles.miniIconOption,
+                              { 
+                                borderColor: newSubcategoryIcon === icon 
+                                  ? (categoryType === 'expense' ? colors.expense : colors.income) 
+                                  : colors.border,
+                              },
+                              newSubcategoryIcon === icon && { 
+                                backgroundColor: (categoryType === 'expense' ? colors.expense : colors.income) + '15' 
+                              },
+                            ]}
+                          >
+                            <MaterialCommunityIcons 
+                              name={icon as any} 
+                              size={16} 
+                              color={newSubcategoryIcon === icon 
+                                ? (categoryType === 'expense' ? colors.expense : colors.income) 
+                                : colors.textMuted
+                              } 
+                            />
+                          </Pressable>
+                        ))}
+                      </View>
+
+                      <Pressable
+                        onPress={handleCreateSubcategory}
+                        disabled={!newSubcategoryName.trim() || loadingSubcategories}
+                        style={({ pressed }) => [
+                          styles.addSubcategoryButton,
+                          { 
+                            backgroundColor: (categoryType === 'expense' ? colors.expense : colors.income) + '15',
+                            borderColor: categoryType === 'expense' ? colors.expense : colors.income,
+                          },
+                          pressed && { opacity: 0.8 },
+                          (!newSubcategoryName.trim() || loadingSubcategories) && { opacity: 0.5 },
+                        ]}
+                      >
+                        <MaterialCommunityIcons 
+                          name="plus" 
+                          size={16} 
+                          color={categoryType === 'expense' ? colors.expense : colors.income} 
+                        />
+                        <Text style={[styles.addSubcategoryButtonText, { 
+                          color: categoryType === 'expense' ? colors.expense : colors.income 
+                        }]}>
+                          Adicionar subcategoria
+                        </Text>
+                      </Pressable>
+                    </View>
+                  </>
+                )}
+              </View>
+            )}
 
             {/* Botões de ação */}
             <View style={styles.modalActionsColumn}>
@@ -780,4 +1190,108 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  // Estilos para gerenciamento de subcategorias no modal
+  subcategoryList: {
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    overflow: 'hidden',
+    marginBottom: spacing.md,
+  },
+  subcategoryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 12,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+  },
+  subcategoryContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    flex: 1,
+  },
+  subcategoryName: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  subcategoryDeleteButton: {
+    padding: 4,
+  },
+  subcategoryActionButton: {
+    padding: 4,
+  },
+  addSubcategoryForm: {
+    gap: spacing.sm,
+  },
+  miniIconGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.xs,
+  },
+  miniIconOption: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderRadius: borderRadius.sm,
+    width: 36,
+    height: 36,
+  },
+  addSubcategoryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: spacing.md,
+    borderRadius: borderRadius.md,
+    gap: spacing.xs,
+    borderWidth: 1.5,
+  },
+  addSubcategoryButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  // Estilos para edição de subcategorias
+  editSubcategoryActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.xs,
+  },
+  editSubcategoryButton: {
+    flex: 1,
+    paddingVertical: 8,
+    paddingHorizontal: spacing.sm,
+    borderRadius: borderRadius.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  editSubcategoryButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  parentCategorySelector: {
+    borderWidth: 1,
+    borderRadius: borderRadius.md,
+    padding: spacing.sm,
+  },
+  parentCategorySelectorLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: spacing.xs,
+  },
+  parentCategoryOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: borderRadius.full,
+    borderWidth: 1.5,
+    marginRight: spacing.xs,
+  },
+  parentCategoryOptionText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  // Removidos estilos antigos de hierarquia na lista
 });

@@ -115,6 +115,67 @@ export function useCategories(type?: CategoryType) {
   const expenseCategories = categories.filter(c => c.type === 'expense');
   const incomeCategories = categories.filter(c => c.type === 'income');
 
+  // Criar subcategoria
+  const createSubcategory = async (parentId: string, data: Omit<CreateCategoryInput, 'parentId'>): Promise<Category | null> => {
+    if (!user?.uid) return null;
+
+    try {
+      const newSubcategory = await categoryService.createSubcategory(user.uid, parentId, data);
+      // Recarregar todas as categorias para atualizar estado do pai
+      await loadCategories();
+      return newSubcategory;
+    } catch (err) {
+      console.error('Erro ao criar subcategoria:', err);
+      setError('Erro ao criar subcategoria');
+      return null;
+    }
+  };
+
+  // Buscar subcategorias de uma categoria
+  const getSubcategories = async (parentId: string): Promise<Category[]> => {
+    if (!user?.uid) return [];
+
+    try {
+      return await categoryService.getSubcategories(user.uid, parentId);
+    } catch (err) {
+      console.error('Erro ao buscar subcategorias:', err);
+      return [];
+    }
+  };
+
+  // Deletar categoria e subcategorias
+  const deleteCategoryWithSubs = async (categoryId: string): Promise<boolean> => {
+    if (!user?.uid) return false;
+
+    try {
+      await categoryService.deleteCategoryAndSubcategories(user.uid, categoryId);
+      await loadCategories();
+      return true;
+    } catch (err) {
+      console.error('Erro ao deletar categoria:', err);
+      setError('Erro ao deletar categoria');
+      return false;
+    }
+  };
+
+  // Atualizar subcategoria
+  const updateSubcategory = async (
+    subcategoryId: string,
+    data: { name?: string; icon?: string; parentId?: string }
+  ): Promise<boolean> => {
+    if (!user?.uid) return false;
+
+    try {
+      await categoryService.updateSubcategory(subcategoryId, data);
+      await loadCategories();
+      return true;
+    } catch (err) {
+      console.error('Erro ao atualizar subcategoria:', err);
+      setError('Erro ao atualizar subcategoria');
+      return false;
+    }
+  };
+
   return {
     categories,
     expenseCategories,
@@ -126,5 +187,10 @@ export function useCategories(type?: CategoryType) {
     updateCategory,
     deleteCategory,
     createDefaultCategories,
+    // Hierarquia
+    createSubcategory,
+    getSubcategories,
+    deleteCategoryWithSubs,
+    updateSubcategory,
   };
 }

@@ -28,6 +28,8 @@ export interface Category extends BaseDocument {
   color?: string;
   isDefault?: boolean; // Categorias padrão do sistema
   isMetaCategory?: boolean; // Categoria especial para lançamentos de meta
+  parentId?: string | null; // ID da categoria pai (null = categoria raiz)
+  isParent?: boolean; // True se esta categoria tem subcategorias
 }
 
 // ID especial para categoria de meta (usada em lançamentos de meta)

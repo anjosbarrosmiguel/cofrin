@@ -100,6 +100,23 @@ export async function getCategoryById(categoryId: string): Promise<Category | nu
   } as Category;
 }
 
+// Atualizar subcategoria (incluindo mudar categoria pai)
+export async function updateSubcategory(
+  subcategoryId: string,
+  data: { name?: string; icon?: string; parentId?: string }
+): Promise<void> {
+  const docRef = doc(db, COLLECTIONS.CATEGORIES, subcategoryId);
+  const updateData: any = {
+    updatedAt: Timestamp.now(),
+  };
+
+  if (data.name !== undefined) updateData.name = data.name;
+  if (data.icon !== undefined) updateData.icon = data.icon;
+  if (data.parentId !== undefined) updateData.parentId = data.parentId;
+
+  await updateDoc(docRef, updateData);
+}
+
 // Atualizar categoria
 export async function updateCategory(
   categoryId: string,
@@ -261,4 +278,175 @@ export async function getOrCreateMetaCategory(userId: string): Promise<string> {
   });
   
   return docRef.id;
+}
+
+// ==========================================
+// SUBCATEGORIAS
+// ==========================================
+
+// Buscar subcategorias de uma categoria pai
+export async function getSubcategories(
+  userId: string,
+  parentId: string
+): Promise<Category[]> {
+  const q = query(
+    categoriesRef,
+    where('userId', '==', userId),
+    where('parentId', '==', parentId)
+  );
+
+  const snapshot = await getDocs(q);
+  const subcategories = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Category[];
+  
+  return subcategories.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// Verificar se uma categoria tem subcategorias
+export async function hasSubcategories(
+  userId: string,
+  categoryId: string
+): Promise<boolean> {
+  const q = query(
+    categoriesRef,
+    where('userId', '==', userId),
+    where('parentId', '==', categoryId)
+  );
+  
+  const snapshot = await getDocs(q);
+  return !snapshot.empty;
+}
+
+// Criar subcategoria
+export async function createSubcategory(
+  userId: string,
+  parentId: string,
+  data: Omit<CreateCategoryInput, 'parentId'>
+): Promise<Category> {
+  const now = Timestamp.now();
+  
+  // Verificar se a categoria pai existe
+  const parentCategory = await getCategoryById(parentId);
+  if (!parentCategory) {
+    throw new Error('Categoria pai não encontrada');
+  }
+  
+  // Criar a subcategoria
+  const docRef = await addDoc(categoriesRef, {
+    ...data,
+    parentId,
+    userId,
+    createdAt: now,
+    updatedAt: now,
+  });
+
+  // Marcar a categoria pai como parent
+  const parentDocRef = doc(db, COLLECTIONS.CATEGORIES, parentId);
+  await updateDoc(parentDocRef, {
+    isParent: true,
+    updatedAt: now,
+  });
+
+  return {
+    id: docRef.id,
+    userId,
+    ...data,
+    parentId,
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
+// Buscar categorias raiz (sem pai) por tipo
+export async function getRootCategoriesByType(
+  userId: string,
+  type: CategoryType
+): Promise<Category[]> {
+  const q = query(
+    categoriesRef,
+    where('userId', '==', userId),
+    where('type', '==', type),
+    where('parentId', '==', null)
+  );
+
+  const snapshot = await getDocs(q);
+  const categories = snapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data(),
+  })) as Category[];
+  
+  return categories.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// Buscar todas as categorias (raiz + subcategorias) organizadas hierarquicamente
+export async function getCategoriesHierarchy(
+  userId: string,
+  type: CategoryType
+): Promise<Array<Category & { subcategories?: Category[] }>> {
+  // Buscar todas as categorias do tipo
+  const allCategories = await getCategoriesByType(userId, type);
+  
+  // Separar categorias raiz e subcategorias
+  const rootCategories = allCategories.filter(cat => !cat.parentId);
+  const subcategoriesMap = new Map<string, Category[]>();
+  
+  allCategories.forEach(cat => {
+    if (cat.parentId) {
+      if (!subcategoriesMap.has(cat.parentId)) {
+        subcategoriesMap.set(cat.parentId, []);
+      }
+      subcategoriesMap.get(cat.parentId)!.push(cat);
+    }
+  });
+  
+  // Montar hierarquia
+  return rootCategories.map(root => ({
+    ...root,
+    subcategories: subcategoriesMap.get(root.id) || [],
+  }));
+}
+
+// Deletar categoria e suas subcategorias
+export async function deleteCategoryAndSubcategories(
+  userId: string,
+  categoryId: string
+): Promise<void> {
+  const category = await getCategoryById(categoryId);
+  
+  if (!category) {
+    throw new Error('Categoria não encontrada');
+  }
+  
+  // Proteger categorias essenciais
+  if (category.name === 'Renda' && category.type === 'income') {
+    throw new Error('A categoria Renda não pode ser removida pois é essencial para o sistema.');
+  }
+  
+  if (category.name === 'Outros') {
+    throw new Error('A categoria Outros não pode ser removida pois é essencial para o sistema.');
+  }
+  
+  if (category.isMetaCategory || category.name === 'Meta') {
+    throw new Error('A categoria Meta não pode ser removida pois é usada para lançamentos de objetivos.');
+  }
+  
+  // Buscar subcategorias
+  const subcategories = await getSubcategories(userId, categoryId);
+  
+  // Deletar em batch
+  const batch = writeBatch(db);
+  
+  // Deletar categoria principal
+  const mainDocRef = doc(db, COLLECTIONS.CATEGORIES, categoryId);
+  batch.delete(mainDocRef);
+  
+  // Deletar subcategorias
+  subcategories.forEach(sub => {
+    const subDocRef = doc(db, COLLECTIONS.CATEGORIES, sub.id);
+    batch.delete(subDocRef);
+  });
+  
+  await batch.commit();
 }

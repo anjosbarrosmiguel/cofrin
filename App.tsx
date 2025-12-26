@@ -10,6 +10,7 @@ import { useMemo, useEffect, useState } from 'react';
 import { useFonts, Roboto_400Regular, Roboto_700Bold } from '@expo-google-fonts/roboto';
 import { ActivityIndicator, View, StyleSheet, Platform } from 'react-native';
 import { initPWA } from './src/utils/pwaInit';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 // Inicializa PWA o mais cedo possível (apenas web)
 if (Platform.OS === 'web') {
@@ -27,7 +28,11 @@ try {
 }
 
 export default function App() {
-  const [fontsLoaded] = useFonts({ Roboto_400Regular, Roboto_700Bold });
+  const [fontsLoaded] = useFonts({ 
+    Roboto_400Regular, 
+    Roboto_700Bold,
+    ...MaterialCommunityIcons.font,
+  });
   const [appIsReady, setAppIsReady] = useState(false);
 
   useEffect(() => {

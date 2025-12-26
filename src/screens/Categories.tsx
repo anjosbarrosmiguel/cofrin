@@ -258,30 +258,101 @@ export default function Categories({ navigation }: any) {
 
   // Deletar subcategoria
   async function handleDeleteSubcategory(subcategoryId: string, subcategoryName: string) {
-    showAlert(
-      'Excluir subcategoria',
-      `Deseja realmente excluir a subcategoria "${subcategoryName}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Excluir', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              const result = await deleteCategory(subcategoryId);
-              if (result) {
-                setSubcategories(prev => prev.filter(s => s.id !== subcategoryId));
-                showSnackbar('Subcategoria excluída!');
-              } else {
-                showAlert('Erro', 'Não foi possível excluir a subcategoria');
+    // Verificar se há transações associadas
+    try {
+      const { getTransactionCountByCategory } = await import('../services/transactionService');
+      
+      if (!user?.uid) return;
+      
+      const transactionCount = await getTransactionCountByCategory(user.uid, subcategoryId);
+      
+      if (transactionCount > 0) {
+        // Tem transações: mostrar opção de transferir
+        // Buscar todas as categorias/subcategorias disponíveis (exceto a que será deletada)
+        const allCategories = currentCategories.filter(c => c.id !== subcategoryId);
+        const allSubcategories = subcategories.filter(s => s.id !== subcategoryId);
+        const availableTargets = [...allCategories, ...allSubcategories];
+        
+        if (availableTargets.length === 0) {
+          showAlert('Erro', 'Não é possível excluir esta subcategoria pois ela possui lançamentos e não há outra categoria disponível para transferi-los.');
+          return;
+        }
+        
+        // Mostrar modal de seleção de categoria
+        showAlert(
+          'Transferir lançamentos',
+          `Esta subcategoria possui ${transactionCount} lançamento(s). Escolha uma categoria ou subcategoria para transferir esses lançamentos:`,
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            ...availableTargets.slice(0, 3).map(target => ({
+              text: target.name,
+              onPress: async () => {
+                await confirmDeleteSubcategoryWithTransfer(subcategoryId, subcategoryName, target.id, target.name);
               }
-            } catch (error: any) {
-              showAlert('Erro', error.message || 'Erro ao excluir subcategoria');
-            }
-          }
-        },
-      ]
-    );
+            }))
+          ]
+        );
+      } else {
+        // Sem transações: confirmar exclusão direta
+        showAlert(
+          'Excluir subcategoria',
+          `Deseja realmente excluir a subcategoria "${subcategoryName}"?`,
+          [
+            { text: 'Cancelar', style: 'cancel' },
+            { 
+              text: 'Excluir', 
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  const result = await deleteCategory(subcategoryId);
+                  if (result) {
+                    setSubcategories(prev => prev.filter(s => s.id !== subcategoryId));
+                    showSnackbar('Subcategoria excluída!');
+                  } else {
+                    showAlert('Erro', 'Não foi possível excluir a subcategoria');
+                  }
+                } catch (error: any) {
+                  showAlert('Erro', error.message || 'Erro ao excluir subcategoria');
+                }
+              }
+            },
+          ]
+        );
+      }
+    } catch (error: any) {
+      showAlert('Erro', error.message || 'Erro ao verificar lançamentos da subcategoria');
+    }
+  }
+  
+  async function confirmDeleteSubcategoryWithTransfer(
+    fromSubcategoryId: string,
+    fromSubcategoryName: string,
+    toTargetId: string,
+    toTargetName: string
+  ) {
+    try {
+      const { transferTransactionsToCategory } = await import('../services/categoryService');
+      
+      if (!user?.uid) {
+        showAlert('Erro', 'Usuário não autenticado');
+        return;
+      }
+      
+      // Transferir transações
+      const count = await transferTransactionsToCategory(user.uid, fromSubcategoryId, toTargetId);
+      
+      // Excluir subcategoria
+      const result = await deleteCategory(fromSubcategoryId);
+      
+      if (result) {
+        setSubcategories(prev => prev.filter(s => s.id !== fromSubcategoryId));
+        showSnackbar(`${count} lançamento(s) transferidos e subcategoria excluída`);
+      } else {
+        showAlert('Erro', 'Não foi possível excluir a subcategoria');
+      }
+    } catch (error: any) {
+      showAlert('Erro', error.message || 'Erro ao excluir subcategoria');
+    }
   }
 
   async function handleSaveEdit() {

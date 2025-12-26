@@ -26,7 +26,7 @@ import { useSnackbar } from '../../hooks/useSnackbar';
 import CustomAlert from '../CustomAlert';
 import Snackbar from '../Snackbar';
 import LoadingOverlay from '../LoadingOverlay';
-import { TransactionType, RecurrenceType, CreateTransactionInput, CATEGORY_ICONS } from '../../types/firebase';
+import { TransactionType, RecurrenceType, CreateTransactionInput, CATEGORY_ICONS, Category } from '../../types/firebase';
 import { useTransactionRefresh } from '../../contexts/transactionRefreshContext';
 import { validateBillForTransaction } from '../../services/creditCardBillService';
 import { useAuth } from '../../contexts/authContext';
@@ -258,11 +258,27 @@ export default function AddTransactionModal({
     return true;
   }, [type, accountId, toAccountId, hasAmount, description]);
 
-  // Filtrar categorias por tipo
-  const filteredCategories = React.useMemo(() => {
+  // Filtrar categorias por tipo e organizar hierarquicamente
+  const filteredCategories: Array<{ category: Category; isSubcategory: boolean }> = React.useMemo(() => {
     if (type === 'transfer') return [];
     const categoryType = type === 'despesa' ? 'expense' : 'income';
-    return categories.filter(c => c.type === categoryType);
+    const allCategories = categories.filter(c => c.type === categoryType);
+    
+    // Separar pais e filhos
+    const rootCategories = allCategories.filter(c => !c.parentId);
+    const subcategories = allCategories.filter(c => c.parentId);
+    
+    // Organizar: pai seguido de suas subcategorias
+    const organized: Array<{ category: Category; isSubcategory: boolean }> = [];
+    rootCategories.forEach(parent => {
+      organized.push({ category: parent, isSubcategory: false });
+      const children = subcategories.filter(sub => sub.parentId === parent.id);
+      children.forEach(child => {
+        organized.push({ category: child, isSubcategory: true });
+      });
+    });
+    
+    return organized;
   }, [categories, type]);
 
   // Atualizar categoria quando mudar o tipo (despesa/receita)
@@ -907,7 +923,7 @@ export default function AddTransactionModal({
     // Render category picker
     if (activePicker === 'category') {
       const categoryType = type === 'despesa' ? 'expense' : 'income';
-      const filteredCategories = categories.filter(c => 
+      const availableCategoriesForCreation = categories.filter(c => 
         c.type === categoryType &&
         !c.isMetaCategory && c.name !== 'Meta'
       );
@@ -1096,41 +1112,56 @@ export default function AddTransactionModal({
             <View style={[styles.pickerDivider, { backgroundColor: colors.border }]} />
             
             {/* Lista de categorias existentes */}
-            {filteredCategories.map((cat) => (
-              <Pressable
-                key={cat.id}
-                onPress={() => {
-                  setCategoryId(cat.id);
-                  setCategoryName(cat.name);
-                  setActivePicker('none');
-                }}
-                style={({ pressed }) => [
-                  styles.pickerOption,
-                  { backgroundColor: pressed ? colors.grayLight : 'transparent' },
-                  categoryId === cat.id && { backgroundColor: colors.primaryBg },
-                ]}
-              >
-                <View style={styles.pickerOptionWithIcon}>
-                  <MaterialCommunityIcons 
-                    name={(cat.icon || 'tag') as any} 
-                    size={20} 
-                    color={categoryId === cat.id ? colors.primary : colors.textMuted} 
-                  />
-                  <Text
-                    style={[
-                      styles.pickerOptionText,
-                      { color: colors.text, marginLeft: spacing.sm },
-                      categoryId === cat.id && { color: colors.primary, fontWeight: '600' },
-                    ]}
-                  >
-                    {cat.name}
-                  </Text>
-                </View>
-                {categoryId === cat.id && (
-                  <MaterialCommunityIcons name="check" size={20} color={colors.primary} />
-                )}
-              </Pressable>
-            ))}
+            {filteredCategories.map((item) => {
+              const cat = item.category;
+              const isSubcategory = item.isSubcategory;
+              
+              return (
+                <Pressable
+                  key={cat.id}
+                  onPress={() => {
+                    setCategoryId(cat.id);
+                    setCategoryName(cat.name);
+                    setActivePicker('none');
+                  }}
+                  style={({ pressed }) => [
+                    styles.pickerOption,
+                    { backgroundColor: pressed ? colors.grayLight : 'transparent' },
+                    categoryId === cat.id && { backgroundColor: colors.primaryBg },
+                    isSubcategory && { paddingLeft: spacing.xl + spacing.lg }, // Indentação para subcategorias
+                  ]}
+                >
+                  <View style={styles.pickerOptionWithIcon}>
+                    {isSubcategory && (
+                      <MaterialCommunityIcons 
+                        name="subdirectory-arrow-right" 
+                        size={16} 
+                        color={colors.textMuted} 
+                        style={{ marginRight: spacing.xs }}
+                      />
+                    )}
+                    <MaterialCommunityIcons 
+                      name={(cat.icon || 'tag') as any} 
+                      size={20} 
+                      color={categoryId === cat.id ? colors.primary : colors.textMuted} 
+                    />
+                    <Text
+                      style={[
+                        styles.pickerOptionText,
+                        { color: colors.text, marginLeft: spacing.sm },
+                        categoryId === cat.id && { color: colors.primary, fontWeight: '600' },
+                        isSubcategory && { fontSize: 14 }, // Fonte menor para subcategorias
+                      ]}
+                    >
+                      {cat.name}
+                    </Text>
+                  </View>
+                  {categoryId === cat.id && (
+                    <MaterialCommunityIcons name="check" size={20} color={colors.primary} />
+                  )}
+                </Pressable>
+              );
+            })}
           </ScrollView>
         </View>
       );

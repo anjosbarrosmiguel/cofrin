@@ -1,22 +1,23 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  View,
-  StyleSheet,
-  ScrollView,
-  Platform,
-  Pressable,
-  Modal,
-  Dimensions,
-  Text,
-  TextInput,
-  ActivityIndicator
+    View,
+    StyleSheet,
+    ScrollView,
+    Platform,
+    Pressable,
+    Modal,
+    Dimensions,
+    Text,
+    TextInput,
+    ActivityIndicator
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import DateTimePicker, { DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { Timestamp } from 'firebase/firestore';
 import { useAppTheme } from '../../contexts/themeContext';
 import { useNavigation } from '@react-navigation/native';
-import { spacing, borderRadius, getShadow } from '../../theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { spacing, borderRadius } from '../../theme';
 import { useCategories } from '../../hooks/useCategories';
 import { useAccounts } from '../../hooks/useAccounts';
 import { useCreditCards } from '../../hooks/useCreditCards';
@@ -134,6 +135,7 @@ export default function AddTransactionModal({
   const { colors } = useAppTheme();
   const { refreshKey } = useTransactionRefresh();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
 
   // Firebase hooks
   const { categories, refresh: refreshCategories, createCategory } = useCategories();
@@ -972,6 +974,7 @@ export default function AddTransactionModal({
       if (isCreatingCategory) {
         return (
           <View style={[styles.pickerContainer, { backgroundColor: colors.card }]}>
+            <View style={[styles.bottomSheetHandle, { backgroundColor: colors.border }]} />
             <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
               <Pressable 
                 onPress={() => {
@@ -995,7 +998,11 @@ export default function AddTransactionModal({
               </Pressable>
             </View>
             
-            <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+            <ScrollView 
+              style={styles.pickerScroll} 
+              contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, spacing.md) }}
+              showsVerticalScrollIndicator={false}
+            >
               {/* Campo de nome */}
               <View style={styles.createCategoryForm}>
                 <Text style={[styles.createCategoryLabel, { color: colors.text }]}>Nome da categoria</Text>
@@ -1085,13 +1092,18 @@ export default function AddTransactionModal({
       // Picker normal com botão de adicionar
       return (
         <View style={[styles.pickerContainer, { backgroundColor: colors.card }]}>
+          <View style={[styles.bottomSheetHandle, { backgroundColor: colors.border }]} />
           <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.pickerTitle, { color: colors.text }]}>Selecionar Categoria</Text>
             <Pressable onPress={() => setActivePicker('none')} hitSlop={12}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textMuted} />
             </Pressable>
           </View>
-          <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+          <ScrollView 
+            style={styles.pickerScroll} 
+            contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, spacing.md) }}
+            showsVerticalScrollIndicator={false}
+          >
             {/* Botão de criar nova categoria */}
             <Pressable
               onPress={() => setIsCreatingCategory(true)}
@@ -1171,6 +1183,7 @@ export default function AddTransactionModal({
     if (activePicker === 'account') {
       return (
         <View style={[styles.pickerContainer, { backgroundColor: colors.card }]}>
+          <View style={[styles.bottomSheetHandle, { backgroundColor: colors.border }]} />
           <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.pickerTitle, { color: colors.text }]}>
               {type === 'transfer' ? 'Conta de Origem' : 'Selecionar Conta'}
@@ -1179,7 +1192,7 @@ export default function AddTransactionModal({
               <MaterialCommunityIcons name="close" size={24} color={colors.textMuted} />
             </Pressable>
           </View>
-          <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, spacing.md) }}>
             {activeAccounts.map((acc) => (
               <Pressable
                 key={acc.id}
@@ -1273,13 +1286,14 @@ export default function AddTransactionModal({
       
       return (
         <View style={[styles.pickerContainer, { backgroundColor: colors.card }]}>
+          <View style={[styles.bottomSheetHandle, { backgroundColor: colors.border }]} />
           <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.pickerTitle, { color: colors.text }]}>Conta de Destino</Text>
             <Pressable onPress={() => setActivePicker('none')} hitSlop={12}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textMuted} />
             </Pressable>
           </View>
-          <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, spacing.md) }}>
             {filteredAccounts.map((acc) => (
               <Pressable
                 key={acc.id}
@@ -1324,13 +1338,14 @@ export default function AddTransactionModal({
     if (activePicker === 'recurrence') {
       return (
         <View style={[styles.pickerContainer, { backgroundColor: colors.card }]}>
+          <View style={[styles.bottomSheetHandle, { backgroundColor: colors.border }]} />
           <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.pickerTitle, { color: colors.text }]}>Repetir Lançamento</Text>
             <Pressable onPress={() => setActivePicker('none')} hitSlop={12}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textMuted} />
             </Pressable>
           </View>
-          <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, spacing.md) }}>
             {RECURRENCE_OPTIONS.map((option) => (
               <Pressable
                 key={option.value}
@@ -1371,13 +1386,14 @@ export default function AddTransactionModal({
     if (activePicker === 'recurrenceType') {
       return (
         <View style={[styles.pickerContainer, { backgroundColor: colors.card }]}>
+          <View style={[styles.bottomSheetHandle, { backgroundColor: colors.border }]} />
           <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.pickerTitle, { color: colors.text }]}>Tipo de Recorrência</Text>
             <Pressable onPress={() => setActivePicker('none')} hitSlop={12}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textMuted} />
             </Pressable>
           </View>
-          <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
+          <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Math.max(insets.bottom, spacing.md) }}>
             {RECURRENCE_TYPE_OPTIONS.map((option) => (
               <Pressable
                 key={option.value}
@@ -1415,45 +1431,123 @@ export default function AddTransactionModal({
       );
     }
 
-    // Render repetitions picker
+    // Render repetitions picker - Input numérico moderno
     if (activePicker === 'repetitions') {
+      const quickNumbers = [3, 6, 12, 24];
+      
+      const handleIncrement = () => {
+        if (repetitions < 72) setRepetitions(repetitions + 1);
+      };
+      
+      const handleDecrement = () => {
+        if (repetitions > 1) setRepetitions(repetitions - 1);
+      };
+      
+      const handleQuickNumber = (num: number) => {
+        setRepetitions(num);
+      };
+      
       return (
         <View style={[styles.pickerContainer, { backgroundColor: colors.card }]}>
+          <View style={[styles.bottomSheetHandle, { backgroundColor: colors.border }]} />
           <View style={[styles.pickerHeader, { borderBottomColor: colors.border }]}>
             <Text style={[styles.pickerTitle, { color: colors.text }]}>Quantas vezes repetir?</Text>
             <Pressable onPress={() => setActivePicker('none')} hitSlop={12}>
               <MaterialCommunityIcons name="close" size={24} color={colors.textMuted} />
             </Pressable>
           </View>
-          <ScrollView style={styles.pickerScroll} showsVerticalScrollIndicator={false}>
-            {REPETITION_OPTIONS.map((option) => (
+          
+          <View style={{ 
+            padding: spacing.lg,
+            paddingBottom: Math.max(insets.bottom + spacing.lg, spacing.xl),
+            gap: spacing.lg,
+          }}>
+            {/* Input numérico com botões +/- */}
+            <View style={styles.numericInputRow}>
               <Pressable
-                key={option.value}
-                onPress={() => {
-                  setRepetitions(option.value);
-                  setActivePicker('none');
-                }}
-                style={({ pressed }) => [
-                  styles.pickerOption,
-                  { backgroundColor: pressed ? colors.grayLight : 'transparent' },
-                  repetitions === option.value && { backgroundColor: colors.primaryBg },
+                onPress={handleDecrement}
+                disabled={repetitions <= 1}
+                style={[
+                  styles.numericButton,
+                  { borderColor: repetitions <= 1 ? colors.border : colors.primary },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.pickerOptionText,
-                    { color: colors.text },
-                    repetitions === option.value && { color: colors.primary, fontWeight: '600' },
-                  ]}
-                >
-                  {option.label}
-                </Text>
-                {repetitions === option.value && (
-                  <MaterialCommunityIcons name="check" size={20} color={colors.primary} />
-                )}
+                <MaterialCommunityIcons 
+                  name="minus" 
+                  size={28} 
+                  color={repetitions <= 1 ? colors.textMuted : colors.primary} 
+                />
               </Pressable>
-            ))}
-          </ScrollView>
+              
+              <Text style={[styles.numericValue, { color: colors.text }]}>
+                {repetitions}x
+              </Text>
+              
+              <Pressable
+                onPress={handleIncrement}
+                disabled={repetitions >= 72}
+                style={[
+                  styles.numericButton,
+                  { borderColor: repetitions >= 72 ? colors.border : colors.primary },
+                ]}
+              >
+                <MaterialCommunityIcons 
+                  name="plus" 
+                  size={28} 
+                  color={repetitions >= 72 ? colors.textMuted : colors.primary} 
+                />
+              </Pressable>
+            </View>
+            
+            {/* Botões rápidos */}
+            <View style={{ gap: spacing.sm }}>
+              <Text style={[styles.numericInputLabel, { color: colors.textMuted, fontSize: 14, marginBottom: 0 }]}>
+                Valores comuns:
+              </Text>
+              <View style={styles.numericInputButtons}>
+                {quickNumbers.map((num) => (
+                  <Pressable
+                    key={num}
+                    onPress={() => handleQuickNumber(num)}
+                    style={[
+                      styles.quickNumberButton,
+                      { 
+                        borderColor: repetitions === num ? colors.primary : colors.border,
+                        backgroundColor: repetitions === num ? colors.primaryBg : 'transparent',
+                      },
+                    ]}
+                  >
+                    <Text 
+                      style={[
+                        styles.quickNumberText,
+                        { color: repetitions === num ? colors.primary : colors.text }
+                      ]}
+                    >
+                      {num}x
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+            
+            {/* Botão Confirmar */}
+            <Pressable
+              onPress={() => setActivePicker('none')}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: spacing.md + 2,
+                paddingHorizontal: spacing.lg,
+                borderRadius: borderRadius.lg,
+                gap: spacing.sm,
+                backgroundColor: colors.primary,
+              }}
+            >
+              <MaterialCommunityIcons name="check" size={20} color="#fff" />
+              <Text style={styles.saveButtonText}>Confirmar</Text>
+            </Pressable>
+          </View>
         </View>
       );
     }
@@ -1465,72 +1559,88 @@ export default function AddTransactionModal({
     <>
       <Modal
         visible={visible}
-        transparent
-        animationType="fade"
+        transparent={false}
+        animationType="slide"
         onRequestClose={onClose}
         statusBarTranslucent
       >
-        <View style={styles.centeredView}>
-          <Pressable 
-            style={styles.overlay} 
-            onPress={saving ? undefined : onClose}
-          />
-          {/* Main Modal or Picker */}
-          {activePicker !== 'none' ? (
-            // Picker overlay
-            <View style={styles.pickerOverlay}>
-              <Pressable
-                style={StyleSheet.absoluteFill}
-                onPress={() => setActivePicker('none')}
-              />
+        {activePicker !== 'none' ? (
+          // Bottom Sheet overlay
+          <View style={styles.bottomSheetOverlay}>
+            <Pressable
+              style={StyleSheet.absoluteFill}
+              onPress={() => setActivePicker('none')}
+            />
+            <View style={styles.bottomSheetContainer}>
               {renderPickerContent()}
             </View>
-          ) : (
-            // Main form
-            <View style={[styles.modalContainer, getShadow(colors, 'lg')]}> 
-              <View style={[styles.sheet, { backgroundColor: colors.bg }]}> 
-                {/* Header colorido */}
-                <View style={[styles.header, { backgroundColor: headerColor }]}> 
-                  {/* Type selector com título integrado - ocultar para transações de meta */}
-                  {!isGoalTransaction && !isMetaCategoryTransaction && (
-                    <View style={styles.typeSelector}> 
-                      {(['despesa', 'receita', 'transfer'] as LocalTransactionType[]).map((t) => (
-                        <Pressable
-                          key={t}
-                          onPress={() => setType(t)}
+          </View>
+        ) : (
+          // Main form fullscreen
+          <View style={[styles.fullscreenModal, { backgroundColor: colors.bg, paddingTop: insets.top }]}>
+            {/* Header Fullscreen */}
+            <View style={[styles.fullscreenHeader, { borderBottomColor: colors.border }]}>
+              <Text style={[styles.fullscreenTitle, { color: colors.text }]}>
+                {isEditMode ? 'Editar Lançamento' : 
+                  type === 'despesa' ? 'Nova Despesa' : 
+                  type === 'receita' ? 'Nova Receita' : 'Nova Transferência'}
+              </Text>
+              <Pressable 
+                onPress={onClose}
+                disabled={saving}
+                style={({ pressed }) => [
+                  styles.closeButton,
+                  { backgroundColor: colors.grayLight },
+                  pressed && { opacity: 0.7, transform: [{ scale: 0.95 }] },
+                  saving && { opacity: 0.5 },
+                ]}
+              >
+                <MaterialCommunityIcons name="close" size={22} color={colors.text} />
+              </Pressable>
+            </View>
+
+            {/* Header colorido com valor */}
+            <View style={[styles.header, { backgroundColor: headerColor }]}> 
+              {/* Type selector com título integrado - ocultar para transações de meta */}
+              {!isGoalTransaction && !isMetaCategoryTransaction && (
+                <View style={styles.typeSelector}> 
+                  {(['despesa', 'receita', 'transfer'] as LocalTransactionType[]).map((t) => (
+                    <Pressable
+                      key={t}
+                      onPress={() => setType(t)}
+                      style={[ 
+                        styles.typeChip,
+                        type === t && styles.typeChipActive,
+                      ]}
+                      disabled={activeAccounts.length === 0}
+                    >
+                      <View style={{ alignItems: 'center' }}>
+                        <Text
                           style={[ 
-                            styles.typeChip,
-                            type === t && styles.typeChipActive,
+                            styles.typeChipText,
+                            type === t && styles.typeChipTextActive,
                           ]}
-                          disabled={activeAccounts.length === 0}
                         >
-                          <View style={{ alignItems: 'center' }}>
-                            <Text
-                              style={[ 
-                                styles.typeChipText,
-                                type === t && styles.typeChipTextActive,
-                              ]}
-                            >
-                              {t === 'despesa' ? 'Despesa' : t === 'receita' ? 'Receita' : 'Transf.'}
-                            </Text>
-                          </View>
-                        </Pressable>
-                      ))}
-                    </View>
-                  )}
-                  {/* Amount input */}
-                  <TextInput
-                    ref={amountInputRef}
-                    value={amount}
-                    onChangeText={handleAmountChange}
-                    keyboardType="numeric"
-                    style={styles.amountInput}
-                    placeholderTextColor="rgba(255,255,255,0.6)"
-                    selectionColor="#fff"
-                    editable={activeAccounts.length > 0 && !isGoalTransaction}
-                    onFocus={() => { shouldAutoFocus.current = false; }}
-                  />
+                          {t === 'despesa' ? 'Despesa' : t === 'receita' ? 'Receita' : 'Transf.'}
+                        </Text>
+                      </View>
+                    </Pressable>
+                  ))}
                 </View>
+              )}
+              {/* Amount input */}
+              <TextInput
+                ref={amountInputRef}
+                value={amount}
+                onChangeText={handleAmountChange}
+                keyboardType="numeric"
+                style={styles.amountInput}
+                placeholderTextColor="rgba(255,255,255,0.6)"
+                selectionColor="#fff"
+                editable={activeAccounts.length > 0 && !isGoalTransaction}
+                onFocus={() => { shouldAutoFocus.current = false; }}
+              />
+            </View>
                 
                 {/* Onboarding message if no accounts */}
                 {activeAccounts.length === 0 ? (
@@ -1556,73 +1666,69 @@ export default function AddTransactionModal({
                       <Text style={styles.onboardingButtonText}>Cadastrar Conta</Text>
                     </Pressable>
                   </View>
-                ) : (
-                  <View style={{flex: 1}}>
-                    {/* Form fields */}
-                    <ScrollView
-                      style={styles.form}
-                      contentContainerStyle={styles.formContent}
-                      showsVerticalScrollIndicator={false}
-                    >
-                      {/* Descrição */}
+            ) : (
+              <ScrollView
+                style={styles.fullscreenContent}
+                contentContainerStyle={styles.fullscreenContentContainer}
+                showsVerticalScrollIndicator={false}
+              >
+                  {/* Descrição */}
                   <Pressable
                     onPress={handleDescriptionPress}
                     disabled={hasAmount}
-                    style={{ opacity: hasAmount ? 1 : 0.6 }}
+                    style={[styles.fieldRow, { backgroundColor: colors.card, opacity: hasAmount ? 1 : 0.6 }]}
                   >
-                    <View style={[
-                      styles.inputContainer,
-                      { backgroundColor: colors.card },
-                      getShadow(colors)
-                    ]}>
-                      <View style={[styles.fieldIcon, { backgroundColor: hasAmount ? colors.primaryBg : colors.grayLight }]}>
-                        <MaterialCommunityIcons name="text" size={20} color={hasAmount ? colors.primary : colors.textMuted} />
-                      </View>
-                      <View style={styles.inputWrapper}>
-                        <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Descrição</Text>
-                        <TextInput
-                          value={description}
-                          onChangeText={setDescription}
-                          placeholder={hasAmount ? "Ex: Almoço, Salário..." : "Preencha o valor primeiro"}
-                          placeholderTextColor={colors.textMuted}
-                          style={[styles.textInput, { color: colors.text }]}
-                          maxLength={60}
-                          editable={hasAmount}
-                          pointerEvents={hasAmount ? 'auto' : 'none'}
-                        />
-                      </View>
+                    <View style={[styles.fieldIcon, { backgroundColor: hasAmount ? colors.primaryBg : colors.grayLight }]}>
+                      <MaterialCommunityIcons name="text" size={20} color={hasAmount ? colors.primary : colors.textMuted} />
+                    </View>
+                    <View style={styles.inputWrapper}>
+                      <Text style={[styles.fieldLabel, { color: colors.textMuted }]}>Descrição</Text>
+                      <TextInput
+                        value={description}
+                        onChangeText={setDescription}
+                        placeholder={hasAmount ? "Ex: Almoço, Salário..." : "Preencha o valor primeiro"}
+                        placeholderTextColor={colors.textMuted}
+                        style={[styles.textInput, { color: colors.text }]}
+                        maxLength={60}
+                        editable={hasAmount}
+                        pointerEvents={hasAmount ? 'auto' : 'none'}
+                      />
                     </View>
                   </Pressable>
-                  {/* Card de campos */}
-                  <View style={[styles.fieldsCard, { backgroundColor: colors.card }, getShadow(colors)]}>
-                    {/* Categoria - não mostrar para transferências ou transações de meta */}
-                    {type !== 'transfer' && !isGoalTransaction && !isMetaCategoryTransaction && (
-                      <>
-                        <SelectField
-                          label="Categoria"
-                          value={categoryName}
-                          icon="tag-outline"
-                          onPress={() => setActivePicker('category')}
-                        />
-                        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                      </>
-                    )}
-                    {/* Conta - desabilitado para transações de meta */}
-                    {type === 'transfer' ? (
-                      <>
-                        <SelectField
-                          label="De (conta origem)"
-                          value={accountName || 'Selecione'}
-                          icon="bank-transfer-out"
-                          onPress={() => setActivePicker('account')}
-                          subtitle={sourceAccount ? `Saldo atual: ${formatCurrency(Math.round(sourceAccount.balance * 100).toString())}` : undefined}
-                          subtitleColor={sourceAccount && sourceAccount.balance < 0 ? colors.danger : colors.textMuted}
-                        />
-                        <View style={[styles.divider, { backgroundColor: colors.border }]} />
-                        <SelectField
-                          label="Para (conta destino)"
-                          value={toAccountName || 'Selecione'}
-                          icon="bank-transfer-in"
+                  
+                  {/* Linha tracejada */}
+                  <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
+
+                  {/* Campos sem wrapper - direto na lista */}
+                  {/* Campos sem wrapper - direto na lista */}
+                  {/* Categoria - não mostrar para transferências ou transações de meta */}
+                  {type !== 'transfer' && !isGoalTransaction && !isMetaCategoryTransaction && (
+                    <>
+                      <SelectField
+                        label="Categoria"
+                        value={categoryName}
+                        icon="tag-outline"
+                        onPress={() => setActivePicker('category')}
+                      />
+                      <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
+                    </>
+                  )}
+                  {/* Conta - desabilitado para transações de meta */}
+                  {type === 'transfer' ? (
+                    <>
+                      <SelectField
+                        label="De (conta origem)"
+                        value={accountName || 'Selecione'}
+                        icon="bank-transfer-out"
+                        onPress={() => setActivePicker('account')}
+                        subtitle={sourceAccount ? `Saldo atual: ${formatCurrency(Math.round(sourceAccount.balance * 100).toString())}` : undefined}
+                        subtitleColor={sourceAccount && sourceAccount.balance < 0 ? colors.danger : colors.textMuted}
+                      />
+                      <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
+                      <SelectField
+                        label="Para (conta destino)"
+                        value={toAccountName || 'Selecione'}
+                        icon="bank-transfer-in"
                           onPress={() => {
                             if (activeAccounts.length <= 1) {
                               showAlert(
@@ -1655,7 +1761,7 @@ export default function AddTransactionModal({
                         subtitleColor={!useCreditCard && sourceAccount && sourceAccount.balance < 0 ? colors.danger : colors.textMuted}
                       />
                     )}
-                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
                     {/* Data */}
                     <SelectField
                       label="Data"
@@ -1663,7 +1769,7 @@ export default function AddTransactionModal({
                       icon="calendar"
                       onPress={() => setActivePicker('date')}
                     />
-                    <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                    <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
                     {/* Recorrência - desabilitado para transações de meta */}
                     <SelectField
                       label="Repetir"
@@ -1674,7 +1780,7 @@ export default function AddTransactionModal({
                     {/* Tipo de recorrência - só aparece se recorrência != none */}
                     {recurrence !== 'none' && (
                       <>
-                        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                        <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
                         <SelectField
                           label="Tipo"
                           value={RECURRENCE_TYPE_OPTIONS.find((r) => r.value === recurrenceType)?.label || 'Parcelada'}
@@ -1686,7 +1792,7 @@ export default function AddTransactionModal({
                     {/* Número de repetições - só aparece se recorrência != none */}
                     {recurrence !== 'none' && (
                       <>
-                        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+                        <View style={[styles.dashedDivider, { borderColor: colors.border }]} />
                         <SelectField
                           label="Quantas vezes?"
                           value={`${repetitions}x`}
@@ -1707,21 +1813,24 @@ export default function AddTransactionModal({
                         )}
                       </>
                     )}
-                  </View>
-                </ScrollView>
-                {/* Aviso: mesma conta - antes dos botões */}
+
+                {/* Aviso: mesma conta */}
                 {type === 'transfer' && accountId && toAccountId && accountId === toAccountId && (
-                  <View style={[styles.warningInfo, { backgroundColor: colors.warningBg, marginHorizontal: spacing.md }]}>
+                  <View style={[styles.warningInfo, { backgroundColor: colors.warningBg }]}>
                     <MaterialCommunityIcons name="alert-circle" size={16} color={colors.warning} />
                     <Text style={[styles.warningText, { color: colors.warning }]}>
                       Não é possível transferir para a mesma conta
                     </Text>
                   </View>
                 )}
-                {/* Botões - fixo no fundo */}
-                <View style={[styles.buttonContainer, { backgroundColor: colors.bg }]}>
-                  {/* Botão Excluir - só aparece em modo edição */}
-                  {isEditMode && onDelete && editTransaction && (
+              </ScrollView>
+            )}
+
+            {/* Botões fixos no bottom - sempre visíveis quando tem contas */}
+            {activeAccounts.length > 0 && (
+              <View style={[styles.fixedButtonContainer, { backgroundColor: colors.bg, paddingBottom: Math.max(insets.bottom, spacing.md) }]}>
+                {/* Botão Excluir - só aparece em modo edição */}
+                {isEditMode && onDelete && editTransaction && (
                     <Pressable
                       onPress={() => {
                         // Verificar se faz parte de uma série
@@ -1804,24 +1913,9 @@ export default function AddTransactionModal({
                     </Text>
                   </Pressable>
                 </View>
-                {/* Botão Cancelar */}
-                <Pressable
-                  onPress={onClose}
-                  disabled={saving}
-                  style={({ pressed }) => [
-                    styles.cancelButton,
-                    pressed && { opacity: 0.7 },
-                    saving && { opacity: 0.5 },
-                  ]}
-                >
-                  <Text style={[styles.cancelButtonText, { color: colors.text }]}>Cancelar</Text>
-                </Pressable>
-                  </View>
-                )}
-              </View>
-            </View>
-          )}
-        </View>
+              )}
+          </View>
+        )}
       </Modal>
       
       {/* Custom Alert */}
@@ -1853,46 +1947,40 @@ export default function AddTransactionModal({
 }
 
 const styles = StyleSheet.create({
-  centeredView: {
+  // Fullscreen modal styles
+  fullscreenModal: {
     flex: 1,
-    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  fullscreenHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderBottomWidth: 1,
   },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+  fullscreenTitle: {
+    fontSize: 20,
+    fontWeight: '700',
   },
-  modalContainer: {
-    width: '92%',
-    maxWidth: 500,
-    height: SCREEN_HEIGHT * 0.75,
-    maxHeight: SCREEN_HEIGHT * 0.88,
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
+  closeButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sheet: {
+  fullscreenContent: {
     flex: 1,
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
+  },
+  fullscreenContentContainer: {
+    paddingBottom: 100, // Espaço para os botões fixos
   },
   header: {
-    paddingTop: spacing.md,
-    paddingBottom: spacing.md,
+    paddingTop: spacing.lg,
+    paddingBottom: spacing.lg,
     paddingHorizontal: spacing.md,
-  },
-  closeButtonCircle: {
-    position: 'absolute',
-    top: spacing.sm,
-    right: spacing.md,
-    zIndex: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   typeSelector: {
     flexDirection: 'row',
@@ -1929,19 +2017,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     paddingVertical: 0,
   },
-  form: {
-    flex: 1,
-  },
-  formContent: {
-    padding: spacing.sm,
-    paddingBottom: spacing.md,
-    gap: spacing.sm,
-  },
-  inputContainer: {
+  fieldRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: borderRadius.lg,
-    padding: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     gap: spacing.sm,
   },
   inputWrapper: {
@@ -1951,15 +2031,13 @@ const styles = StyleSheet.create({
     fontSize: 15,
     paddingVertical: 2,
   },
-  fieldsCard: {
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
-  },
   selectField: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
     gap: spacing.sm,
+    backgroundColor: 'transparent',
   },
   fieldIcon: {
     width: 40,
@@ -1983,17 +2061,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
   },
-  divider: {
+  dashedDivider: {
     height: 1,
-    marginLeft: 68,
-    backgroundColor: '#e2e8f0',
+    borderTopWidth: 1,
+    borderStyle: 'dashed',
+    marginHorizontal: spacing.lg,
   },
-  buttonContainer: {
+  fixedButtonContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: spacing.md,
-    paddingBottom: spacing.lg,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
     gap: spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: '#e5e7eb',
   },
   saveButton: {
     flex: 1,
@@ -2035,16 +2116,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: spacing.xs,
   },
-  cancelButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-  },
-  cancelButtonText: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
   onboardingButton: {
     alignSelf: 'center',
     flexDirection: 'row',
@@ -2060,32 +2131,44 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#fff',
   },
-  // Picker styles
-  pickerOverlay: {
+  // Bottom Sheet styles
+  bottomSheetOverlay: {
     ...StyleSheet.absoluteFillObject,
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  bottomSheetContainer: {
+    maxHeight: SCREEN_HEIGHT * 0.7,
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    overflow: 'hidden',
+  },
+  bottomSheetHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginTop: spacing.sm,
+    marginBottom: spacing.xs,
   },
   pickerContainer: {
-    width: '85%',
-    maxWidth: 400,
-    maxHeight: SCREEN_HEIGHT * 0.6,
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
+    width: '100%',
+    maxHeight: SCREEN_HEIGHT * 0.65,
   },
   pickerHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: spacing.md,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.lg,
     borderBottomWidth: 1,
   },
   pickerTitle: {
-    fontSize: 17,
-    fontWeight: '600',
+    fontSize: 18,
+    fontWeight: '700',
   },
   pickerScroll: {
-    maxHeight: SCREEN_HEIGHT * 0.5,
+    maxHeight: SCREEN_HEIGHT * 0.55,
   },
   pickerOption: {
     flexDirection: 'row',
@@ -2118,12 +2201,57 @@ const styles = StyleSheet.create({
     paddingTop: spacing.sm,
     paddingBottom: spacing.xs,
   },
+  // Numeric input for repetitions
+  numericInputContainer: {
+    padding: spacing.xl,
+    gap: spacing.lg,
+  },
+  numericInputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  numericInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xl,
+  },
+  numericButton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+  },
+  numericValue: {
+    fontSize: 48,
+    fontWeight: '700',
+    minWidth: 120,
+    textAlign: 'center',
+  },
+  numericInputButtons: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.md,
+  },
+  quickNumberButton: {
+    flex: 1,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.md,
+    borderWidth: 1.5,
+    alignItems: 'center',
+  },
+  quickNumberText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
   // Custom Date Picker styles
   datePickerContainer: {
-    width: '90%',
-    maxWidth: 360,
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
+    width: '100%',
+    maxHeight: SCREEN_HEIGHT * 0.65,
   },
   calendarHeader: {
     flexDirection: 'row',
@@ -2192,12 +2320,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.sm,
-    marginBottom: spacing.md,
-    borderRadius: borderRadius.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.xs,
   },
   installmentText: {
     fontSize: 14,
@@ -2208,10 +2333,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: spacing.xs,
     paddingVertical: spacing.xs,
-    paddingHorizontal: spacing.md,
-    marginHorizontal: spacing.md,
+    paddingHorizontal: spacing.lg,
     marginTop: spacing.xs,
-    borderRadius: borderRadius.sm,
   },
   accountBalanceText: {
     fontSize: 12,
@@ -2221,12 +2344,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.xs,
-    paddingVertical: spacing.sm,
-    paddingHorizontal: spacing.md,
-    marginHorizontal: spacing.md,
-    marginTop: spacing.md,
-    marginBottom: spacing.xs,
-    borderRadius: borderRadius.sm,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
+    marginTop: spacing.sm,
+    borderRadius: 0,
   },
   warningText: {
     fontSize: 13,
@@ -2237,10 +2358,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: spacing.sm,
-    padding: spacing.md,
-    marginHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.lg,
     marginTop: spacing.sm,
-    borderRadius: borderRadius.md,
   },
   goalBannerTitle: {
     fontSize: 14,

@@ -27,7 +27,7 @@ import { useSnackbar } from '../../hooks/useSnackbar';
 import CustomAlert from '../CustomAlert';
 import Snackbar from '../Snackbar';
 import LoadingOverlay from '../LoadingOverlay';
-import { TransactionType, RecurrenceType, CreateTransactionInput, CATEGORY_ICONS, Category } from '../../types/firebase';
+import { TransactionType, RecurrenceType, CreateTransactionInput, CATEGORY_ICONS, Category, CreateCategoryInput } from '../../types/firebase';
 import { useTransactionRefresh } from '../../contexts/transactionRefreshContext';
 import { validateBillForTransaction } from '../../services/creditCardBillService';
 import { useAuth } from '../../contexts/authContext';
@@ -1107,11 +1107,21 @@ export default function AddTransactionModal({
         
         setSavingCategory(true);
         try {
-          const newCategory = await createCategory({
+          // Garantir que a cor seja sempre uma string válida ou undefined (não null)
+          const categoryColor = typeColor || (type === 'despesa' ? '#FF6B6B' : '#51CF66');
+          
+          const categoryData: CreateCategoryInput = {
             name: newCategoryName.trim(),
             type: categoryType,
             icon: newCategoryIcon,
-          });
+          };
+          
+          // Adicionar cor apenas se for uma string válida
+          if (categoryColor && typeof categoryColor === 'string') {
+            categoryData.color = categoryColor;
+          }
+          
+          const newCategory = await createCategory(categoryData);
           
           if (newCategory) {
             // Selecionar a nova categoria

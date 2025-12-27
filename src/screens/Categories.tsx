@@ -225,12 +225,17 @@ export default function Categories({ navigation }: any) {
     
     setSaving(true);
     try {
-      const payload = {
+      const payload: any = {
         name: categoryName.trim(),
         icon: categoryIcon,
         type: categoryType,
-        color: categoryColor || undefined,
       };
+      
+      // Adicionar cor apenas se for uma string válida
+      const finalColor = categoryColor || defaultAccent;
+      if (finalColor && typeof finalColor === 'string') {
+        payload.color = finalColor;
+      }
 
       const isCreatingRootCategory = !categoryParentId;
 

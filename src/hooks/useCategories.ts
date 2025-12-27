@@ -161,7 +161,7 @@ export function useCategories(type?: CategoryType) {
   // Atualizar subcategoria
   const updateSubcategory = async (
     subcategoryId: string,
-    data: { name?: string; icon?: string; parentId?: string }
+    data: { name?: string; icon?: string; color?: string; parentId?: string | null }
   ): Promise<boolean> => {
     if (!user?.uid) return false;
 

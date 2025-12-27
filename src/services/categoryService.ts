@@ -3,25 +3,25 @@
 // ==========================================
 
 import {
-    collection,
-    doc,
-    addDoc,
-    updateDoc,
-    deleteDoc,
-    getDocs,
-    getDoc,
-    query,
-    where, Timestamp,
-    writeBatch
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  getDocs,
+  getDoc,
+  query,
+  where, Timestamp,
+  writeBatch
 } from 'firebase/firestore';
 import { db, COLLECTIONS } from './firebase';
 import {
-    Category,
-    CreateCategoryInput,
-    UpdateCategoryInput,
-    CategoryType,
-    DEFAULT_EXPENSE_CATEGORIES,
-    DEFAULT_INCOME_CATEGORIES,
+  Category,
+  CreateCategoryInput,
+  UpdateCategoryInput,
+  CategoryType,
+  DEFAULT_EXPENSE_CATEGORIES,
+  DEFAULT_INCOME_CATEGORIES,
 } from '../types/firebase';
 
 const categoriesRef = collection(db, COLLECTIONS.CATEGORIES);
@@ -103,7 +103,7 @@ export async function getCategoryById(categoryId: string): Promise<Category | nu
 // Atualizar subcategoria (incluindo mudar categoria pai)
 export async function updateSubcategory(
   subcategoryId: string,
-  data: { name?: string; icon?: string; parentId?: string }
+  data: { name?: string; icon?: string; color?: string; parentId?: string | null }
 ): Promise<void> {
   const docRef = doc(db, COLLECTIONS.CATEGORIES, subcategoryId);
   const updateData: any = {
@@ -112,6 +112,7 @@ export async function updateSubcategory(
 
   if (data.name !== undefined) updateData.name = data.name;
   if (data.icon !== undefined) updateData.icon = data.icon;
+  if (data.color !== undefined) updateData.color = data.color;
   if (data.parentId !== undefined) updateData.parentId = data.parentId;
 
   await updateDoc(docRef, updateData);

@@ -1,9 +1,11 @@
 import { useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Pressable } from 'react-native';
+import { View, Text, StyleSheet, Animated, Pressable, Dimensions } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAppTheme } from '../contexts/themeContext';
 import { spacing, borderRadius, getShadow } from '../theme';
+
+const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 interface SnackbarProps {
   visible: boolean;
@@ -99,7 +101,7 @@ export default function Snackbar({
   const snackColors = getColors();
 
   return (
-    <View style={[styles.wrapper, { bottom: insets.bottom + 80 }]}>
+    <View style={[styles.wrapper, { bottom: 16 }]} pointerEvents="box-none">
       <Animated.View 
         style={[
           styles.container, 
@@ -115,12 +117,13 @@ export default function Snackbar({
           name={getIcon()} 
           size={18} 
           color={snackColors.icon} 
+          style={{ flexShrink: 0 }}
         />
-        <Text style={[styles.message, { color: snackColors.text }]} numberOfLines={1}>
+        <Text style={[styles.message, { color: snackColors.text }]}>
           {message}
         </Text>
         {action && (
-          <Pressable onPress={action.onPress} hitSlop={8}>
+          <Pressable onPress={action.onPress} hitSlop={8} style={{ flexShrink: 0 }}>
             <Text style={[styles.actionText, { color: snackColors.text }]}>
               {action.label}
             </Text>
@@ -143,17 +146,20 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     paddingHorizontal: spacing.md,
-    borderRadius: borderRadius.full,
+    borderRadius: borderRadius.lg,
     gap: spacing.sm,
-    maxWidth: 400,
+    width: '100%',
+    maxWidth: SCREEN_WIDTH * 0.75,
     alignSelf: 'center',
   },
   message: {
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
+    flexWrap: 'wrap',
+    lineHeight: 18,
   },
   actionText: {
     fontSize: 14,

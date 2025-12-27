@@ -1,7 +1,8 @@
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useState, useEffect } from "react";
 import { NavigationContainer } from "@react-navigation/native";
 import { createNativeStackNavigator } from "@react-navigation/native-stack";
 import { View, ActivityIndicator } from "react-native";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Telas críticas - carregadas imediatamente
 import Login from "../screens/Login";
@@ -26,6 +27,8 @@ const MyGoals = lazy(() => import("../screens/MyGoals"));
 const ManageGoals = lazy(() => import("../screens/ManageGoals"));
 const MinhasAcoes = lazy(() => import("../screens/MinhasAcoes"));
 const ImportarMovimentacoesAtivos = lazy(() => import("../screens/ImportarMovimentacoesAtivos"));
+const Onboarding = lazy(() => import("../screens/Onboarding"));
+const Tutorial = lazy(() => import("../screens/Tutorial"));
 
 import { useAuth } from "../contexts/authContext";
 
@@ -64,6 +67,8 @@ const MyGoalsScreen = withSuspense(MyGoals);
 const ManageGoalsScreen = withSuspense(ManageGoals);
 const MinhasAcoesScreen = withSuspense(MinhasAcoes);
 const ImportarMovimentacoesAtivosScreen = withSuspense(ImportarMovimentacoesAtivos);
+const OnboardingScreen = withSuspense(Onboarding);
+const TutorialScreen = withSuspense(Tutorial);
 
 // Configuração de Deep Linking
 const linking = {
@@ -80,11 +85,31 @@ const linking = {
 export default function RootNavigation() {
   const { user, loading, needsEmailVerification } = useAuth();
   const canAccessAtivosBeta = (user?.email ?? '').toLowerCase() === 'thiago.w3c@gmail.com';
+  const [onboardingCompleted, setOnboardingCompleted] = useState<boolean | null>(null);
 
-  if (loading) {
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const completed = await AsyncStorage.getItem('@cofrin:onboarding_completed');
+        setOnboardingCompleted(completed === 'true');
+      } catch (error) {
+        console.error('Erro ao verificar onboarding:', error);
+        setOnboardingCompleted(true); // Em caso de erro, mostra a Home normalmente
+      }
+    };
+
+    if (user && !needsEmailVerification) {
+      checkOnboarding();
+    }
+  }, [user, needsEmailVerification]);
+
+  if (loading || (user && !needsEmailVerification && onboardingCompleted === null)) {
     // Tela de loading durante verificação
     return null;
   }
+
+  // Determina a tela inicial
+  const initialRouteName = user && !needsEmailVerification && !onboardingCompleted ? 'Onboarding' : 'Home';
 
   return (
     <NavigationContainer linking={linking}>
@@ -95,7 +120,10 @@ export default function RootNavigation() {
           </Stack.Navigator>
         ) : (
           // ROTAS DO USUÁRIO LOGADO
-          <Stack.Navigator screenOptions={{ headerShown: false }}>
+          <Stack.Navigator screenOptions={{ headerShown: false }} initialRouteName={initialRouteName}>
+            <Stack.Screen name="Onboarding" component={OnboardingScreen} />
+            <Stack.Screen name="Tutorial" component={TutorialScreen} />
+            <Stack.Screen name="Home" component={Home} />
             <Stack.Screen name="Bem-vindo" component={Home} />
             <Stack.Screen name="Lançamentos" component={LaunchesScreen} />
             <Stack.Screen name="Metas do ano" component={GoalsScreen} />

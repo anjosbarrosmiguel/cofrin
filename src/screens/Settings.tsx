@@ -43,6 +43,7 @@ export default function Settings({ navigation }: any) {
   ];
 
   const secondaryItems: MenuItem[] = [
+    { id: "tutorial", label: "Como usar o app", icon: "book-open-variant", screen: "Tutorial" },
     { id: "education", label: "Educação financeira", icon: "school-outline", screen: "Education" },
     { id: "about", label: "Sobre o app", icon: "information-outline", screen: "About" },
   ];

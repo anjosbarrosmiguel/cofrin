@@ -4,6 +4,7 @@ import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppTheme } from '../../contexts/themeContext';
 import { spacing, borderRadius, getShadow } from '../../theme';
+import { DS_COLORS } from '../../theme/designSystem';
 import { formatCurrencyBRL } from '../../utils/format';
 import { useExpensesByCategory } from '../../hooks/useFirebaseTransactions';
 
@@ -21,11 +22,9 @@ const CATEGORY_COLORS = [
   '#3DC9A0', // verde claro
   '#06B6D4', // cyan
   '#EC4899', // rosa
-  '#F59E0B', // âmbar
+  DS_COLORS.warning, // warning
 ];
 
-// Cor roxa escura para títulos
-const primaryDark = '#4A2FA8';
 
 type TopCount = 3 | 5 | 10;
 
@@ -73,7 +72,7 @@ export default memo(function TopExpensesCard({ onDetailsPress }: Props) {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleSection}>
-          <Text style={[styles.title, { color: primaryDark }]}>
+          <Text style={[styles.title, { color: DS_COLORS.primary }]}>
             Maiores gastos
           </Text>
           <Text style={[styles.subtitle, { color: colors.textMuted }]}>

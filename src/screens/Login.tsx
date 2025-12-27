@@ -6,11 +6,12 @@ import { login, sendPasswordReset } from "../services/auth";
 import { useGoogleAuth } from "../services/googleAuth";
 import { checkNetworkConnection, reconnectFirestore } from "../utils/networkUtils";
 import { InstallAppButton } from "../components/InstallAppButton";
+import { DS_COLORS } from "../theme/designSystem";
 
 // Design System Roxo Premium
 const LOGIN_COLORS = {
-  primary: '#5B3CC4',      // roxo principal
-  primaryDark: '#4A2FA8',  // roxo escuro
+  primary: '#28043b',      // cor primária
+  primaryDark: '#28043b',  // variação escura
   primaryLight: '#7B5CD6', // roxo claro
   gradient: '#F9F8FD',     // off-white arroxeado
 };
@@ -272,12 +273,12 @@ export default function Login({ navigation }: any) {
           >
             {googleLoading ? (
               <View style={styles.buttonContent}>
-                <ActivityIndicator color="#2E2E2E" size="small" />
+                <ActivityIndicator color={LOGIN_COLORS.primary} size="small" />
                 <Text style={[styles.googleButtonText, { marginLeft: 8 }]}>Conectando...</Text>
               </View>
             ) : (
               <View style={styles.buttonContent}>
-                <MaterialCommunityIcons name="google" size={20} color="#2E2E2E" style={{ marginRight: 8 }} />
+                <MaterialCommunityIcons name="google" size={20} color={LOGIN_COLORS.primary} style={{ marginRight: 8 }} />
                 <Text style={styles.googleButtonText}>Continuar com Google</Text>
               </View>
             )}
@@ -321,7 +322,7 @@ export default function Login({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#5B3CC4',
+    backgroundColor: 'rgb(108 42 143)',
   },
   scrollContent: {
     flexGrow: 1,
@@ -381,7 +382,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 22,
     fontWeight: '600',
-    color: '#2E2E2E',
+    color: LOGIN_COLORS.primary,
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -397,14 +398,14 @@ const styles = StyleSheet.create({
     paddingVertical: Platform.select({ ios: 2, default: 0 }),
   },
   inputFocused: {
-    borderColor: '#5B3CC4',
+    borderColor: LOGIN_COLORS.primary,
     backgroundColor: '#FAFAFA',
   },
   input: {
     flex: 1,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#1F2937',
+    color: '#322438',
     ...Platform.select({
       web: {
         // web-specific outline removal removed to satisfy TypeScript TextStyle
@@ -427,7 +428,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   forgotPasswordText: {
-    color: '#5B3CC4',
+    color: LOGIN_COLORS.primary,
     fontWeight: '600',
     fontSize: 14,
   },
@@ -457,13 +458,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   helperText: {
-    color: '#6B6B6B',
+    color: '#322438',
     fontSize: 13,
     marginTop: 8,
     textAlign: 'center',
   },
   primaryButton: {
-    backgroundColor: '#5B3CC4',
+    backgroundColor: LOGIN_COLORS.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -489,7 +490,7 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   googleButtonText: {
-    color: '#2E2E2E',
+    color: LOGIN_COLORS.primary,
     fontWeight: '600',
     fontSize: 15,
   },
@@ -512,7 +513,7 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     paddingHorizontal: 16,
-    color: '#6B6B6B',
+    color: '#322438',
     fontSize: 13,
   },
   registerButton: {
@@ -520,11 +521,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   registerText: {
-    color: '#6B6B6B',
+    color: '#322438',
     fontSize: 14,
   },
   registerTextBold: {
-    color: '#5B3CC4',
+    color: LOGIN_COLORS.primary,
     fontWeight: '700',
   },
   loadingOverlay: {
@@ -560,13 +561,13 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     fontWeight: '600',
-    color: '#2E2E2E',
+    color: LOGIN_COLORS.primary,
     textAlign: 'center',
   },
   loadingSubtext: {
     marginTop: 4,
     fontSize: 13,
-    color: '#6B6B6B',
+    color: '#322438',
     textAlign: 'center',
   },
   offlineBanner: {
@@ -574,7 +575,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#EF4444',
+    backgroundColor: DS_COLORS.error,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 10,

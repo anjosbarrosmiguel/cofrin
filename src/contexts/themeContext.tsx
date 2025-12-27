@@ -44,18 +44,18 @@ interface ThemeColors {
 // Tema Claro - Design System Roxo Premium
 const lightTheme: ThemeColors = {
   bg: '#F9F8FD',           // off-white arroxeado
-  bgHeader: '#5B3CC4',     // roxo principal
+  bgHeader: '#28043b',
   card: '#FFFFFF',
   surface: '#FFFFFF',
   
-  text: '#1F1B2E',         // preto arroxeado
-  textSecondary: '#4B475C',
+  text: '#28043b',
+  textSecondary: '#322438',
   textMuted: '#9A96B0',
   textInverse: '#FFFFFF',
   
-  primary: '#5B3CC4',      // roxo principal
+  primary: '#28043b',
   primaryLight: '#7B5CD6',
-  primaryDark: '#4A2FA8',
+  primaryDark: '#28043b',
   primaryBg: '#EDE9FF',    // roxo suave
   
   success: '#2FAF8E',      // verde elegante
@@ -108,18 +108,18 @@ const darkTheme: ThemeColors = {
 // Tema Teal -> Convertido para Roxo Premium (mantém nome por compatibilidade)
 const tealTheme: ThemeColors = {
   bg: '#F9F8FD',           // off-white arroxeado
-  bgHeader: '#5B3CC4',     // roxo principal
+  bgHeader: '#28043b',
   card: '#FFFFFF',
   surface: '#FFFFFF',
   
-  text: '#1F1B2E',         // preto arroxeado
-  textSecondary: '#4B475C',
+  text: '#28043b',
+  textSecondary: '#322438',
   textMuted: '#9A96B0',
   textInverse: '#FFFFFF',
   
-  primary: '#5B3CC4',      // roxo principal
+  primary: '#28043b',
   primaryLight: '#7B5CD6',
-  primaryDark: '#4A2FA8',
+  primaryDark: '#28043b',
   primaryBg: '#EDE9FF',    // roxo suave
   
   success: '#2FAF8E',      // verde elegante

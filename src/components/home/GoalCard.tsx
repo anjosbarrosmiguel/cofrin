@@ -3,12 +3,7 @@ import { View, StyleSheet, Pressable } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppTheme } from '../../contexts/themeContext';
-import { getShadow } from '../../theme';
-
-// Cores do design system - Roxo
-const primaryDark = '#4A2FA8';   // roxo escuro (títulos h1)
-const primary = '#5B3CC4';       // roxo principal (botões, ícones)
-const primaryBg = '#EDE9FF';     // fundo roxo suave (backgrounds de ícones)
+import { DS_COLORS, DS_TYPOGRAPHY, DS_ICONS, DS_CARD, DS_SPACING } from '../../theme/designSystem';
 
 interface Props {
   onPress: () => void;
@@ -22,16 +17,15 @@ export default memo(function GoalCard({ onPress }: Props) {
       onPress={onPress}
       style={({ pressed }) => [
         styles.card,
-        { backgroundColor: '#fff' },
-        getShadow(colors),
+        { backgroundColor: DS_COLORS.card },
         pressed && { opacity: 0.95 }
       ]}
     >
-      <View style={[styles.iconCircle, { backgroundColor: primaryBg }]}>
-        <MaterialCommunityIcons name="target" size={20} color={primary} />
+      <View style={[styles.iconCircle, { backgroundColor: DS_COLORS.primaryLight }]}>
+        <MaterialCommunityIcons name="target" size={DS_ICONS.size.default} color={DS_ICONS.color} />
       </View>
-      <Text style={[styles.title, { color: primaryDark }]}>Minhas metas financeiras</Text>
-      <MaterialCommunityIcons name="chevron-right" size={22} color={colors.textMuted} />
+      <Text style={[styles.title, { color: DS_COLORS.primary }]}>Metas financeiras</Text>
+      <MaterialCommunityIcons name="chevron-right" size={22} color={DS_COLORS.textMuted} />
     </Pressable>
   );
 });
@@ -40,25 +34,22 @@ const styles = StyleSheet.create({
   card: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 16,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    ...DS_CARD,
+    ...DS_CARD.shadow,
+    width: '100%',
+    marginBottom: 0,
   },
   iconCircle: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: DS_ICONS.featured.containerSize,
+    height: DS_ICONS.featured.containerSize,
+    borderRadius: DS_ICONS.featured.containerSize / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: DS_SPACING.md,
   },
   title: {
     flex: 1,
-    fontSize: 16,
-    fontWeight: '600',
+    ...DS_TYPOGRAPHY.styles.cardSubtitle,
+    color: DS_COLORS.primary,
   },
 });

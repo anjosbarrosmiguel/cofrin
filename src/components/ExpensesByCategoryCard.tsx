@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../contexts/themeContext';
 import { spacing, borderRadius, getShadow } from '../theme';
 import { formatCurrencyBRL } from '../utils/format';
+import { DS_COLORS } from '../theme/designSystem';
 
 interface CategoryExpense {
   categoryId: string;
@@ -181,7 +182,7 @@ export default function ExpensesByCategoryCard({
                             backgroundColor: isDominant && !isOthers
                               ? colors.primary
                               : isOthers && expense.percentage > 50
-                              ? colors.warning || '#F59E0B'
+                              ? DS_COLORS.warning
                               : colors.expense
                           }
                         ]} 

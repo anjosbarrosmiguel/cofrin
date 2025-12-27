@@ -1,36 +1,31 @@
-import { View, Text, StyleSheet, ScrollView, Pressable } from "react-native";
+import { View, Text, StyleSheet, ScrollView, Pressable, Platform } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 // Design System Roxo Premium
 const TERMS_COLORS = {
-  primary: '#5B3CC4',      // roxo principal
-  primaryDark: '#4A2FA8',  // roxo escuro
+  primary: '#28043b',      // cor primária
+  primaryDark: '#28043b',  // variação escura
   primaryLight: '#7B5CD6', // roxo claro
 };
 
 export default function Terms({ navigation }: any) {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable 
-          onPress={() => navigation.goBack()} 
-          style={styles.backButton}
-        >
-          <MaterialCommunityIcons name="arrow-left" size={24} color="#fff" />
-        </Pressable>
-        <View style={styles.iconContainer}>
-          <MaterialCommunityIcons name="piggy-bank" size={56} color="#fff" />
+      <ScrollView contentContainerStyle={styles.scrollContent}>
+        <View style={styles.header}>
+          <View style={styles.brandRow}>
+            <View style={styles.iconContainer}>
+              <MaterialCommunityIcons name="piggy-bank" size={24} color="#fff" />
+            </View>
+            <Text style={styles.appName}>Cofrin</Text>
+          </View>
+          <Text style={styles.tagline}>Controle financeiro pessoal</Text>
         </View>
-        <ResponsiveText style={styles.appName} variant="h1">Cofrin</ResponsiveText>
-        <ResponsiveText style={styles.tagline} variant="body">Controle financeiro pessoal</ResponsiveText>
-        <ResponsiveText style={styles.headerTitle} variant="h3">Termos de Uso</ResponsiveText>
-      </View>
 
-      {/* Content */}
-      <ScrollView style={styles.scrollContent} contentContainerStyle={styles.scrollContainer}>
         <View style={styles.card}>
+          <Text style={styles.cardTitle}>Termos de Uso</Text>
+
           {/* Alerta de Versão Beta */}
           <View style={styles.warningBox}>
             <MaterialCommunityIcons name="alert-circle" size={24} color="#D97706" />
@@ -184,22 +179,16 @@ export default function Terms({ navigation }: any) {
             <Text style={styles.footerText}>Cofrin v1.0.0 - Beta</Text>
             <Text style={styles.footerText}>Última atualização: Dezembro 2025</Text>
           </View>
+
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={({ pressed }) => [styles.acceptButton, pressed && styles.buttonPressed]}
+          >
+            <Text style={styles.acceptButtonText}>Entendi</Text>
+            <MaterialCommunityIcons name="check" size={20} color="#fff" />
+          </Pressable>
         </View>
       </ScrollView>
-
-      {/* Botão de Aceitar/Voltar */}
-      <View style={styles.bottomBar}>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={({ pressed }) => [
-            styles.acceptButton,
-            pressed && styles.buttonPressed,
-          ]}
-        >
-          <Text style={styles.acceptButtonText}>Entendi</Text>
-          <MaterialCommunityIcons name="check" size={20} color="#fff" />
-        </Pressable>
-      </View>
     </SafeAreaView>
   );
 }
@@ -207,64 +196,69 @@ export default function Terms({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#5B3CC4',
+    backgroundColor: 'rgb(108 42 143)',
   },
   header: {
+    alignItems: 'center',
     paddingTop: 16,
-    paddingBottom: 16,
-    paddingHorizontal: 24,
-    alignItems: 'center',
-    position: 'relative',
+    paddingBottom: 12,
   },
-  backButton: {
-    position: 'absolute',
-    top: 16,
-    left: 24,
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  brandRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 10,
+    marginBottom: 4,
   },
   iconContainer: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
+    width: 44,
+    height: 44,
+    borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginRight: 12,
   },
   appName: {
     fontSize: 28,
     fontWeight: '700',
     color: '#fff',
-    marginBottom: 4,
   },
   tagline: {
     fontSize: 14,
     color: 'rgba(255, 255, 255, 0.95)',
-    marginBottom: 12,
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#fff',
+    textAlign: 'center',
   },
   scrollContent: {
-    flex: 1,
-  },
-  scrollContainer: {
+    flexGrow: 1,
     paddingHorizontal: 24,
-    paddingTop: 8,
-    paddingBottom: 120,
+    paddingBottom: 32,
   },
   card: {
     backgroundColor: '#F7F6F2',
     borderRadius: 16,
-    padding: 20,
+    padding: 24,
+    marginTop: 16,
+    marginBottom: 32,
+    ...Platform.select({
+      web: {
+        maxWidth: 460,
+        alignSelf: 'center',
+        width: '100%',
+      },
+      default: {
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.12,
+        shadowRadius: 8,
+        elevation: 3,
+      },
+    }),
+  },
+  cardTitle: {
+    fontSize: 22,
+    fontWeight: '600',
+    color: TERMS_COLORS.primary,
+    textAlign: 'center',
+    marginBottom: 20,
   },
   warningBox: {
     backgroundColor: '#FEF3C7',
@@ -302,12 +296,12 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#2E2E2E',
+    color: TERMS_COLORS.primary,
   },
   paragraph: {
     fontSize: 14,
     lineHeight: 22,
-    color: '#2E2E2E',
+    color: '#322438',
     marginBottom: 8,
   },
   bold: {
@@ -320,7 +314,7 @@ const styles = StyleSheet.create({
   listItem: {
     fontSize: 14,
     lineHeight: 22,
-    color: '#2E2E2E',
+    color: '#322438',
   },
   disclaimerBox: {
     backgroundColor: '#E0F2FE',
@@ -336,7 +330,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 14,
     lineHeight: 20,
-    color: '#0C4A6E',
+    color: '#322438',
   },
   footer: {
     marginTop: 20,
@@ -348,23 +342,17 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 12,
-    color: '#6B6B6B',
-  },
-  bottomBar: {
-    backgroundColor: '#fff',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.1)',
+    color: '#322438',
   },
   acceptButton: {
-    backgroundColor: '#5B3CC4',
+    backgroundColor: TERMS_COLORS.primary,
     paddingVertical: 14,
     borderRadius: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
+    marginTop: 20,
   },
   buttonPressed: {
     opacity: 0.8,

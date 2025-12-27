@@ -9,16 +9,16 @@ export const palette = {
   surface: '#FFFFFF',      // superfícies
   
   // === TEXT ===
-  text: '#1F1B2E',         // títulos (preto arroxeado)
-  textDefault: '#4B475C',  // conteúdo padrão
+  text: '#28043b',         // títulos
+  textDefault: '#322438',  // conteúdo padrão (parágrafos)
   textSecondary: '#8A8699', // texto secundário
   textMuted: '#9A96B0',    // texto auxiliar / ícones inativos
   textInverse: '#FFFFFF',  // texto sobre fundos escuros
   
   // === PRIMARY (Roxo Marca) ===
-  primary: '#5B3CC4',      // roxo principal (botões, ícones ativos)
+  primary: '#28043b',      // cor primária
   primaryLight: '#7B5CD6', // roxo claro
-  primaryDark: '#4A2FA8',  // roxo escuro
+  primaryDark: '#28043b',  // variação escura
   primaryBg: '#EDE9FF',    // fundo roxo suave (ícones, cards destacados)
   
   // === STATUS ===

@@ -2417,7 +2417,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.9)',
   },
   typeChipTextActive: {
-    color: '#1f2937',
+    color: '#322438',
   },
   amountInput: {
     fontSize: 32,

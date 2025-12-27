@@ -12,6 +12,7 @@ import * as transactionService from '../services/transactionService';
 import MainLayout from '../components/MainLayout';
 import SimpleHeader from '../components/SimpleHeader';
 import { useNavigation } from '@react-navigation/native';
+import { DS_COLORS } from '../theme/designSystem';
 
 type ViewMode = 'monthly' | 'yearly';
 type TransactionTypeFilter = 'expense' | 'income';
@@ -623,7 +624,7 @@ export default function CategoryDetails() {
               {insights.length > 0 && (
                 <View style={[styles.insightsCard, { backgroundColor: colors.card }, getShadow(colors)]}>
                   <View style={styles.insightsHeader}>
-                    <MaterialCommunityIcons name="lightbulb-on" size={20} color={colors.warning || '#F59E0B'} />
+                    <MaterialCommunityIcons name="lightbulb-on" size={20} color={DS_COLORS.warning} />
                     <Text style={[styles.insightsTitle, { color: colors.text }]}>Insights</Text>
                   </View>
 

@@ -19,6 +19,7 @@ import { useAllGoals } from '../hooks/useAllGoals';
 import { useSnackbar } from '../hooks/useSnackbar';
 import Snackbar from '../components/Snackbar';
 import { spacing, borderRadius, getShadow } from '../theme';
+import { DS_COLORS } from '../theme/designSystem';
 import { formatCurrencyBRL } from '../utils/format';
 import * as goalService from '../services/goalService';
 import * as transactionService from '../services/transactionService';
@@ -546,7 +547,7 @@ function MonthlyGoalsContent({ goals, categories, loading, colors, getPercentage
         const percentage = getPercentage(goal.currentAmount, goal.targetAmount);
         const isExpense = goal.goalType === 'expense';
         const showWarning = isExpense && percentage >= 85;
-        const progressColor = isExpense ? '#ef4444' : '#22c55e';
+        const progressColor = isExpense ? DS_COLORS.error : DS_COLORS.success;
 
         return (
           <Pressable key={goal.id} style={[styles.goalCard, { backgroundColor: colors.card }, getShadow(colors)]} onPress={() => onEdit(goal)}>
@@ -572,7 +573,7 @@ function MonthlyGoalsContent({ goals, categories, loading, colors, getPercentage
               
               {showWarning && (
                 <View style={styles.warningBadge}>
-                  <MaterialCommunityIcons name="alert" size={16} color="#f59e0b" />
+                  <MaterialCommunityIcons name="alert" size={16} color={DS_COLORS.warning} />
                 </View>
               )}
             </View>

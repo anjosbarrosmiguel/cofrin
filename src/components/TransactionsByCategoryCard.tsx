@@ -6,6 +6,7 @@ import { useAppTheme } from '../contexts/themeContext';
 import { spacing, borderRadius, getShadow } from '../theme';
 import { formatCurrencyBRL } from '../utils/format';
 import { useState, useMemo } from 'react';
+import { DS_COLORS } from '../theme/designSystem';
 
 interface CategoryData {
   categoryId: string;
@@ -288,7 +289,7 @@ export default function TransactionsByCategoryCard({
                             backgroundColor: isDominant && !isOthers
                               ? colors.primary
                               : isOthers && item.percentage > 50
-                              ? colors.warning || '#F59E0B'
+                              ? DS_COLORS.warning
                               : valueColor
                           }
                         ]} 

@@ -3,9 +3,9 @@ import { View, StyleSheet, Pressable } from 'react-native';
 import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAppTheme } from '../../contexts/themeContext';
-import { getShadow } from '../../theme';
 import { formatCurrencyBRL } from '../../utils/format';
 import { Account, Transaction, CreditCard } from '../../types/firebase';
+import { DS_COLORS, DS_TYPOGRAPHY, DS_ICONS, DS_CARD, DS_SPACING } from '../../theme/designSystem';
 
 interface Props {
   accounts?: Account[];
@@ -33,18 +33,13 @@ const getAccountIcon = (type: string): string => {
 
 const getAccountColor = (type: string): string => {
   switch (type) {
-    case 'checking': return '#5B3CC4'; // roxo principal
-    case 'savings': return '#2FAF8E';  // verde elegante do design system
-    case 'investment': return '#7B5CD6'; // roxo claro
-    case 'cash': return '#E07A3F';  // laranja atenção
-    default: return '#9A96B0';  // cinza arroxeado
+    case 'checking': return DS_COLORS.primary;
+    case 'savings': return DS_COLORS.success;
+    case 'investment': return DS_COLORS.primary;
+    case 'cash': return DS_COLORS.warning;
+    default: return DS_COLORS.gray;
   }
 };
-
-// Cor cinza chumbo moderna para o título
-const titleGray = '#6B7280';
-// Fundo mais claro para visual moderno
-const lightBg = '#FAFAFA';
 
 export default memo(function AccountsCard({ 
   accounts = [], 
@@ -104,7 +99,7 @@ export default memo(function AccountsCard({
     return (
       <>
         {index > 0 && (
-          <View style={[styles.divider, { borderColor: colors.border }]} />
+          <View style={[styles.divider, { borderColor: DS_COLORS.divider }]} />
         )}
         <Pressable
           onPress={() => onAccountPress?.(account)}
@@ -117,10 +112,10 @@ export default memo(function AccountsCard({
           <View style={styles.accountHeader}>
             <MaterialCommunityIcons
               name={accountIcon as any}
-              size={20}
+              size={DS_ICONS.size.default}
               color={accountColor}
             />
-            <Text style={[styles.accountName, { color: colors.text }]} numberOfLines={1}>
+            <Text style={[styles.accountName, { color: DS_COLORS.textBody }]} numberOfLines={1}>
               {account.name}
             </Text>
           </View>
@@ -128,11 +123,11 @@ export default memo(function AccountsCard({
           {/* Segunda linha: saldo */}
           <View style={styles.accountInfo}>
             <View style={styles.infoItem}>
-              <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Saldo atual:</Text>
+              <Text style={[styles.infoLabel, { color: DS_COLORS.textMuted }]}>Saldo atual:</Text>
               <Text 
                 style={[
                   styles.balanceValue, 
-                  { color: isNegative ? colors.expense : colors.text }
+                  { color: isNegative ? DS_COLORS.error : DS_COLORS.textBody }
                 ]}
               >
                 {formatCurrencyBRL(account.balance)}
@@ -150,13 +145,13 @@ export default memo(function AccountsCard({
       {showGreeting && (
         <View style={styles.greetingSection}>
           <View style={styles.greetingRow}>
-            <Text style={[styles.greeting, { color: colors.text }]}>
+            <Text style={[styles.greeting, { color: DS_COLORS.primary }]}>
               {greeting.text}, {username}
             </Text>
             <MaterialCommunityIcons 
               name={greeting.icon} 
               size={28} 
-              color={colors.text} 
+              color={DS_COLORS.primary}
               style={styles.greetingIcon}
             />
           </View>
@@ -164,21 +159,21 @@ export default memo(function AccountsCard({
       )}
 
       {/* Card Principal */}
-      <View style={[styles.card, { borderColor: colors.border }, getShadow(colors)]}>
+      <View style={styles.card}>
         {/* Header com título e saldo geral */}
         <View style={styles.header}>
-          <Text style={[styles.title, { color: titleGray }]}>
+          <Text style={[styles.title, { color: DS_COLORS.primary }]}>
             Onde está meu dinheiro
           </Text>
           
           {/* Saldo Geral - Destaque */}
           <View style={styles.totalBalanceSection}>
-            <Text style={[styles.totalBalanceLabel, { color: colors.textMuted }]}>
+            <Text style={[styles.totalBalanceLabel, { color: DS_COLORS.textMuted }]}>
               Saldo geral
             </Text>
             <Text style={[
               styles.totalBalanceValue, 
-              { color: displayTotalBalance >= 0 ? colors.income : colors.expense }
+              { color: displayTotalBalance >= 0 ? DS_COLORS.success : DS_COLORS.error }
             ]}>
               {formatCurrencyBRL(displayTotalBalance)}
             </Text>
@@ -187,13 +182,13 @@ export default memo(function AccountsCard({
 
         {/* Separador */}
         {accountsWithBalance.length > 0 && (
-          <View style={[styles.separator, { backgroundColor: colors.border }]} />
+          <View style={[styles.separator, { backgroundColor: DS_COLORS.divider }]} />
         )}
 
         {/* Lista de contas */}
         {accountsWithBalance.length > 0 && (
           <View style={styles.accountsList}>
-            <Text style={[styles.accountsTitle, { color: titleGray }]}>
+            <Text style={styles.accountsTitle}>
               Contas
             </Text>
             {accountsWithBalance.map((account, index) => (
@@ -205,8 +200,8 @@ export default memo(function AccountsCard({
         {/* Mensagem vazia */}
         {accountsWithBalance.length === 0 && (
           <View style={styles.emptyState}>
-            <MaterialCommunityIcons name="wallet-outline" size={48} color="#9CA3AF" />
-            <Text style={[styles.emptyText, { color: '#9CA3AF' }]}>
+            <MaterialCommunityIcons name="wallet-outline" size={48} color={DS_COLORS.textMuted} />
+            <Text style={[styles.emptyText, { color: DS_COLORS.textMuted }]}>
               Nenhuma conta com saldo disponível
             </Text>
           </View>
@@ -218,10 +213,10 @@ export default memo(function AccountsCard({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 16,
+    gap: DS_SPACING.lg,
   },
   greetingSection: {
-    gap: 4,
+    gap: DS_SPACING.xs,
     paddingHorizontal: 4,
   },
   greetingRow: {
@@ -229,7 +224,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   greetingIcon: {
-    marginLeft: 8,
+    marginLeft: DS_SPACING.sm,
   },
   greeting: {
     fontSize: 28,
@@ -238,26 +233,24 @@ const styles = StyleSheet.create({
     letterSpacing: -0.5,
   },
   card: {
-    padding: 24,
-    borderRadius: 24,
-    borderWidth: 1,
-    backgroundColor: '#FFFFFF',
+    ...DS_CARD,
+    ...DS_CARD.shadow,
+    backgroundColor: DS_COLORS.card,
   },
   header: {
-    gap: 16,
+    gap: DS_SPACING.lg,
   },
   title: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...DS_TYPOGRAPHY.styles.sectionTitle,
+    color: DS_COLORS.primary,
   },
   totalBalanceSection: {
-    gap: 4,
+    gap: DS_SPACING.xs,
   },
   totalBalanceLabel: {
-    fontSize: 12,
+    ...DS_TYPOGRAPHY.styles.label,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
-    fontWeight: '500',
   },
   totalBalanceValue: {
     fontSize: 32,
@@ -266,19 +259,19 @@ const styles = StyleSheet.create({
   },
   separator: {
     height: 1,
-    marginVertical: 8,
+    marginVertical: DS_SPACING.sm,
   },
   accountsList: {
     gap: 0,
-    marginTop: 8,
+    marginTop: DS_SPACING.sm,
   },
   accountsTitle: {
-    fontSize: 14,
+    ...DS_TYPOGRAPHY.styles.body,
     fontWeight: '600',
     marginBottom: 4,
   },
   accountItem: {
-    paddingVertical: 16,
+    paddingVertical: DS_SPACING.lg,
   },
   divider: {
     borderBottomWidth: 1,
@@ -288,35 +281,35 @@ const styles = StyleSheet.create({
   accountHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
+    gap: DS_SPACING.sm,
+    marginBottom: DS_SPACING.sm,
   },
   accountName: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
+    ...DS_TYPOGRAPHY.styles.valueSecondary,
   },
   accountInfo: {
     flexDirection: 'row',
   },
   infoItem: {
     flex: 1,
-    gap: 4,
+    gap: DS_SPACING.xs,
   },
   infoLabel: {
+    ...DS_TYPOGRAPHY.styles.label,
     fontSize: 13,
   },
   balanceValue: {
-    fontSize: 16,
+    ...DS_TYPOGRAPHY.styles.valueSecondary,
     fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 32,
-    gap: 12,
+    gap: DS_SPACING.md,
   },
   emptyText: {
-    fontSize: 14,
+    ...DS_TYPOGRAPHY.styles.body,
     textAlign: 'center',
   },
 });

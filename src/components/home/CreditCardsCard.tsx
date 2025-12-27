@@ -3,11 +3,11 @@ import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useState, useMemo, memo, useEffect } from 'react';
 import { useAppTheme } from '../../contexts/themeContext';
-import { getShadow } from '../../theme';
 import { formatCurrencyBRL } from '../../utils/format';
 import { CreditCard } from '../../types/firebase';
 import { getCreditCardTransactionsByMonth, calculateBillTotal } from '../../services/creditCardBillService';
 import { useAuth } from '../../contexts/authContext';
+import { DS_COLORS, DS_TYPOGRAPHY, DS_ICONS, DS_CARD, DS_BADGE, DS_SPACING } from '../../theme/designSystem';
 
 interface Props {
   cards?: CreditCard[];
@@ -17,26 +17,7 @@ interface Props {
   onAddPress?: () => void;
 }
 
-// Cores para os cartões baseado no nome (paleta harmônica com roxo)
-const getCardColor = (name: string, customColor?: string): string => {
-  // Lista de cores azuis que devem ser substituídas por roxo
-  const blueColors = ['#3B82F6', '#3b82f6', '#06b6d4', '#0ea5e9', '#2563eb', '#1d4ed8'];
-  
-  // Se a cor customizada for azul, usar roxo principal
-  if (customColor && blueColors.includes(customColor.toLowerCase())) {
-    return '#5B3CC4'; // roxo principal
-  }
-  
-  if (customColor) return customColor;
-  const colors = ['#5B3CC4', '#7B5CD6', '#2FAF8E', '#E07A3F', '#ec4899', '#C4572D'];
-  const index = name.charCodeAt(0) % colors.length;
-  return colors[index];
-};
 
-// Cor roxa escura para títulos principais
-const primaryDark = '#4A2FA8';
-// Fundo mais claro para visual moderno
-const lightBg = '#FAFAFA';
 
 // Status de uso do cartão baseado na porcentagem de gastos vs receitas
 type CardUsageStatus = {
@@ -45,12 +26,12 @@ type CardUsageStatus = {
   color: string;
 };
 
-const getCardUsageStatus = (totalUsed: number, totalIncome: number, colors: any): CardUsageStatus => {
+const getCardUsageStatus = (totalUsed: number, totalIncome: number): CardUsageStatus => {
   if (totalIncome === 0) {
     return {
       level: 'no-income',
       message: 'Sem receitas registradas neste mês',
-      color: colors.textMuted,
+      color: DS_COLORS.textMuted,
     };
   }
 
@@ -60,19 +41,19 @@ const getCardUsageStatus = (totalUsed: number, totalIncome: number, colors: any)
     return {
       level: 'controlled',
       message: 'Gastos controlados',
-      color: '#22C55E', // verde
+      color: DS_COLORS.success,
     };
   } else if (percentage <= 50) {
     return {
       level: 'warning',
       message: 'Cuidado, você está se aproximando do limite recomendado',
-      color: '#F59E0B', // amarelo/laranja
+      color: DS_COLORS.warning,
     };
   } else {
     return {
       level: 'alert',
       message: 'Atenção, gastos elevados no cartão',
-      color: '#EF4444', // vermelho
+      color: DS_COLORS.error,
     };
   }
 };
@@ -148,7 +129,6 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
 
   // Componente de item do cartão (layout minimalista)
   const CardItem = ({ card, index }: { card: CreditCard; index: number }) => {
-    const cardColor = getCardColor(card.name, card.color);
     const billAmount = currentBills[card.id] || 0;
     
     // Determinar status da fatura
@@ -167,32 +147,25 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
     };
 
     const getStatusBadgeColors = () => {
-      if (isOverdue) {
-        return { bg: '#EF5350', border: '#EF5350' }; // Vermelho
-      }
-      if (isDueToday) {
-        return { bg: '#FFA726', border: '#FFA726' }; // Laranja
-      }
-      // Pendente normal - cinza
-      return { bg: '#9E9E9E', border: '#9E9E9E' };
+      if (isOverdue) return DS_BADGE.variants.error;
+      if (isDueToday) return DS_BADGE.variants.warning;
+      return DS_BADGE.variants.neutral;
     };
     
     const getBillValueColor = () => {
-      if (isOverdue) {
-        return '#EF5350'; // Vermelho
-      }
-      if (isDueToday) {
-        return '#F57C00'; // Laranja escuro
-      }
-      return colors.textMuted; // Cinza para pendente
+      if (isOverdue) return DS_COLORS.error;
+      if (isDueToday) return DS_COLORS.warning;
+      return DS_COLORS.textMuted;
     };
     
     const statusText = getStatusText();
     
+    const badgeColors = getStatusBadgeColors();
+    
     return (
       <>
         {index > 0 && (
-          <View style={[styles.divider, { borderColor: colors.border }]} />
+          <View style={[styles.divider, { borderColor: DS_COLORS.divider }]} />
         )}
         <Pressable
           onPress={() => onCardPress?.(card)}
@@ -205,15 +178,15 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
           <View style={styles.cardHeader}>
             <MaterialCommunityIcons
               name={(card.icon as any) || 'credit-card'}
-              size={20}
-              color={cardColor}
+              size={DS_ICONS.size.default}
+              color={DS_ICONS.color}
             />
-            <Text style={[styles.cardName, { color: colors.text }]} numberOfLines={1}>
+            <Text style={[styles.cardName, { color: DS_COLORS.textBody }]} numberOfLines={1}>
               {card.name}
             </Text>
             {statusText && (
-              <View style={[styles.statusBadge, { backgroundColor: getStatusBadgeColors().bg, borderColor: getStatusBadgeColors().border }]}>
-                <Text style={[styles.statusBadgeText, { color: colors.textInverse }]}>
+              <View style={[styles.statusBadge, { backgroundColor: badgeColors.backgroundColor }]}>
+                <Text style={[styles.statusBadgeText, { color: badgeColors.color }]}>
                   {statusText}
                 </Text>
               </View>
@@ -222,7 +195,7 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
 
           {/* Segunda linha: vencimento + valor na mesma linha */}
           <View style={styles.cardInfo}>
-            <Text style={[styles.infoLabel, { color: colors.textMuted }]}>
+            <Text style={[styles.infoLabel, { color: DS_COLORS.textMuted }]}>
               Vencimento dia {card.dueDay}
             </Text>
             <Text style={[styles.billValue, { color: getBillValueColor() }]}>
@@ -235,12 +208,12 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
   };
 
   return (
-    <View style={[styles.card, { backgroundColor: '#fff' }, getShadow(colors)]}>
+    <View style={[styles.card, { backgroundColor: DS_COLORS.card }]}>
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.titleSection}>
           <View style={styles.titleRow}>
-            <Text style={[styles.title, { color: primaryDark }]}>
+            <Text style={[styles.title, DS_TYPOGRAPHY.styles.sectionTitle, { color: DS_COLORS.primary }]}>
               Meus cartões
             </Text>
             {cardsWithPendingBills.length > 0 && totalUsed > 0 && (
@@ -272,8 +245,8 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
       {/* Mensagem vazia */}
       {cardsWithPendingBills.length === 0 && (
         <View style={styles.emptyState}>
-          <MaterialCommunityIcons name="credit-card-check" size={48} color={colors.textMuted} />
-          <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+          <MaterialCommunityIcons name="credit-card-check" size={48} color={DS_COLORS.textMuted} />
+          <Text style={[styles.emptyText, { color: DS_COLORS.textMuted }]}>
             Nenhuma fatura pendente neste mês
           </Text>
         </View>
@@ -290,7 +263,7 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
           style={styles.modalOverlay}
           onPress={() => setShowStatusModal(false)}
         >
-          <View style={[styles.modalCard, { backgroundColor: colors.card }]}>
+          <View style={[styles.modalCard, { backgroundColor: DS_COLORS.card }]}>
             {/* Ícone e status principal */}
             <View style={styles.modalHeader}>
               <View style={[styles.modalIconContainer, { backgroundColor: `${usageStatus.color}15` }]}>
@@ -300,63 +273,63 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
                   color={usageStatus.color} 
                 />
               </View>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
+              <Text style={[styles.modalTitle, { color: DS_COLORS.textTitle }]}>
                 {usageStatus.message}
               </Text>
             </View>
 
-            <View style={[styles.modalDivider, { backgroundColor: colors.border }]} />
+            <View style={[styles.modalDivider, { backgroundColor: DS_COLORS.divider }]} />
 
             {/* Resumo dos compromissos */}
             <View style={styles.modalDetails}>
               <View style={styles.modalRow}>
-                <Text style={[styles.modalLabel, { color: colors.textMuted }]}>Total em faturas:</Text>
-                <Text style={[styles.modalValue, { color: colors.expense }]}>
+                <Text style={[styles.modalLabel, { color: DS_COLORS.textMuted }]}>Total em faturas:</Text>
+                <Text style={[styles.modalValue, { color: DS_COLORS.error }]}>
                   {formatCurrencyBRL(totalUsed)}
                 </Text>
               </View>
               <View style={styles.modalRow}>
-                <Text style={[styles.modalLabel, { color: colors.textMuted }]}>Receitas do mês:</Text>
-                <Text style={[styles.modalValue, { color: colors.income }]}>
+                <Text style={[styles.modalLabel, { color: DS_COLORS.textMuted }]}>Receitas do mês:</Text>
+                <Text style={[styles.modalValue, { color: DS_COLORS.success }]}>
                   {formatCurrencyBRL(totalIncome)}
                 </Text>
               </View>
               <View style={styles.modalRow}>
-                <Text style={[styles.modalLabel, { color: colors.textMuted }]}>Comprometimento:</Text>
+                <Text style={[styles.modalLabel, { color: DS_COLORS.textMuted }]}>Comprometimento:</Text>
                 <Text style={[styles.modalValue, { color: usageStatus.color }]}>
                   {usagePercentage.toFixed(1)}%
                 </Text>
               </View>
             </View>
 
-            <View style={[styles.modalDivider, { backgroundColor: colors.border }]} />
+            <View style={[styles.modalDivider, { backgroundColor: DS_COLORS.divider }]} />
 
             {/* Detalhes por cartão - apenas mês atual */}
             <View style={styles.modalCardsList}>
-              <Text style={[styles.modalSectionTitle, { color: colors.text }]}>
+              <Text style={[styles.modalSectionTitle, { color: DS_COLORS.textBody }]}>
                 Por cartão (mês atual)
               </Text>
               {cards.filter(c => (currentBills[c.id] || 0) > 0).map((card) => (
                 <View key={card.id} style={styles.modalCardItem}>
                   <View style={styles.modalCardInfo}>
-                    <View style={[styles.modalCardIcon, { backgroundColor: `${getCardColor(card.name, card.color)}15` }]}>
+                    <View style={[styles.modalCardIcon, { backgroundColor: DS_COLORS.primaryLight }]}>
                       <MaterialCommunityIcons 
                         name={(card.icon as any) || 'credit-card'} 
                         size={16} 
-                        color={getCardColor(card.name, card.color)} 
+                        color={DS_ICONS.color} 
                       />
                     </View>
-                    <Text style={[styles.modalCardName, { color: colors.text }]} numberOfLines={1}>
+                    <Text style={[styles.modalCardName, { color: DS_COLORS.textBody }]} numberOfLines={1}>
                       {card.name}
                     </Text>
                   </View>
-                  <Text style={[styles.modalCardValue, { color: colors.expense }]}>
+                  <Text style={[styles.modalCardValue, { color: DS_COLORS.error }]}>
                     {formatCurrencyBRL(currentBills[card.id] || 0)}
                   </Text>
                 </View>
               ))}
               {cards.filter(c => (currentBills[c.id] || 0) > 0).length === 0 && (
-                <Text style={[styles.modalEmptyText, { color: colors.textMuted }]}>
+                <Text style={[styles.modalEmptyText, { color: DS_COLORS.textMuted }]}>
                   Nenhuma fatura em aberto no mês atual
                 </Text>
               )}
@@ -370,7 +343,7 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
                   size={16} 
                   color={usageStatus.color} 
                 />
-                <Text style={[styles.modalTipText, { color: colors.textMuted }]}>
+                <Text style={[styles.modalTipText, { color: DS_COLORS.textBody }]}>
                   {usageStatus.level === 'controlled' 
                     ? 'Continue assim! Manter os gastos no cartão abaixo de 30% das receitas é ideal.'
                     : usageStatus.level === 'warning'
@@ -379,13 +352,13 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
                 </Text>
               </View>
             ) : (
-              <View style={[styles.modalTip, { backgroundColor: `${colors.primary}10` }]}>
+              <View style={[styles.modalTip, { backgroundColor: DS_COLORS.primaryLight }]}>
                 <MaterialCommunityIcons 
                   name="information-outline" 
                   size={16} 
-                  color={colors.primary} 
+                  color={DS_ICONS.color} 
                 />
-                <Text style={[styles.modalTipText, { color: colors.textMuted }]}>
+                <Text style={[styles.modalTipText, { color: DS_COLORS.textBody }]}>
                   Cadastre suas receitas para acompanhar o comprometimento do seu orçamento com cartões de crédito.
                 </Text>
               </View>
@@ -399,32 +372,26 @@ export default memo(function CreditCardsCard({ cards = [], totalBills = 0, total
 
 const styles = StyleSheet.create({
   card: {
-    padding: 24,
-    borderRadius: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    elevation: 3,
+    ...DS_CARD,
+    ...DS_CARD.shadow,
   },
   header: {
-    marginBottom: 16,
+    marginBottom: DS_SPACING.lg,
   },
   titleSection: {
-    gap: 4,
+    gap: DS_SPACING.xs,
   },
   title: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...DS_TYPOGRAPHY.styles.sectionTitle,
   },
   subtitle: {
-    fontSize: 13,
+    ...DS_TYPOGRAPHY.styles.label,
   },
   cardsList: {
     gap: 0,
   },
   cardItem: {
-    paddingVertical: 16,
+    paddingVertical: DS_SPACING.lg,
   },
   divider: {
     borderBottomWidth: 1,
@@ -434,23 +401,19 @@ const styles = StyleSheet.create({
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 10,
+    gap: DS_SPACING.sm,
+    marginBottom: DS_SPACING.sm,
   },
   cardName: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '600',
+    ...DS_TYPOGRAPHY.styles.valueSecondary,
   },
   statusText: {
     fontSize: 13,
     fontWeight: '500',
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 999,
-    borderWidth: 0,
+    ...DS_BADGE,
   },
   statusBadgeText: {
     fontSize: 10,
@@ -462,39 +425,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   infoLabel: {
-    fontSize: 12,
+    ...DS_TYPOGRAPHY.styles.label,
   },
   billValue: {
-    fontSize: 16,
+    ...DS_TYPOGRAPHY.styles.valueSecondary,
     fontWeight: '700',
   },
   emptyState: {
     alignItems: 'center',
     paddingVertical: 32,
-    gap: 12,
+    gap: DS_SPACING.md,
   },
   emptyText: {
-    fontSize: 14,
+    ...DS_TYPOGRAPHY.styles.body,
   },
   emptyButton: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     paddingVertical: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: DS_SPACING.lg,
     borderRadius: 20,
     marginTop: 4,
   },
   emptyButtonText: {
-    color: '#fff',
-    fontSize: 14,
+    color: DS_COLORS.textInverse,
+    ...DS_TYPOGRAPHY.styles.body,
     fontWeight: '600',
   },
   // Estilos do ícone de status
   titleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: DS_SPACING.sm,
   },
   statusIconButton: {
     padding: 4,
@@ -505,23 +468,19 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 24,
+    padding: DS_SPACING.xxl,
   },
   modalCard: {
     width: '100%',
     maxWidth: 400,
-    borderRadius: 20,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 10,
+    borderRadius: DS_CARD.borderRadius,
+    padding: DS_SPACING.xxl,
+    ...DS_CARD.shadow,
   },
   modalHeader: {
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 16,
+    gap: DS_SPACING.md,
+    marginBottom: DS_SPACING.lg,
   },
   modalIconContainer: {
     width: 56,
@@ -531,16 +490,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalTitle: {
-    fontSize: 16,
-    fontWeight: '600',
+    ...DS_TYPOGRAPHY.styles.valueSecondary,
     textAlign: 'center',
   },
   modalDivider: {
     height: 1,
-    marginVertical: 16,
+    marginVertical: DS_SPACING.lg,
   },
   modalDetails: {
-    gap: 12,
+    gap: DS_SPACING.md,
   },
   modalRow: {
     flexDirection: 'row',
@@ -548,17 +506,16 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalLabel: {
-    fontSize: 14,
+    ...DS_TYPOGRAPHY.styles.body,
   },
   modalValue: {
-    fontSize: 15,
-    fontWeight: '600',
+    ...DS_TYPOGRAPHY.styles.valueSecondary,
   },
   modalCardsList: {
     gap: 10,
   },
   modalSectionTitle: {
-    fontSize: 14,
+    ...DS_TYPOGRAPHY.styles.body,
     fontWeight: '600',
     marginBottom: 4,
   },
@@ -581,27 +538,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   modalCardName: {
-    fontSize: 14,
+    ...DS_TYPOGRAPHY.styles.body,
     flex: 1,
   },
   modalCardValue: {
-    fontSize: 14,
+    ...DS_TYPOGRAPHY.styles.body,
     fontWeight: '600',
   },
   modalEmptyText: {
-    fontSize: 13,
+    ...DS_TYPOGRAPHY.styles.body,
     fontStyle: 'italic',
   },
   modalTip: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 8,
-    padding: 12,
-    borderRadius: 12,
-    marginTop: 16,
+    gap: DS_SPACING.sm,
+    padding: DS_SPACING.md,
+    borderRadius: DS_SPACING.md,
+    marginTop: DS_SPACING.lg,
   },
   modalTipText: {
-    fontSize: 12,
+    ...DS_TYPOGRAPHY.styles.label,
     flex: 1,
     lineHeight: 18,
   },

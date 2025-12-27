@@ -5,6 +5,7 @@ import { Timestamp } from 'firebase/firestore';
 import { formatCurrencyBRL } from '../../utils/format';
 import { useAppTheme } from '../../contexts/themeContext';
 import { spacing, borderRadius, getShadow } from '../../theme';
+import { DS_COLORS } from '../../theme/designSystem';
 
 interface Props {
   creditCardName: string;
@@ -45,8 +46,8 @@ function CreditCardBillItemComponent({
   // Cor do valor - laranja para despesa (sem vermelho)
   const amountColor = colors.expense;
   
-  // Badge de status - usar cor warning (#f59e0b) para pendente, igual ao card meus cartões
-  const badgeColor = isPaid ? colors.success : '#f59e0b';
+  // Badge de status - usar warning do design system para pendente
+  const badgeColor = isPaid ? colors.success : DS_COLORS.warning;
   const badgeIcon = isPaid ? 'check' : 'clock-outline';
   const badgeText = isPaid ? 'Paga' : 'Pendente';
 

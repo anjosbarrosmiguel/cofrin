@@ -7,6 +7,7 @@ import SimpleHeader from "../components/SimpleHeader";
 import { FOOTER_HEIGHT } from "../components/AppFooter";
 import { useMemo } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { DS_COLORS } from "../theme/designSystem";
 
 // Dicas práticas de educação financeira
 const TIPS = [
@@ -78,7 +79,7 @@ export default function Education({ navigation }: any) {
             
             {/* Mensagem do Julius */}
             <View style={[styles.juliusCard, { backgroundColor: colors.warningBg || '#FEF3C7' }]}>
-              <MaterialCommunityIcons name="lightbulb-on" size={32} color={colors.warning || '#F59E0B'} />
+              <MaterialCommunityIcons name="lightbulb-on" size={32} color={DS_COLORS.warning} />
               <Text style={[styles.juliusQuote, { color: colors.text }]}>
                 {JULIUS_QUOTE}
               </Text>

@@ -15,8 +15,8 @@ import { register } from "../services/auth";
 
 // Design System Roxo Premium
 const REGISTER_COLORS = {
-  primary: '#5B3CC4',      // roxo principal
-  primaryDark: '#4A2FA8',  // roxo escuro
+  primary: '#28043b',      // cor primária
+  primaryDark: '#28043b',  // variação escura
   primaryLight: '#7B5CD6', // roxo claro
 };
 
@@ -201,7 +201,7 @@ export default function Register({ navigation }: any) {
 
         {/* Link para Termos de Uso */}
         <Pressable onPress={() => navigation.navigate("Termos de Uso")} style={styles.termsButton}>
-          <MaterialCommunityIcons name="file-document-outline" size={16} color="#6B6B6B" />
+          <MaterialCommunityIcons name="file-document-outline" size={16} color="#322438" />
           <Text style={styles.termsText}>Termos de Uso</Text>
         </Pressable>
       </View>
@@ -213,7 +213,7 @@ export default function Register({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#5B3CC4',
+    backgroundColor: 'rgb(108 42 143)',
   },
   scrollContent: {
     flexGrow: 1,
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 22,
     fontWeight: '600',
-    color: '#2E2E2E',
+    color: REGISTER_COLORS.primary,
     textAlign: 'center',
     marginBottom: 20,
   },
@@ -292,7 +292,7 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#1F2937',
+    color: '#322438',
     ...Platform.select({
       web: {
         // Removed outlineStyle to fix TypeScript issue
@@ -310,7 +310,7 @@ const styles = StyleSheet.create({
   fieldLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#6B6B6B',
+    color: '#322438',
     marginBottom: 6,
     marginTop: 4,
     letterSpacing: 0.5,
@@ -323,7 +323,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   primaryButton: {
-    backgroundColor: '#5B3CC4',
+    backgroundColor: REGISTER_COLORS.primary,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
@@ -359,7 +359,7 @@ const styles = StyleSheet.create({
   },
   dividerText: {
     paddingHorizontal: 16,
-    color: '#6B6B6B',
+    color: '#322438',
     fontSize: 13,
   },
   loginButton: {
@@ -367,11 +367,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   loginText: {
-    color: '#6B6B6B',
+    color: '#322438',
     fontSize: 14,
   },
   loginTextBold: {
-    color: '#5B3CC4',
+    color: REGISTER_COLORS.primary,
     fontWeight: '700',
   },
   termsButton: {
@@ -383,7 +383,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   termsText: {
-    color: '#6B6B6B',
+    color: '#322438',
     fontSize: 13,
   },
 });

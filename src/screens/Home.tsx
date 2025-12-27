@@ -19,6 +19,7 @@ import { UpcomingFlowsCard } from "../components/home";
 import TopCategoriesCard from "../components/TopCategoriesCard";
 import CreditCardsCard from "../components/home/CreditCardsCard";
 import GoalCard from "../components/home/GoalCard";
+import { DS_COLORS } from "../theme/designSystem";
 
 export default function Home() {
   const { user } = useAuth();
@@ -135,7 +136,7 @@ export default function Home() {
   return (
     <MainLayout>
       <ScrollView 
-        style={{ backgroundColor: '#F9FAFB' }} 
+        style={{ backgroundColor: DS_COLORS.background }} 
         contentContainerStyle={{ 
           paddingTop: insets.top || 16
         }}
@@ -145,14 +146,14 @@ export default function Home() {
             {/* Saudação - sempre visível imediatamente */}
             <View style={styles.greetingSection}>
               <View style={styles.greetingRow}>
-                <Text style={[styles.greeting, { color: colors.text }]}>
+                <Text style={[styles.greeting, { color: DS_COLORS.primary }]}>
                   {getGreeting().text}, {userName}
                 </Text>
                 <View style={styles.greetingIcons}>
                   <MaterialCommunityIcons 
                     name={getGreeting().icon} 
                     size={28} 
-                    color={colors.text} 
+                    color={DS_COLORS.primary} 
                     style={styles.greetingIcon}
                   />
                   {hasAlert && (
@@ -163,7 +164,7 @@ export default function Home() {
                       <MaterialCommunityIcons 
                         name="bell-alert" 
                         size={24} 
-                        color="#f59e0b" 
+                        color={DS_COLORS.warning} 
                       />
                     </Pressable>
                   )}

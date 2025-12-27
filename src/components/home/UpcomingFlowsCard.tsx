@@ -4,9 +4,9 @@ import { Text } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAppTheme } from '../../contexts/themeContext';
-import { spacing, borderRadius, getShadow } from '../../theme';
 import { formatCurrencyBRL } from '../../utils/format';
 import type { Transaction } from '../../types/firebase';
+import { DS_COLORS, DS_TYPOGRAPHY, DS_CARD, DS_SPACING } from '../../theme/designSystem';
 
 interface Props {
   incomeTransactions: Transaction[];
@@ -71,26 +71,26 @@ export default memo(function UpcomingFlowsCard({
   const getMessage = () => {
     if (currentData.type === 'income') {
       return (
-        <Text style={[styles.message, { color: colors.text }]}>
+        <Text style={[styles.message, { color: DS_COLORS.textBody }]}>
           Opa, vi que você tem{' '}
-          <Text style={[styles.highlight, { color: colors.income }]}>
+          <Text style={[styles.highlight, { color: DS_COLORS.success }]}>
             contas a receber
           </Text>
           {' '}no total de{' '}
-          <Text style={[styles.amount, { color: colors.income }]}>
+          <Text style={[styles.amount, { color: DS_COLORS.success }]}>
             {formatCurrencyBRL(currentData.total)}
           </Text>
         </Text>
       );
     }
     return (
-      <Text style={[styles.message, { color: colors.text }]}>
+      <Text style={[styles.message, { color: DS_COLORS.textBody }]}>
         Você também tem{' '}
-        <Text style={[styles.highlight, { color: colors.expense }]}>
+        <Text style={[styles.highlight, { color: DS_COLORS.error }]}>
           contas a pagar
         </Text>
         {' '}no valor total de{' '}
-        <Text style={[styles.amount, { color: colors.expense }]}>
+        <Text style={[styles.amount, { color: DS_COLORS.error }]}>
           {formatCurrencyBRL(currentData.total)}
         </Text>
       </Text>
@@ -99,7 +99,7 @@ export default memo(function UpcomingFlowsCard({
 
   const accentColor = currentData.type === 'income' ? colors.income : colors.expense;
 
-  // Mostrar seta esquerda apenas no slide 2+ e seta direita apenas antes do último
+  // Mostrar seta esquerda apenas no slide 2+ e seta direita apenas antes do ultimo
   const showLeftArrow = hasMultipleSlides && currentSlide > 0;
   const showRightArrow = hasMultipleSlides && currentSlide < slides.length - 1;
 
@@ -108,8 +108,7 @@ export default memo(function UpcomingFlowsCard({
       onPress={handlePress}
       style={({ pressed }) => [
         styles.card,
-        { backgroundColor: colors.card, opacity: pressed ? 0.9 : 1 },
-        getShadow(colors),
+        { backgroundColor: DS_COLORS.card, opacity: pressed ? 0.9 : 1 },
       ]}
     >
       <View style={styles.content}>
@@ -120,7 +119,7 @@ export default memo(function UpcomingFlowsCard({
             style={styles.arrowButton}
             hitSlop={8}
           >
-            <MaterialCommunityIcons name="chevron-left" size={20} color={colors.textMuted} />
+            <MaterialCommunityIcons name="chevron-left" size={20} color={DS_COLORS.textMuted} />
           </Pressable>
         )}
 
@@ -136,7 +135,7 @@ export default memo(function UpcomingFlowsCard({
             style={styles.arrowButton}
             hitSlop={8}
           >
-            <MaterialCommunityIcons name="chevron-right" size={20} color={colors.textMuted} />
+            <MaterialCommunityIcons name="chevron-right" size={20} color={DS_COLORS.textMuted} />
           </Pressable>
         )}
       </View>
@@ -146,23 +145,23 @@ export default memo(function UpcomingFlowsCard({
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
+    ...DS_CARD,
+    ...DS_CARD.shadow,
   },
   content: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   arrowButton: {
-    paddingHorizontal: spacing.xs,
+    paddingHorizontal: DS_SPACING.xs,
   },
   centerContent: {
     flex: 1,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: DS_SPACING.sm,
   },
   message: {
     flex: 1,
-    fontSize: 14,
+    ...DS_TYPOGRAPHY.styles.body,
     lineHeight: 20,
   },
   highlight: {

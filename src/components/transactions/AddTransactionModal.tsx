@@ -1282,6 +1282,7 @@ export default function AddTransactionModal({
             {filteredCategories.map((item) => {
               const cat = item.category;
               const isSubcategory = item.isSubcategory;
+              const categoryColor = cat.color || (type === 'despesa' ? colors.expense : colors.income);
               
               return (
                 <Pressable
@@ -1299,19 +1300,25 @@ export default function AddTransactionModal({
                   ]}
                 >
                   <View style={styles.pickerOptionWithIcon}>
-                    {isSubcategory && (
-                      <MaterialCommunityIcons 
-                        name="subdirectory-arrow-right" 
-                        size={16} 
-                        color={colors.textMuted} 
-                        style={{ marginRight: spacing.xs }}
-                      />
+                    {isSubcategory ? (
+                      <>
+                        <MaterialCommunityIcons 
+                          name="subdirectory-arrow-right" 
+                          size={16} 
+                          color={colors.textMuted} 
+                          style={{ marginRight: spacing.xs }}
+                        />
+                        <View style={[styles.categoryColorDot, { backgroundColor: categoryColor }]} />
+                      </>
+                    ) : (
+                      <View style={[styles.categoryColorCircle, { backgroundColor: categoryColor }]}>
+                        <MaterialCommunityIcons 
+                          name={(cat.icon || 'tag') as any} 
+                          size={18} 
+                          color="#FFFFFF" 
+                        />
+                      </View>
                     )}
-                    <MaterialCommunityIcons 
-                      name={(cat.icon || 'tag') as any} 
-                      size={20} 
-                      color={categoryId === cat.id ? colors.primary : colors.textMuted} 
-                    />
                     <Text
                       style={[
                         styles.pickerOptionText,
@@ -2726,6 +2733,18 @@ const styles = StyleSheet.create({
   pickerOptionWithIcon: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  categoryColorCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryColorDot: {
+    width: 12,
+    height: 12,
+    borderRadius: 6,
   },
   pickerOptionText: {
     fontSize: 15,

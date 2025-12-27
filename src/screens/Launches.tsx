@@ -9,7 +9,6 @@ import { useSnackbar } from "../hooks/useSnackbar";
 import CustomAlert from "../components/CustomAlert";
 import Snackbar from "../components/Snackbar";
 import TransactionsList, { TransactionListItem } from '../components/transactions/TransactionsList';
-import CreditCardBillItem from '../components/transactions/CreditCardBillItem';
 import AddTransactionModal, { EditableTransaction } from '../components/transactions/AddTransactionModal';
 import { useTransactions } from '../hooks/useFirebaseTransactions';
 import { useCreditCards } from '../hooks/useCreditCards';
@@ -182,8 +181,9 @@ export default function Launches() {
   // Converte transações do Firebase para o formato do TransactionsList
   // Filtra transações de cartão de crédito (elas aparecem apenas nas faturas)
   // Filtra transações de pagamento de fatura (são automáticas e redundantes visualmente)
+  // INCLUI faturas de cartão de crédito na lista, ordenadas por data de vencimento
   const listItems = useMemo(() => {
-    return transactions
+    const transactionItems = transactions
       .filter((t: Transaction) => !t.creditCardId && !t.creditCardBillId) // Exclui transações de cartão e pagamentos de fatura
       .map((t: Transaction) => {
         // Usar valor absoluto para garantir consistência
@@ -212,9 +212,57 @@ export default function Launches() {
           installmentTotal: t.installmentTotal,
           anticipatedFrom: t.anticipatedFrom,
           anticipationDiscount: t.anticipationDiscount,
+          itemType: 'transaction' as const,
         };
       });
-  }, [transactions]) as Array<{
+
+    // Adicionar faturas como itens especiais
+    const billItems = creditCardBills.map((bill) => {
+      // Calcular a data de vencimento correta
+      // Se dueDay < closingDay, vencimento é no próximo mês
+      // Caso contrário, é no mesmo mês da fatura
+      let dueMonth = bill.month;
+      let dueYear = bill.year;
+      
+      if (bill.creditCard) {
+        const { closingDay, dueDay } = bill.creditCard;
+        if (dueDay < closingDay) {
+          // Vencimento é no mês seguinte
+          dueMonth += 1;
+          if (dueMonth > 12) {
+            dueMonth = 1;
+            dueYear += 1;
+          }
+        }
+      }
+      
+      // Obter o dia de vencimento do cartão ou da fatura
+      const dueDay = bill.creditCard?.dueDay || bill.dueDate?.toDate().getDate() || 1;
+      
+      // Garantir que o dia não ultrapasse o último dia do mês
+      const lastDayOfMonth = new Date(dueYear, dueMonth, 0).getDate();
+      const validDueDay = Math.min(dueDay, lastDayOfMonth);
+      
+      const dueDateString = `${dueYear}-${String(dueMonth).padStart(2, '0')}-${String(validDueDay).padStart(2, '0')}`;
+      
+      return {
+        id: `bill-${bill.creditCardId}-${bill.month}-${bill.year}`,
+        date: dueDateString,
+        title: `Fatura ${bill.creditCardName}`,
+        account: bill.creditCardName,
+        amount: -bill.totalAmount,
+        type: 'paid' as const,
+        status: (bill.isPaid ? 'completed' : 'pending') as const,
+        itemType: 'bill' as const,
+        billData: bill, // Dados completos da fatura para renderização
+      };
+    });
+
+    // Combinar e ordenar por data (mais antigo primeiro)
+    return [...transactionItems, ...billItems].sort((a, b) => {
+      return new Date(a.date).getTime() - new Date(b.date).getTime();
+    });
+  }, [transactions, creditCardBills]) as Array<{
     id: string;
     date: string;
     title: string;
@@ -226,6 +274,8 @@ export default function Launches() {
     categoryIcon?: string;
     status?: 'pending' | 'completed' | 'cancelled';
     goalName?: string;
+    itemType: 'transaction' | 'bill';
+    billData?: any;
   }>;
 
   // Calcular totais separados por status (para previsão)
@@ -534,7 +584,7 @@ export default function Launches() {
                 <View style={[styles.emptyCard, { backgroundColor: colors.card }, getShadow(colors)]}>
                   <Text style={[styles.emptyText, { color: colors.textMuted }]}>Carregando...</Text>
                 </View>
-              ) : listItems.length === 0 && creditCardBills.length === 0 ? (
+              ) : listItems.length === 0 ? (
                 <View style={[styles.emptyCard, { backgroundColor: colors.card }, getShadow(colors)]}>
                   <View style={[styles.emptyIcon, { backgroundColor: colors.primaryBg }]}>
                     <MaterialCommunityIcons 
@@ -553,33 +603,13 @@ export default function Launches() {
                   </Text>
                 </View>
               ) : (
-                <View style={[styles.listCard, { backgroundColor: colors.card }, getShadow(colors)]}>
-                  {/* Faturas de Cartão de Crédito - integradas na lista */}
-                  {creditCardBills.length > 0 && (
-                    creditCardBills.map((bill) => (
-                      <CreditCardBillItem
-                        key={`bill-${bill.creditCardId}-${bill.month}-${bill.year}`}
-                        creditCardName={bill.creditCardName}
-                        creditCardIcon={bill.creditCard?.icon || 'credit-card'}
-                        creditCardColor={bill.creditCard?.color || '#3B82F6'}
-                        billMonth={bill.month}
-                        billYear={bill.year}
-                        totalAmount={bill.totalAmount}
-                        isPaid={bill.isPaid}
-                        dueDate={bill.dueDate}
-                        onPress={() => handleBillPress(bill)}
-                      />
-                    ))
-                  )}
-                  
-                  {/* Lista de Transações */}
-                  {listItems.length > 0 && (
-                    <TransactionsList 
-                      items={listItems} 
-                      onEditItem={handleEditTransaction}
-                      onStatusPress={handleStatusPress}
-                    />
-                  )}
+                <View style={styles.listContainer}>
+                  <TransactionsList 
+                    items={listItems} 
+                    onEditItem={handleEditTransaction}
+                    onStatusPress={handleStatusPress}
+                    onBillPress={handleBillPress}
+                  />
                 </View>
               )}
             </View>
@@ -794,9 +824,8 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     textAlign: 'center',
   },
-  listCard: {
-    borderRadius: borderRadius.lg,
-    padding: spacing.md,
+  listContainer: {
+    gap: spacing.md,
   },
   listHeader: {
     marginBottom: spacing.sm,
